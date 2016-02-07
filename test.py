@@ -19,6 +19,8 @@ import pdb
 #mem = svi.SharedMemory(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, size=20)
 mem = svi.SharedMemory(None, svi.IPC_CREX)
 
+print "memory id = {}".format(mem.id)
+
 # 
 # value = sem.value
 # 
@@ -34,9 +36,9 @@ mem = svi.SharedMemory(None, svi.IPC_CREX)
 
 mem.write("kha", 10)
 
-mem.detach()
+#mem.detach()
 
-mem.remove()
+#mem.remove()
 
 
 #mem = mem

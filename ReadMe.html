@@ -4,7 +4,7 @@
 
 <head>
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2010 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2012 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
 	
     <title>System V IPC for Python - Semaphores, Shared Memory and Message Queues</title>
@@ -55,22 +55,23 @@
 
 <p>This describes the <tt>sysv_ipc</tt> module which gives Python access
 to System V inter-process semaphores, shared memory and message queues 
-on most (all?) *nix flavors. Examples include OS X 10.5 &amp; 10.6, 
-Ubuntu 8 &amp; 9, OpenSolaris 2008.11, FreeBSD 6, 7 and 8,
+on most (all?) *nix flavors. Examples include OS X, Linux, FreeBSD,
+OpenSolaris 2008.11, 
 and <a href="http://f-utility.tumblr.com/post/525726296/compiling-sysv-ipc-python-module-with-gcc-on-aix-5-2">AIX 5.2</a>.
 It might also work under Windows with a library like 
 <a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
-<p>It works with Python 2.4 &ndash; 3.1 (but <em>not</em> 3.0). 
+<p>It works with Python 2.4 &ndash; 3.x (but <em>not</em> 3.0). 
 It's released 
 under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.6.3.tar.gz">sysv_ipc version 0.6.3</a>
+<a href="sysv_ipc-0.6.4.tar.gz">sysv_ipc version 0.6.4</a>
 </strong>
-<a href="sysv_ipc-0.6.3.md5.txt">[md5 sum]</a>
+(<a href="sysv_ipc-0.6.4.md5.txt">[md5 sum]</a>,
+<a href="sysv_ipc-0.6.4.sha1.txt">[sha1 sum]</a>)
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -99,6 +100,24 @@ completely.
 <h3>Module Functions</h3>
 
 <dl>
+    <dt>attach(id, [address = None, [flags = 0]])</dt>
+    <dd>Attaches the (existing) shared memory that has the given <tt>id</tt> and 
+    	returns a new SharedMemory object. See 
+    	<a href="#attach">SharedMemory.attach()</a> for details on the 
+    	<tt>address</tt> and <tt>flags</tt> parameters.
+
+    <p>This method is useful only under fairly unusual circumstances.
+    	You probably don't need it.
+    </p>
+    </dd>
+        
+    <dt>ftok(path, id, [silence_warning = False])</dt>
+    <dd>Calls <tt>ftok(path, id)</tt>. Note that 
+    <a href="#ftok_weakness"><tt>ftok()</tt> has limitations</a>, and this
+    function will issue a warning to that effect unless 
+    <tt>silence_warning</tt> is True.
+    </dd>
+        
     <dt>remove_semaphore(id)</dt>
     <dd>Removes the semaphore with the given <tt>id</tt>.</dd>
         
@@ -514,7 +533,7 @@ situations specific to IPC.
         </p>
     </dd>
 
-    <dt>attach([address = None, [flags = 0]])</dt>
+    <dt id="attach">attach([address = None, [flags = 0]])</dt>
     <dd>
         Attaches this process to the shared memory. The memory must be attached 
         before calling <tt>.read()</tt> or <tt>.write()</tt>. Note that the
@@ -825,11 +844,6 @@ and exposure of <tt>sem_otime</tt>.
     <li>This module offers neither the functions <tt>semaphore_haskey()</tt>
         nor <tt>memory_haskey()</tt>.
     </li>
-    <li>This module doesn't offer access to <tt>ftok()</tt> which is
-        for the best because 
-        <a href="http://nikitathespider.com/python/shm/#ftok">ftok is
-        probably broken on your system</a>.
-    </li>
     <li>This module's default permission on objects is <tt>0600</tt> as opposed
         to <tt>shm</tt>'s <tt>0666</tt>.
     </li>
@@ -850,6 +864,44 @@ and exposure of <tt>sem_otime</tt>.
 directory <tt>demo</tt>) shows how to use shared memory and semaphores.
 The second (in the directory <tt>demo2</tt>) shows how to use 
 message queues.
+
+
+<h4 id="ftok_weakness">The Weakness of <tt>ftok()</tt></h4>
+
+<p>
+Most System V IPC sample code recommends <tt>ftok()</tt> for generating an 
+integer key that's more-or-less random. 
+It does not, however, guarantee that the key it generates is unused. If 
+<tt>ftok()</tt> gives your application a key that some other application is 
+already using,
+your app is in trouble unless it has a reliable second mechanism for generating 
+a key. And if that's the case, why not just abandon <tt>ftok()</tt> and use the 
+second mechanism exclusively?
+</p>
+
+<p>This is the weakness of <tt>ftok()</tt> -- it isn't guaranteed to give you
+what you want. The <a href="http://www.unix.com/man-page/FreeBSD/3/ftok/">BSD 
+man page for <tt>ftok</tt></a> says it is "quite possible for the routine to 
+return duplicate keys". The term "quite possible" isn't quantified, but suppose
+it means one-tenth of one percent. Who wants to have 1-in-1000 odds of a 
+catastrophic failure in their program, or even 1-in-10000? 
+</p>
+
+<p>This module obviates the need for <tt>ftok()</tt> by generating random
+keys for you. If your application can't use <tt>sysv_ipc</tt>'s automatically
+generated keys because it needs to know the key in advance, hardcoding a 
+random number like 123456 in your app might be no worse than using 
+<tt>ftok()</tt> and has the advantage of not hiding its limitations. 
+</p>
+
+<p>This module provides <tt>ftok()</tt> in case you want to experiment with it.
+However, to emphasize its weakness, this version of <tt>ftok()</tt> raises a 
+warning with every call unless you explicitly pass a flag to silence it.
+</p>
+
+<p>This package provides <tt>ftok_experiment.py</tt> so that you can observe
+how often <tt>ftok()</tt> generates duplicate keys on your system.
+</p>
 
 
 <h4 id="sem_init">Semaphore Initialization</h4>
@@ -968,7 +1020,7 @@ On some systems the limits are expressed in header files, on others
 they're available through kernel interfaces (like FreeBSD's <tt>sysctl</tt>).
 Under OS X and to some extent OpenSolaris I can't figure out where they're 
 defined and what I report here is the result of experimentation and educated
-guesses formed with the help of Google.
+guesses formed by Googling.
 </p>
 
 <p>The good news is that this module will still behave as advertised no
@@ -1074,7 +1126,18 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_3"><strong><span id="current">Current</span> &ndash; 0.6.3 (3 Oct 2010) &ndash;</strong>
+    <li id="v0_6_4"><strong><span id="current">Current</span> &ndash; 0.6.4 (19 Dec 2012) &ndash;</strong>
+        <ul>
+            <li>Added a module-level <tt>attach()</tt> method based on a 
+            	suggestion by Vladimír Včelák. 
+            </li>
+            <li>Added the <tt>ftok()</tt> method along with dire warnings about
+            	its use.
+            </li>
+        </ul>
+    </li>
+
+    <li id="v0_6_3">0.6.3 (3 Oct 2010) &ndash;
         <ul>
             <li>Fixed a segfault in <tt>write()</tt> that occurred any time
                 an offset was passed. This was introduced in v0.6.0.

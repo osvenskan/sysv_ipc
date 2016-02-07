@@ -52,3 +52,6 @@ PyObject *shm_repr(SharedMemory *);
 
 /* Utility functions */
 PyObject *shm_remove(int);
+
+PyObject *shm_attach(SharedMemory *, int);
+

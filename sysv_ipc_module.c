@@ -53,11 +53,95 @@ PyObject *pExistentialException;
 PyObject *pBusyException;
 PyObject *pNotAttachedException;
 
+// sysv_ipc_attach() needs this forward declaration of SharedMemoryType
+static PyTypeObject SharedMemoryType;
+
 /*
 
         Module methods
 
 */
+
+
+static PyObject *
+sysv_ipc_attach(PyObject *self, PyObject *args, PyObject *keywords) {
+	// Given the id of an extant shared memory segment and (optionally) an
+	// address and shmat flags, attempts to attach the memory. If successful,
+	// returns a new SharedMemory object with the key permanently set to -1.
+    SharedMemory *shm = NULL;
+    PyObject *py_address = NULL;
+    int id = -1;
+    void *address = NULL;
+    int flags = 0;
+    char *keyword_list[ ] = {"id", "address", "flags", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "i|Oi", keyword_list, 
+                                      &id, &py_address, &flags))
+        goto error_return;
+
+    if ((!py_address) || (py_address == Py_None))
+        address = NULL;
+    else {
+        if (PyLong_Check(py_address))
+            address = PyLong_AsVoidPtr(py_address);
+        else {
+            PyErr_SetString(PyExc_TypeError, "address must be a long");
+            goto error_return;
+        }
+    }
+
+    DPRINTF("About to create a new SharedMemory object.\n");
+   
+    /* Create a new SharedMemory object. Some tutorials recommend using 
+    PyObject_CallObject() to create this, but that invokes the __init__ method
+    which I don't want to do.
+    */
+	shm = (SharedMemory *)PyObject_New(SharedMemory, &SharedMemoryType);
+	shm->id  = id;
+	shm->address = address;
+
+    DPRINTF("About to call shm_attach()\n");
+	if (Py_None == shm_attach(shm, flags))
+		// All is well
+		return (PyObject *)shm;
+	else
+		// abandon this object and fall through to the error return below.
+		Py_DECREF(shm); 
+
+    error_return:
+    return NULL;
+}
+
+
+static PyObject *
+sysv_ipc_ftok(PyObject *self, PyObject *args, PyObject *keywords) {
+    char *path;
+    int id = 0;
+    int silence_warning = 0;
+    char *keyword_list[ ] = {"path", "id", "silence_warning", NULL};
+
+    key_t rc = 0;
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "si|i", keyword_list, 
+                                     &path, &id, &silence_warning))
+        goto error_return;
+
+    if (!silence_warning) {
+	    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
+	    PyErr_WarnEx(PyExc_Warning, 
+	                 "Use of ftok() is not recommended; see sysv_ipc documentation", 1);
+	}
+	
+    rc = ftok(path, id);
+
+    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
+
+    return Py_BuildValue("i", rc);
+
+    error_return:
+    return NULL;
+}
+
 
 static PyObject *
 sysv_ipc_remove_semaphore(PyObject *self, PyObject *args) {
@@ -609,8 +693,17 @@ static PyTypeObject MessageQueueType = {
 
 */
 
-
 static PyMethodDef module_methods[ ] = {
+   {   "attach",
+        (PyCFunction)sysv_ipc_attach,
+        METH_VARARGS | METH_KEYWORDS,
+        "Attaches the memory identified by the id and returns a new SharedMemory object."
+    },
+   {   "ftok",
+        (PyCFunction)sysv_ipc_ftok,
+        METH_VARARGS | METH_KEYWORDS,
+        "Calls ftok(). Not recommended; see sysv_ipc documentation."
+    },
     {   "remove_semaphore",
         (PyCFunction)sysv_ipc_remove_semaphore,
         METH_VARARGS,

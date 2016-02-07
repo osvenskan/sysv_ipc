@@ -29,6 +29,7 @@ filenames = (
     "semaphore.h",
     "memory.c",
     "memory.h",
+    "ftok_experiment.py",
     "demo/",
     "demo/ReadMe.txt",
     "demo/cleanup.py",
@@ -65,6 +66,7 @@ filenames = (
 
 tarball_name = "sysv_ipc-%s.tar.gz" % VERSION
 md5_name = "sysv_ipc-%s.md5.txt" % VERSION
+sha1_name = "sysv_ipc-%s.sha1.txt" % VERSION
 
 if os.path.exists(tarball_name):
     os.remove(tarball_name)
@@ -82,18 +84,18 @@ for name in filenames:
     tarball.add(SourceName, BundledName, False)
 tarball.close()
 
-# Generate the md5 hash of the tarball
-f = open("./" + tarball_name)
-s = f.read()
-f.close()
+# Generate the tarball hashes
+s = open("./" + tarball_name).read()
 
-s = hashlib.md5(s).hexdigest()
+md5 = hashlib.md5(s).hexdigest()
 
-print "md5 = " + s
+sha1 = hashlib.sha1(s).hexdigest()
 
-f = open(md5_name, "w")
-f.write(s)
-f.close()
+print "md5 = {}, sha1 = {}".format(md5, sha1)
+
+open(md5_name, "w").write(md5)
+open(sha1_name, "w").write(sha1)
+
 
 
 # Print an RSS item suitable for pasting into rss.xml
