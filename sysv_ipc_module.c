@@ -127,14 +127,14 @@ sysv_ipc_ftok(PyObject *self, PyObject *args, PyObject *keywords) {
         goto error_return;
 
     if (!silence_warning) {
-	    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
+	    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, (long)rc);
 	    PyErr_WarnEx(PyExc_Warning,
 	                 "Use of ftok() is not recommended; see sysv_ipc documentation", 1);
 	}
 
     rc = ftok(path, id);
 
-    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
+    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, (long)rc);
 
     return Py_BuildValue("i", rc);
 
