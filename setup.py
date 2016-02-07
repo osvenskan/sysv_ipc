@@ -24,7 +24,8 @@ author_email = "philip@semanchuk.com",
 maintainer = "Philip Semanchuk",
 url = "http://semanchuk.com/philip/sysv_ipc/",
 download_url = "http://semanchuk.com/philip/sysv_ipc/sysv_ipc-%s.tar.gz" % VERSION,
-source_files = ["sysv_ipc_module.c"]
+source_files = ["sysv_ipc_module.c", "common.c", "semaphore.c", "memory.c", 
+                "mq.c" ]
 # http://pypi.python.org/pypi?:action=list_classifiers
 classifiers = [ "Development Status :: 3 - Alpha",
                 "Intended Audience :: Developers", 

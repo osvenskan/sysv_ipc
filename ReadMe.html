@@ -8,7 +8,7 @@
 	<meta name="copyright" content="All contents &copy; 2008 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
 	
-    <title>System V IPC for Python - Semaphores and Shared Memory</title>
+    <title>System V IPC for Python - Semaphores, Shared Memory and Message Queues</title>
 
     <style type="text/css">
         dt {
@@ -25,15 +25,6 @@
         }
 
         pre { margin-left: 2em; }
-        
-        .dangerdanger {
-            border: 2px dashed red;
-            padding: .5em;
-            margin: 1em;
-            font-weight: bold;
-            clear: both;
-            text-align: center;
-        }
         
         li { margin-top: 1em; margin-bottom: 1em; }
 
@@ -53,12 +44,13 @@
 
 <body>
 
-<h2>System V IPC for Python - Semaphores and Shared Memory</h2>
+<h2>System V IPC for Python - Semaphores, Shared Memory and Message Queues</h2>
 
 <p>This describes the <tt>sysv_ipc</tt> module which gives Python access
-to System V inter-process semaphores and shared memory on systems that support them.
-That includes most (all?) *nix flavors but not Windows. At present, IPC
-message queues are not supported.
+to System V inter-process semaphores, shared memory and message queues 
+on systems that support them. That includes most (all?) *nix flavors.
+The module might work under Windows with a library like 
+<a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
 <p>If you're interested in this module, there are 
@@ -67,9 +59,9 @@ for Python</a> that you might find useful.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.3.tar.gz">sysv_ipc version 0.3</a>
+<a href="sysv_ipc-0.4.tar.gz">sysv_ipc version 0.4</a>
 </strong>
-<a href="sysv_ipc-0.3.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.4.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. The class and error names changed
@@ -84,11 +76,6 @@ I've tested <tt>sysv_ipc</tt> on
 OS X 10.5, Ubuntu 8, OpenSolaris 2008.05 and FreeBSD 6 and 7.
 </p>
 
-<p class="dangerdanger">Please note: This module is new and has not been
-rigorously tested.
-</p>
-
-
 <h2>Module <tt>sysv_ipc</tt></h2>
 
 <h3>Module Functions</h3>
@@ -99,6 +86,9 @@ rigorously tested.
         
     <dt>remove_shared_memory(id)</dt>
     <dd>Removes the shared memory with the given <tt>id</tt>.</dd>
+
+    <dt>remove_message_queue(id)</dt>
+    <dd>Removes the message queue with the given <tt>id</tt>.</dd>
 </dl>
         
 
@@ -139,7 +129,7 @@ rigorously tested.
     
     <dt>SEMAPHORE_TIMEOUT_SUPPORTED</dt>
     <dd>True if the platform supports timed semaphore waits, False otherwise.</dd>
-
+    
     <dt>SHM_RND</dt>
     <dd>You probably don't need this, but it can be used when attaching shared 
         memory to force the address to be
@@ -620,6 +610,169 @@ situations specific to IPC.
 </dl>
 
 
+<h3>The MessageQueue Class</h3>
+
+<p>This is a handle to a message queue.</p>
+
+
+<h4>Methods</h4>
+
+<dl>
+    <dt>MessageQueue(key, [flags = 0, [mode = 0600, [max_message_size = 2048]]])</dt>
+    <dd>Creates a new message queue or opens an existing one.
+
+        <p>The 
+        <span class="param">key</span> must be either the value IPC_PRIVATE or 
+        an integer &gt; 0 and &le; KEY_MAX. 
+        </p>
+
+        <p>The <span class="param">flags</span> specify whether you want to create a
+            new queue or open an existing one.
+        </p> 
+            
+        <ul>
+            <li>With <span class="param">flags</span> set to the 
+                <strong>default</strong> of <tt>0</tt>, the module attempts
+                to <strong>open an existing</strong> message queue identified by 
+                <span class="param">key</span> and raises 
+                a <tt>ExistentialError</tt> if it doesn't exist.
+            </li>
+            
+            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module 
+                <strong>opens</strong> the message queue identified 
+                by <span class="param">key</span> <strong>or 
+                creates</strong> a new one if no such queue exists.
+            </li>
+            
+            <li>With <span class="param">flags</span> set to 
+                <strong><tt>IPC_CREX</tt></strong> (<tt>IPC_CREAT | IPC_EXCL</tt>),
+                the module 
+                <strong>creates</strong> a new message queue identified by 
+                <span class="param">key</span>. If 
+                a queue with that key already exists, the call raises 
+                a <tt>ExistentialError</tt>.
+            </li>
+        </ul>
+        
+        <p>The <span class="param">max_message_size</span> can be increased
+            from the default, but be aware of the issues discussed in 
+            <a href="#message_queue_limits">Message Queue Limits</a>.
+        </p>
+    </dd>
+
+    <dt>send(message, [block = True, [type = 1]])</dt>
+    <dd>Puts a message on the queue. 
+        
+        <p>The <span class="param">message</span> string can contain embedded
+            NULLs (ASCII <tt>0x00</tt>). 
+        </p>
+
+        <p>The <span class="param">block</span> flag specifies whether or
+            not the call should wait if the message can't be sent (if, for
+            example, the queue is full). When <span class="param">block</span>
+            is <tt>False</tt>, the call will raise a <tt>BusyError</tt> if
+            the message can't be sent immediately.
+        </p>
+
+        <p>The <span class="param">type</span> is
+            associated with the message and is relevant when calling 
+            <tt>receive()</tt>. It must be &gt; 0.
+        </p>
+    </dd>
+
+    <dt>receive([block = True, [type = 0]])</dt>
+    <dd>
+        Receives a message from the queue, returning a tuple of 
+        <tt>(message, type)</tt>. 
+
+        <p>The <span class="param">block</span> flag specifies whether or
+            not the call should wait if there's no messages of the 
+            specified type to retrieve. When <span class="param">block</span>
+            is <tt>False</tt>, the call will raise a <tt>BusyError</tt> if
+            a message can't be received immediately.
+        </p>
+
+        <p>The <span class="param">type</span> permits some control over
+            which messages are retrieved. 
+            
+            <ul>
+                <li>When <span class="param">type</span> <tt>== 0</tt>, the call
+                    returns the first message on the queue regardless of its 
+                    type.
+                </li>
+                <li>When <span class="param">type</span> <tt>&gt; 0</tt>, the call
+                    returns the first message of that type.
+                </li>
+                <li>When <span class="param">type</span> <tt>&lt; 0</tt>, the call
+                    returns the first message of the lowest type that is 
+                    ≤ to the absolute value of <span class="param">type</span>.
+                </li>
+            </ul>
+        </p>
+    </dd>
+    
+    <dt>remove()</dt>
+    <dd>Removes (deletes) the message queue.</dd>
+</dl>
+
+<h4>Attributes</h4>
+
+<dl>
+    <dt>key (read-only)</dt>
+    <dd>The key provided in the constructor.</dd>
+
+    <dt>id (read-only)</dt>
+    <dd>The id assigned to this queue by the OS.</dd>
+
+    <dt id="queue_max_size">max_size</dt>
+    <dd>The maximum size of the queue in bytes. Only a process with 
+        "appropriate privileges" can increase this value, and on some
+        systems even that won't work. See 
+        <a href="#message_queue_limits">Message Queue Limits</a> for details.
+    </dd>
+    
+    <dt>last_send_time (read-only)</dt>
+    <dd>The last time a message was placed on the queue.</dd>
+
+    <dt>last_receive_time (read-only)</dt>
+    <dd>The last time a message was received from the queue.</dd>
+
+    <dt>last_change_time (read-only)</dt>
+    <dd>The last time a process changed the queue's attributes.</dd>
+
+    <dt>last_send_pid (read-only)</dt>
+    <dd>The id of the most recent process to send a message.</dd>
+
+    <dt>last_receive_pid (read-only)</dt>
+    <dd>The id of the most recent process to receive a message.</dd>
+
+    <dt>current_messages (read-only)</dt>
+    <dd>The number of messages currently in the queue.</dd>
+
+    <dt>uid</dt>
+    <dd>The queue's user id.</dd>
+
+    <dt>gid</dt>
+    <dd>The queue's group id.</dd>
+
+    <dt>mode</dt>
+    <dd>The queue's permission bits.
+
+        <p>Tip: the following Python code will display
+        the mode in octal:<br>
+        <tt>print int(str(my_mem.mode), 8)</tt>
+        </p>
+    </dd>
+    
+    <dt>cuid (read-only)</dt>
+    <dd>The queue creator's user id.</dd>
+
+    <dt>cgid (read-only)</dt>
+    <dd>The queue creator's group id.</dd>
+</dl>
+
+
+
 <h3>Supported Features and Differences from SHM</h3>
 
 <p>This module is almost, but not quite, a superset of 
@@ -745,6 +898,82 @@ segment. I think most modern systems do the sensible thing and insist on
 a minimum length of 1.
 </p>
 
+
+<h4 id="message_queue_limits">Message Queue Limits</h4>
+
+<p>Python programmers can usually remain blissfully ignorant of memory 
+allocation issues. Unfortunately, a combination of factors makes them
+relevant when dealing with System V message queues.
+</p>
+
+<p><strong>Some implementations impose extremely stingy limits.</strong>
+For instance, many BSDish systems (OS X, FreeBSD, 
+<a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=NETBSD">NetBSD</a>, and
+<a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=OPENBSD">OpenBSD</a>)
+limit queues to 2048 bytes. Note that that's the <em>total
+queue size</em>, not the message size. Two 1k messages would fill the queue.
+</p>
+
+<p><strong>Those limits can be very difficult to change.</strong> At best, 
+only privileged processes can increase the limit. At worst, the limit 
+is a kernel parameter and requires a kernel change via a tunable or 
+a recompile.
+</p>
+    
+<p><strong>This module can't figure out what the limits are</strong>, so 
+it can't cushion them or even report them to you.
+On some systems the limits are expressed in header files, on others 
+they're available through kernel interfaces (like FreeBSD's <tt>sysctl</tt>).
+Under OS X and to some extent OpenSolaris I can't figure out where they're 
+defined and what I report here is the result of experimentation and educated
+guesses formed with the help of Google.
+</p>
+
+<p>The good news is that this module will still behave as advertised no
+matter what these limits are. Nevertheless you might be surprised when a 
+call to <tt>.send()</tt> get stuck because a queue is full even though you've 
+only put 2048 bytes of messages in it.
+</p>
+
+<p>Here are the limits I've been able to find under my test operating
+systems, ordered from best (most generous) to worst (most stingy). 
+</p>
+
+<p>Under <strong>OpenSolaris 2008.05</strong> each queue's maximum size defaults 
+to 64k. A privileged process (e.g. root) can change this through the 
+<tt>max_size</tt> attribute of a <tt>sysv_ipc.MessageQueue</tt> object. 
+I was able to increase it to 16M and successfully sent sixteen 1M messages to
+the queue.
+</p>
+
+<p>Under <strong>Ubuntu 8.04</strong> (and perhaps other Linuxes) each 
+queue's maximum size defaults to 16k. As with OpenSolaris, I was able to 
+increase this to 16M, but only for a privileged process.
+</p>
+
+<p>Under <strong>FreeBSD 7</strong> and I think NetBSD and OpenBSD, each 
+queue's maximum size defaults to 2048 bytes. Furthermore, one can (as root)
+set <tt>max_size</tt> to something larger and FreeBSD doesn't complain, but 
+it also ignores the change.
+</p>
+
+<p><strong>OS X</strong> is the worst of the lot. Each queue is limited
+to 2048 bytes and OS X silently ignores attempts to increase this (just like
+FreeBSD). To add insult to injury, there appears to be no way to increase
+this limit short of recompiling the kernel.
+I'm guessing at this based on the 
+<a href="http://www.opensource.apple.com/darwinsource/projects/other/xnu-1228.3.13/bsd/sys/msg.h">Darwin
+message queue limits</a>.
+</p>
+
+<p>If you want
+to search for these limits on your operating system, the key constants are 
+<tt>MSGSEG</tt>, <tt>MSGSSZ</tt>, <tt>MSGTQL</tt>, <tt>MSGMNB</tt>, 
+<tt>MSGMNI</tt> and <tt>MSGMAX</tt>. Under BSD, <tt>sysctl kern.ipc</tt>
+should tell you what you need to know and may allow you to change these
+parameters.
+</p>
+
 <h4>Nobody Likes a Mr. Messy</h4>
 
 <p>Semaphores and especially shared memory are a little different from most Python objects 
@@ -804,7 +1033,23 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_3"><strong><span id="current">Current</span> &ndash; 0.3 (16 Jan 2009) &ndash;</strong>
+    <li id="v0_4"><strong><span id="current">Current</span> &ndash; 0.4 (28 Jan 2009) &ndash;</strong>
+        <ul>
+            <li>Added message queues.</li>
+            <li>Fixed a bug where the <tt>key</tt> attribute of SharedMemory objects
+                returned garbage.
+            </li>
+            <li>Fixed a bug where keys &gt; INT_MAX would get truncated on 
+                platforms where longs are bigger than ints.
+            </li>
+            <li>Provided decent inline documentation for object attributes
+                (available via the <tt>help()</tt> command).
+            </li>
+            <li>Restructured the code which was suffering growing pains.</li>
+        </ul>
+    </li>
+
+    <li id="v0_3">0.3 (16 Jan 2009) &ndash;
         <p>This version features a rename of classes and errors 
             (sorry about breaking the names), some modifications to
             semaphore timeouts, and many small fixes.
@@ -960,22 +1205,17 @@ difficulty, user interest and so forth.
 </p>
 
 <ul>
-    <li>Support for message queues.</li>
-
-    <li>Expose Linux-specific flags SHM_DEST and SHM_LOCKED.</li>
-    
     <li>Add __str__ and __repr__ support.</li>
 
-    <li>Update this documentation with a list of platforms that support semtimedop().</li>
-    
     <li>Add a way for callers to indicate "please generate a key for me" in
         the object constructors.
     </li>
+
+    <li>Expose Linux-specific flags SHM_DEST and SHM_LOCKED.</li>
     
-    <li>Find a way to make <tt>SEMAPHORE_VALUE_MAX</tt> more accurate.
-    </li>
+    <li>Update this documentation with a list of platforms that support semtimedop().</li>
     
-    
+    <li>Find a way to make <tt>SEMAPHORE_VALUE_MAX</tt> more accurate.</li>
 </ul>
 
 <p>I don't plan on adding support for semaphore sets.</p>
