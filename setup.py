@@ -8,18 +8,7 @@ VERSION = file("VERSION").read().strip()
 
 name = "sysv_ipc"
 description = "System V IPC primitives (semaphores, shared memory and message queues) for Python"
-long_description = """
-Sysv_ipc gives access to System V semaphores, shared memory and message 
-queues. Most (all?) Unixes (including OS X) support System V IPC. 
-Windows+Cygwin 1.7 might also work. 
-
-Sample code is included.
-
-This extension is released under the GPL. 
-
-You might also be interested in the similar POSIX IPC module at:
-http://semanchuk.com/philip/posix_ipc/
-"""
+long_description = file("README").read()
 author = "Philip Semanchuk",
 author_email = "philip@semanchuk.com",
 maintainer = "Philip Semanchuk",
