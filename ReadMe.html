@@ -4,7 +4,7 @@
 
 <head>
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2009 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2010 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
 	
     <title>System V IPC for Python - Semaphores, Shared Memory and Message Queues</title>
@@ -68,9 +68,9 @@ under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.6.tar.gz">sysv_ipc version 0.6</a>
+<a href="sysv_ipc-0.6.1.tar.gz">sysv_ipc version 0.6.1</a>
 </strong>
-<a href="sysv_ipc-0.6.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.6.1.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -1074,7 +1074,18 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_0"><strong><span id="current">Current</span> &ndash; 0.6.0 (20 May 2010) &ndash;</strong>
+    <li id="v0_6_1"><strong><span id="current">Current</span> &ndash; 0.6.1 (26 June 2010) &ndash;</strong>
+        <ul>
+            <li>Fixed a typo introduced in the previous version that caused
+                unpredictable behavior (usually a segfault) if a block flag 
+                was passed to <tt>MessageQueue.send()</tt>. <i>Obrigado</i> 
+                to Álvaro Justen and Ronald Kaiser for the bug report and
+                patch.
+            </li>
+        </ul>
+    </li>
+
+    <li id="v0_6_0">0.6.0 (20 May 2010) &ndash;
         <ul>
             <li>Added Python 3 support.</li>
             <li>Renamed a constant that caused a problem under AIX.
