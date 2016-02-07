@@ -196,6 +196,14 @@ static PyMemberDef Semaphore_members[] = {
 
 
 static PyMethodDef Semaphore_methods[] = {
+    {   "__enter__",
+        (PyCFunction)Semaphore_enter,
+        METH_NOARGS,
+    },
+    {   "__exit__",
+        (PyCFunction)Semaphore_exit,
+        METH_VARARGS,
+    },
     {   "P",
         (PyCFunction)Semaphore_P,
         METH_VARARGS | METH_KEYWORDS,
