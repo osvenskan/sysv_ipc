@@ -10,14 +10,14 @@ import pdb
 
 
 #mq = svi.MessageQueue(99, svi.IPC_CREX)
-mq = svi.MessageQueue(None, svi.IPC_CREX)
+#mq = svi.MessageQueue(None, svi.IPC_CREX)
 
 #sem = svi.Semaphore(99, 0, 0600, 1)
 #sem = svi.Semaphore(None, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
 #sem = svi.Semaphore(99, svi.IPC_CREAT)
 
 #mem = svi.SharedMemory(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, size=20)
-#mem = svi.SharedMemory(99, svi.IPC_CREX, 0600)
+mem = svi.SharedMemory(None, svi.IPC_CREX)
 
 # 
 # value = sem.value
@@ -32,6 +32,12 @@ mq = svi.MessageQueue(None, svi.IPC_CREX)
 
 #mem.read(offset=-1)
 
+mem.write("kha", 10)
+
+mem.detach()
+
+mem.remove()
+
 
 #mem = mem
 
@@ -39,7 +45,7 @@ mq = svi.MessageQueue(None, svi.IPC_CREX)
 
 #mq.send("iahsdgl", type=42)
 
-pdb.set_trace()
+#pdb.set_trace()
 # 
 # print mq.receive()
 
@@ -58,5 +64,5 @@ i = 42
 # sem.remove()
 
 
-mq.remove()
+#mq.remove()
 

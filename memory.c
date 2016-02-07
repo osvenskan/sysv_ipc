@@ -572,12 +572,12 @@ SharedMemory_write(SharedMemory *self, PyObject *args) {
     unsigned long size;
     PyObject *py_size;
 #if PY_MAJOR_VERSION > 2
-    static char args_format[] = "s*|O&l";
+    static char args_format[] = "s*|l";
     Py_buffer data;
 #else
-    static char args_format[] = "s#|O&l";
+    static char args_format[] = "s#|l";
     typedef struct {
-        char *buf;
+        const char *buf;
         long len;
     } MyBuffer;    
     MyBuffer data;
