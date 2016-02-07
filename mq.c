@@ -4,6 +4,19 @@
 #include "common.h"
 #include "mq.h"
 
+
+PyObject *
+mq_str(MessageQueue *self) {
+    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+}
+
+
+PyObject *
+mq_repr(MessageQueue *self) {
+    return PyString_FromFormat("sysv_ipc.MessageQueue(%ld)", (long)self->key);
+}
+
+
 static PyObject *
 get_a_value(int queue_id, enum GET_SET_IDENTIFIERS field) {
     struct msqid_ds q_info;
@@ -270,7 +283,7 @@ PyObject *
 mq_remove(int queue_id) {
     struct msqid_ds mq_info;
 
-    DPRINTF("removing mq with id %d\n", queue_id);
+    DPRINTF("calling msgctl(...IPC_RMID...) on id %d\n", queue_id);
     if (-1 == msgctl(queue_id, IPC_RMID, &mq_info)) {
         switch (errno) {
             case EIDRM:
@@ -317,19 +330,32 @@ int
 MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
     int flags = 0;
     int mode = 0600;
+    NoneableKey key;
     unsigned long max_message_size = QUEUE_MESSAGE_SIZE_MAX_DEFAULT;
     char *keyword_list[ ] = {"key", "flags", "mode", "max_message_size", NULL};
     
     //MessageQueue(key, [flags = 0, [mode = 0600, [max_message_size = QUEUE_MESSAGE_SIZE_MAX_DEFAULT]])
     
     if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iik", keyword_list, 
-                                     convert_key_param, &(self->key), &flags,
+                                     convert_key_param, &key, &flags,
                                      &mode, &max_message_size))
         goto error_return;
  
     if (max_message_size > QUEUE_MESSAGE_SIZE_MAX) {
         PyErr_Format(PyExc_ValueError, "The message length must be <= %lu\n",
             (unsigned long)QUEUE_MESSAGE_SIZE_MAX);
+        goto error_return;
+    }
+
+    if ( !(flags & IPC_CREAT) && (flags & IPC_EXCL) ) {
+		PyErr_SetString(PyExc_ValueError, 
+                "IPC_EXCL must be combined with IPC_CREAT");
+        goto error_return;
+    }
+
+    if (key.is_none && ((flags & IPC_EXCL) != IPC_EXCL)) {
+		PyErr_SetString(PyExc_ValueError, 
+                "Key can only be None if IPC_EXCL is set");
         goto error_return;
     }
     
@@ -340,10 +366,26 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
     flags &= (IPC_CREAT | IPC_EXCL);
     
     mode &= 0777;
-    
-    DPRINTF("Calling msgget, key=%ld, flags=0x%x\n", (long)self->key, flags);
-    self->id = msgget(self->key, mode | flags);
+
+    if (key.is_none) {
+        // (key == None) ==> generate a key for the caller
+        do {
+            errno = 0;
+            self->key = get_random_key();
+
+            DPRINTF("Calling msgget, key=%ld, flags=0x%x\n", 
+                        (long)self->key, flags);
+            self->id = msgget(self->key, mode | flags);
+        } while ( (-1 == self->id) && (EEXIST == errno) );
+    }
+    else {
+        // (key != None) ==> use key supplied by the caller
+        self->key = key.value;
         
+        DPRINTF("Calling msgget, key=%ld, flags=0x%x\n", (long)self->key, flags);
+        self->id = msgget(self->key, mode | flags);
+    }
+    
     DPRINTF("id == %d\n", self->id);
     
     if (self->id == -1) {
@@ -388,6 +430,13 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
 
 PyObject *
 MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
+    /* In Python >= 2.5, the Python argument specifier 's#' expects a 
+       py_ssize_t for its second parameter. A ulong is long enough to hold
+       a py_ssize_t.
+       It might be too big, though, on platforms where a long is larger than
+       py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
+       Python doesn't write to is zeroed out.
+   */
     unsigned long message_length = 0;
     char *p_message = NULL;
     PyObject *py_block = NULL;
@@ -478,6 +527,8 @@ PyObject *
 MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
     PyObject *py_block = NULL;
     PyObject *py_return_tuple = NULL;
+    // PyObject *py_msg = NULL;
+    // PyObject *py_type = NULL;
     int flags = 0;
     int type = 0;
     ssize_t rc;
@@ -543,10 +594,28 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
     }
     
     // rc from msgrcv() is the # of bytes in the message.
-    py_return_tuple = PyTuple_Pack(2, 
-                                   PyString_FromStringAndSize(p_msg->message, rc), 
-                                   PyInt_FromLong(p_msg->type));
+    // py_msg = PyString_FromStringAndSize(p_msg->message, rc);
+    // py_type = PyInt_FromLong(p_msg->type);
+    // 
+    // py_return_tuple = PyTuple_Pack(2, py_msg, py_type);
+    // 
+    // Py_DECREF(py_msg);
+    // Py_DECREF(py_type);
+    // 
+    // // py_return_tuple = PyTuple_Pack(2, 
+    // //                                PyString_FromStringAndSize(p_msg->message, rc), 
+    // //                                PyInt_FromLong(p_msg->type));
+    // 
+    // free(p_msg);
+    // 
+    // //Py_RETURN_NONE;
+    // 
     
+    py_return_tuple = Py_BuildValue("NN", 
+                                    PyString_FromStringAndSize(p_msg->message, rc), 
+                                    PyInt_FromLong(p_msg->type)
+                                   );
+
     free(p_msg);
     
     return py_return_tuple;

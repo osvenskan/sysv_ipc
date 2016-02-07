@@ -34,6 +34,7 @@ union semun {
 };
 #endif
 
+
 static int 
 convert_timeout(PyObject *py_timeout, void *converted_timeout) {
     // Converts a PyObject into a timeout if possible. The PyObject should
@@ -86,6 +87,18 @@ convert_timeout(PyObject *py_timeout, void *converted_timeout) {
     }
         
     return rc;
+}
+
+
+PyObject *
+sem_str(Semaphore *self) {
+    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+}
+
+
+PyObject *
+sem_repr(Semaphore *self) {
+    return PyString_FromFormat("sysv_ipc.Semaphore(%ld)", (long)self->key);
 }
 
 
@@ -416,28 +429,59 @@ Semaphore_init(Semaphore *self, PyObject *args, PyObject *keywords) {
     int flags = 0;
     union semun arg;
     char *keyword_list[ ] = {"key", "flags", "mode", "initial_value", NULL};
-    
+    NoneableKey key;
+
     //Semaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])
     
     if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iii", keyword_list, 
-                                     &convert_key_param, &(self->key), &flags, 
+                                     &convert_key_param, &key, &flags, 
                                      &mode, &initial_value))
         goto error_return;
-    
+
+    DPRINTF("key is none = %d, key value = %ld\n", key.is_none, (long)key.value);
+
+    if ( !(flags & IPC_CREAT) && (flags & IPC_EXCL) ) {
+		PyErr_SetString(PyExc_ValueError, 
+                "IPC_EXCL must be combined with IPC_CREAT");
+        goto error_return;
+    }
+
+    if (key.is_none && ((flags & IPC_EXCL) != IPC_EXCL)) {
+		PyErr_SetString(PyExc_ValueError, 
+                "Key can only be None if IPC_EXCL is set");
+        goto error_return;
+    }
+
     self->op_flags = 0;
         
     // I mask the caller's flags against the two IPC_* flags to ensure that 
     // nothing funky sneaks into the flags.
     flags &= (IPC_CREAT | IPC_EXCL);
     
-    // Note that Sys V sems can be in "sets" (arrays) but I hardcode this to
-    // always be a set with just one member.
-    // Permissions and flags (i.e. IPC_CREAT | IPC_EXCL) are both crammed into
-    // the 3rd param.
-    DPRINTF("Calling semget, key=%ld, mode=%o, flags=%x\n", 
-            (long)self->key, mode, flags);
-    self->id = semget(self->key, 1, mode | flags);
+    // Note that Sys V sems can be in "sets" (arrays) but I hardcode this
+    // to always be a set with just one member.
+    // Permissions and flags (i.e. IPC_CREAT | IPC_EXCL) are both crammed 
+    // into the 3rd param.
+    if (key.is_none) {
+        // (key == None) ==> generate a key for the caller
+        do {
+            errno = 0;
+            self->key = get_random_key();
+
+            DPRINTF("Calling semget, key=%ld, mode=%o, flags=%x\n", 
+                        (long)self->key, mode, flags);
+            self->id = semget(self->key, 1, mode | flags);
+        } while ( (-1 == self->id) && (EEXIST == errno) );
+    }
+    else {
+        // (key != None) ==> use key supplied by the caller
+        self->key = key.value;
         
+        DPRINTF("Calling semget, key=%ld, mode=%o, flags=%x\n", 
+                    (long)self->key, mode, flags);
+        self->id = semget(self->key, 1, mode | flags);
+    }
+    
     DPRINTF("id == %d\n", self->id);
     
     if (self->id == -1) {

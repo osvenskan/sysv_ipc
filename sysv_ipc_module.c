@@ -20,8 +20,12 @@
 #include "Python.h"
 #include "structmember.h"
 
-// for memset
+// For memset
 #include <string.h>
+
+// For srand
+#include <stdlib.h>
+#include <time.h>
 
 // For the math surrounding timeouts for semtimedop()
 #include <math.h>
@@ -228,13 +232,13 @@ static PyTypeObject SemaphoreType = {
     0, /*tp_getattr*/
     0, /*tp_setattr*/
     0, /*tp_compare*/
-    0, /*tp_repr*/
+    (reprfunc)sem_repr, /*tp_repr*/
     0, /*tp_as_number*/
     0, /*tp_as_sequence*/
     0, /*tp_as_mapping*/
     0, /*tp_hash */
     0, /*tp_call*/
-    0, /*tp_str*/
+    (reprfunc)sem_str, /*tp_str*/
     0, /*tp_getattro*/
     0, /*tp_setattro*/
     0, /*tp_as_buffer*/
@@ -405,13 +409,13 @@ static PyTypeObject SharedMemoryType = {
     0, /*tp_getattr*/
     0, /*tp_setattr*/
     0, /*tp_compare*/
-    0, /*tp_repr*/
+    (reprfunc)shm_repr, /*tp_repr*/
     0, /*tp_as_number*/
     0, /*tp_as_sequence*/
     0, /*tp_as_mapping*/
     0, /*tp_hash */
     0, /*tp_call*/
-    0, /*tp_str*/
+    (reprfunc)shm_str, /*tp_str*/
     0, /*tp_getattro*/
     0, /*tp_setattro*/
     0, /*tp_as_buffer*/
@@ -559,13 +563,13 @@ static PyTypeObject MessageQueueType = {
     0, /*tp_getattr*/
     0, /*tp_setattr*/
     0, /*tp_compare*/
-    0, /*tp_repr*/
+    (reprfunc)mq_repr, /*tp_repr*/
     0, /*tp_as_number*/
     0, /*tp_as_sequence*/
     0, /*tp_as_mapping*/
     0, /*tp_hash */
     0, /*tp_call*/
-    0, /*tp_str*/
+    (reprfunc)mq_str, /*tp_str*/
     0, /*tp_getattro*/
     0, /*tp_setattro*/
     0, /*tp_as_buffer*/
@@ -624,6 +628,10 @@ PyMODINIT_FUNC
 initsysv_ipc(void) {
     PyObject *m;
     PyObject *module_dict;
+    
+    // I seed the random number generator in case I'm asked to make some
+    // random keys.
+    srand((unsigned int)time(NULL));
 
     if (PyType_Ready(&SemaphoreType) < 0)
         goto error_return;
@@ -639,6 +647,7 @@ initsysv_ipc(void) {
     if (m == NULL) 
         goto error_return;
 
+    PyModule_AddStringConstant(m, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddIntConstant(m, "PAGE_SIZE", PAGE_SIZE);
     PyModule_AddIntConstant(m, "KEY_MAX", KEY_MAX);    
     PyModule_AddIntConstant(m, "SEMAPHORE_VALUE_MAX", SEMAPHORE_VALUE_MAX);

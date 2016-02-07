@@ -3,7 +3,6 @@
 <html>
 
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8;">
 	<meta name="author" content="Philip Semanchuk">
 	<meta name="copyright" content="All contents &copy; 2008 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
@@ -59,9 +58,9 @@ for Python</a> that you might find useful.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.4.tar.gz">sysv_ipc version 0.4</a>
+<a href="sysv_ipc-0.4.1.tar.gz">sysv_ipc version 0.4.1</a>
 </strong>
-<a href="sysv_ipc-0.4.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.4.1.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. The class and error names changed
@@ -197,8 +196,10 @@ situations specific to IPC.
     <dt>Semaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])</dt>
     <dd>Creates a new semaphore or opens an existing one.
         
-        <p><span class="param">key</span> must be either the value IPC_PRIVATE or 
-        an integer &gt; 0 and &le; KEY_MAX.
+        <p><span class="param">key</span> must be <tt>None</tt>, 
+            <tt>IPC_PRIVATE</tt> or 
+        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+        is <tt>None</tt>, the module chooses a random unused key.
         </p>
         
         <p>The <span class="param">flags</span> specify whether you want to create a
@@ -263,16 +264,16 @@ situations specific to IPC.
                 seconds before either returning (having acquired the semaphore)
                 or raising a <tt>BusyError</tt>.
             </li>        
-
-            <p>On platforms that don't support the <tt>semtimedop()</tt> API
-                (OS X doesn't support it), the <span class="param">timeout</span>
-                is ignored (treated as <tt>None</tt>).
-            </p>
-
-            <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
-                is True on platforms that support <tt>semtimedop()</tt>.
-            </p>
         </ul>
+        
+        <p>On platforms that don't support the <tt>semtimedop()</tt> API
+            (OS X doesn't support it), the <span class="param">timeout</span>
+            is ignored (treated as <tt>None</tt>).
+        </p>
+
+        <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
+            is True on platforms that support <tt>semtimedop()</tt>.
+        </p>
 
         <p>When the call returns, the semaphore's value decreases by <span class="param">delta</span> 
             (or more precisely,  <tt>abs(<span class="param">delta</span>)</tt>)
@@ -421,9 +422,10 @@ situations specific to IPC.
     <dd>Creates a new shared memory segment or opens an existing one. 
         The memory is automatically attached.
         
-        <p>The 
-        <span class="param">key</span> must be either the value IPC_PRIVATE or 
-        an integer &gt; 0 and &le; KEY_MAX. 
+        <p><span class="param">key</span> must be <tt>None</tt>, 
+            <tt>IPC_PRIVATE</tt> or 
+        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+        is <tt>None</tt>, the module chooses a random unused key.
         </p>
 
         <p>The <span class="param">flags</span> specify whether you want to create a
@@ -621,9 +623,10 @@ situations specific to IPC.
     <dt>MessageQueue(key, [flags = 0, [mode = 0600, [max_message_size = 2048]]])</dt>
     <dd>Creates a new message queue or opens an existing one.
 
-        <p>The 
-        <span class="param">key</span> must be either the value IPC_PRIVATE or 
-        an integer &gt; 0 and &le; KEY_MAX. 
+        <p><span class="param">key</span> must be <tt>None</tt>, 
+            <tt>IPC_PRIVATE</tt> or 
+        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+        is <tt>None</tt>, the module chooses a random unused key.
         </p>
 
         <p>The <span class="param">flags</span> specify whether you want to create a
@@ -694,21 +697,21 @@ situations specific to IPC.
 
         <p>The <span class="param">type</span> permits some control over
             which messages are retrieved. 
-            
-            <ul>
-                <li>When <span class="param">type</span> <tt>== 0</tt>, the call
-                    returns the first message on the queue regardless of its 
-                    type.
-                </li>
-                <li>When <span class="param">type</span> <tt>&gt; 0</tt>, the call
-                    returns the first message of that type.
-                </li>
-                <li>When <span class="param">type</span> <tt>&lt; 0</tt>, the call
-                    returns the first message of the lowest type that is 
-                    ≤ to the absolute value of <span class="param">type</span>.
-                </li>
-            </ul>
         </p>
+        
+        <ul>
+            <li>When <span class="param">type</span> <tt>== 0</tt>, the call
+                returns the first message on the queue regardless of its 
+                type.
+            </li>
+            <li>When <span class="param">type</span> <tt>&gt; 0</tt>, the call
+                returns the first message of that type.
+            </li>
+            <li>When <span class="param">type</span> <tt>&lt; 0</tt>, the call
+                returns the first message of the lowest type that is 
+                ≤ to the absolute value of <span class="param">type</span>.
+            </li>
+        </ul>
     </dd>
     
     <dt>remove()</dt>
@@ -809,6 +812,14 @@ and exposure of <tt>sem_otime</tt>.
 </ul>
 
 <h3>Usage Tips</h3>
+
+<h4>Sample Code</h4>
+
+<p>This module comes with two demonstration apps. The first (in the 
+directory <tt>demo</tt>) shows how to use shared memory and semaphores.
+The second (in the directory <tt>demo2</tt>) shows how to use 
+message queues.
+
 
 <h4 id="sem_init">Semaphore Initialization</h4>
 
@@ -1018,8 +1029,9 @@ the latter allows you to remove them.
 <ul>
     <li>Under OS X, <tt>sys/ipc.h</tt> defines two versions of the 
         <tt>ipc_perm</tt> struct. This module picks up the old, deprecated
-        one which stores uid and gid values in 16 bit types. In order to 
-        solve this problem, I need to do battle with the C preprocessor.
+        one which stores uid and gid values in 16 bit types. It's definitions
+        in <tt>Python.h</tt> that cause this, though, so there's not much
+        I can do to change it. 
     </li>        
     <li>Maximum values for uids, gids, keys and semaphore values are 
         hardcoded to "safe" values rather than being platform dependent.
@@ -1033,7 +1045,27 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_4"><strong><span id="current">Current</span> &ndash; 0.4 (28 Jan 2009) &ndash;</strong>
+    <li id="v0_4_1"><strong><span id="current">Current</span> &ndash; 0.4.1 (12 Feb 2009) &ndash;</strong>
+        <ul>
+            <li>Changed status to beta.</li>
+            <li>Added automatic generation of keys.</li>
+            <li>Added a message queue demo.</li>
+            <li>Added <tt>str()</tt> and <tt>repr()</tt> support to all
+                objects.</li>
+            <li>Fixed a bug in <tt>SharedMemory.write()</tt> that could cause 
+                a spurious error of "Attempt to write past end of memory 
+                segment". This bug only occurred on platforms using
+                different sizes for <tt>long</tt> and <tt>int</tt>, or 
+                <tt>long</tt> and <tt>py_size_t</tt> 
+                (depending on Python version). <em>Tack</em> to Jesper 
+                for debug help.
+            </li>
+            <li>Plugged a memory leak in <tt>MessageQueue.receive()</tt>.</li>
+            <li>Added a VERSION attribute to the module.</li>
+        </ul>
+    </li>
+
+    <li id="v0_4">0.4 (28 Jan 2009) &ndash;
         <ul>
             <li>Added message queues.</li>
             <li>Fixed a bug where the <tt>key</tt> attribute of SharedMemory objects
@@ -1045,7 +1077,7 @@ the latter allows you to remove them.
             <li>Provided decent inline documentation for object attributes
                 (available via the <tt>help()</tt> command).
             </li>
-            <li>Restructured the code which was suffering growing pains.</li>
+            <li>Rearranged the code which was suffering growing pains.</li>
         </ul>
     </li>
 
@@ -1205,14 +1237,6 @@ difficulty, user interest and so forth.
 </p>
 
 <ul>
-    <li>Add __str__ and __repr__ support.</li>
-
-    <li>Add a way for callers to indicate "please generate a key for me" in
-        the object constructors.
-    </li>
-
-    <li>Expose Linux-specific flags SHM_DEST and SHM_LOCKED.</li>
-    
     <li>Update this documentation with a list of platforms that support semtimedop().</li>
     
     <li>Find a way to make <tt>SEMAPHORE_VALUE_MAX</tt> more accurate.</li>
