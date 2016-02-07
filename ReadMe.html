@@ -58,9 +58,9 @@ for Python</a> that you might find useful.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.5.tar.gz">sysv_ipc version 0.5</a>
+<a href="sysv_ipc-0.5.1.tar.gz">sysv_ipc version 0.5.1</a>
 </strong>
-<a href="sysv_ipc-0.5.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.5.1.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -71,7 +71,7 @@ which contains the source code, setup.py, installation instructions and
 You might also want to read
 about some <a href="#bugs">known bugs</a>. 
 I've tested <tt>sysv_ipc</tt> on 
-OS X 10.5, Ubuntu 8, OpenSolaris 2008.05 and FreeBSD 6 and 7.
+OS X 10.5, Ubuntu 8 &amp; 9, OpenSolaris 2008.05 and FreeBSD 6 and 7.
 </p>
 
 <h2>Module <tt>sysv_ipc</tt></h2>
@@ -1043,7 +1043,22 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_5"><strong><span id="current">Current</span> &ndash; 0.5 (6 Oct 2009) &ndash;</strong>
+    <li id="v0_5_1"><strong><span id="current">Current</span> &ndash; 0.5.1 (1 Dec 2009) &ndash;</strong>
+        <p>No code changes in this version.</p>
+        <ul>
+            <li>Fixed the comment in <tt>sysv_ipc_module.c</tt> that 
+                still referred to the GPL license.
+            </li>
+            <li>Added the attributes <tt>__version</tt>, <tt>__author__</tt>,
+                <tt>__license__</tt> and <tt>__copyright__</tt>.
+            </li>
+            <li>Removed <tt>file()</tt> from <tt>setup.py</tt> in favor
+                of <tt>open()</tt>.
+            </li>
+        </ul>
+    </li>
+
+    <li id="v0_5">0.5 (6 Oct 2009) &ndash;
         <p>No code changes in this version.</p>
         <ul>
             <li>Changed the license from GPL to BSD.</li>
