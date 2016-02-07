@@ -1,0 +1,841 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1;">
+	<meta name="author" content="Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2008 Philip Semanchuk">
+	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
+	
+    <title>System V IPC for Python</title>
+
+    <style type="text/css">
+        dt {
+            font-family: monospace;
+            font-weight: bold;
+            padding-bottom: .33em;
+            margin-top: 1em;
+        }
+        span[lang] { font-style: italic; }
+        
+        span.param {
+            font-family: monospace;
+            font-style: italic;
+        }
+
+        pre { margin-left: 2em; }
+        
+        .dangerdanger {
+            border: 2px dashed red;
+            padding: .5em;
+            margin: 1em;
+            font-weight: bold;
+            clear: both;
+        }
+        
+        li { margin-top: 1em; margin-bottom: 1em; }
+
+        form {
+            width: 20em;
+            float: right;
+            font-size: 90%;
+            margin-left: 1em;
+            margin-bottom: 1em;
+            float: right;
+        }
+        fieldset, legend {
+            background-color: #d0d0a9;
+        }
+    </style>
+</head>
+
+<body>
+
+<h2>System V IPC for Python - Semaphores and Shared Memory</h2>
+
+<p>This describes the <tt>sysv_ipc</tt> module which gives Python access
+to System V inter-process semaphores and shared memory on systems that support them.
+That includes most (all?) *nix flavors but not Windows. At present, IPC
+message queues are not supported.
+</p>
+
+<p>Users of this module might be interested in a similar module
+(which I also wrote). <a href="/philip/posix_ipc/"><tt>Posix_ipc</tt>
+provides Python access to IPC using POSIX semaphores and shared memory</a>.
+POSIX IPC has slightly less broad OS support but is a little easier to use.
+</p>
+
+<p>You can <strong>download <a href="sysv_ipc-0.1.tar.gz">sysv_ipc version 0.1</a></strong>
+which 
+contains the source code, setup.py, installation 
+instructions and
+<a href="#samples">sample code</a>. You might also want to read
+about some <a href="#bugs">known bugs</a>. Currently, this module
+only works with Python 2.5. I've tested it on 
+OS X 10.5 and Ubuntu 8. It doesn't compile on OpenSolaris 2008.05.
+</p>
+
+<p class="dangerdanger">Please note: This module is new and has not been
+rigorously tested. Also, the interface may change a little in the future. 
+</p>
+
+
+<h2>Module <tt>sysv_ipc</tt></h2>
+
+<h3>Module Functions</h3>
+
+<dl>
+    <dt>remove_semaphore(id)</dt>
+    <dd>Removes the semaphore with the given <tt>id</tt>.</dd>
+        
+    <dt>remove_shared_memory(id)</dt>
+    <dd>Removes the shared memory with the given <tt>id</tt>.</dd>
+</dl>
+        
+
+<h3>Module Constants</h3>
+
+<dl>
+    <dt>IPC_CREAT and IPC_EXCL</dt>
+    <dd>These flags are used when creating IPC objects. They're
+        bitwise unique and can be ORed together.
+        
+        <p>When passed to an IPC object's constructor, <tt>IPC_CREAT</tt> indicates 
+            that you want to create a new object or open an existing one. If you want
+            the call to fail if an object with that key already exists, specify 
+            the  <tt>IPC_EXCL</tt> flag, too.
+        </p>
+    </dd>
+    
+    <dt>IPC_PRIVATE</dt>
+    <dd>This is a special value that can be passed in place of a key. It implies that 
+        the IPC object should be available only to the creating process or its
+        child processes (e.g. those created with <tt>fork()</tt>).
+    </dd>
+    
+    <dt>MAX_KEY</dt>
+    <dd>Keys passed to IPC object constructors must not exceed MAX_KEY.
+    </dd>
+
+    <dt>MAX_SEMAPHORE_VALUE</dt>
+    <dd>The maximum value of a semaphore. 
+        
+        <p>This constant is only available on systems
+        where SEMVMX is hardcoded in a header file (e.g. Linux). On systems where
+        the value is tunable (e.g. FreeBSD, OS X), <tt>MAX_SEMAPHORE_VALUE</tt> isn't
+        part of this module. Sorry about that!
+        </p>
+    </dd>
+    
+    <dt>PAGE_SIZE</dt>
+    <dd>The operating system's memory page size, in bytes. It's probably a good
+        idea to make shared memory segments some multiple of this size.
+    </dd>
+    
+    <dt>SEMAPHORE_TIMEOUT_SUPPORTED</dt>
+    <dd>True if the platform supports timed semaphore waits.</dd>
+
+    <dt>SHM_RND</dt>
+    <dd>You probably don't need this, but it can be used when attaching shared 
+        memory to force the address to be
+        rounded down to SHMLBA. See your system's man page for <tt>shmat()</tt>
+        for more information.
+    </dd>
+    
+    <dt>SHM_HUGETLB, SHM_NORESERVE and SHM_REMAP</dt>
+    <dd>You probably don't need these. They're Linux-specific flags that can 
+        be passed to the SysVSharedMemory
+        constructor, or to the <tt>.attach()</tt> function in the case of 
+        SHM_REMAP. See your system's man page for <tt>shmget()</tt>
+        and <tt>shmat()</tt> for more information.
+    </dd>
+</dl>    
+
+<h3>Module Errors</h3>
+
+<p>In addition to standard Python errors (e.g. <tt>ValueError</tt>),
+this module raises custom errors. These errors cover 
+situations specific to IPC.
+</p>
+
+<dl>
+    <dt>SystemVIpcError</dt>
+    <dd>The base error class for all the custom errors in this module. This
+        error is occasionally raised on its own but usually you'll see a
+        more specific error.
+    </dd>
+    
+    <dt>SysVIpcInternalError</dt>
+    <dd>Indicates that something has gone very wrong in the module code. Please
+        report this to the maintainer.
+    </dd>
+    
+    <dt>SysVIpcPermissionsError</dt>
+    <dd>Indicates that you've attempted something that the permissions on the
+        IPC object don't allow.
+    </dd>
+    
+    <dt>SysVIpcExistentialError</dt>
+    <dd>Indicates an error related to the existence or non-existence of 
+        an IPC object. 
+    </dd>
+    
+    <dt>SysVIpcBusyError</dt>
+    <dd>Raised when a semaphore call to <tt>.P()</tt> or <tt>.Z()</tt> either times out 
+        or would be forced to wait when its <tt>block</tt> attribute is False.
+    </dd>
+    
+    <dt>SysVIpcNotAttachedError</dt>
+    <dd>Raised when a process attempts to read from or write to a shared memory
+        segment to which it is not attached.
+    </dd>
+</dl>
+
+
+<h3>The SysVSemaphore Class</h3>
+
+<p>This is a handle to a semaphore.</p>
+
+<h4>Methods</h4>
+
+<dl>
+    <dt>SysVSemaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])</dt>
+    <dd>Creates a new semaphore or opens an existing one.
+        
+        <p><span class="param">key</span> must be either the value IPC_PRIVATE or 
+        an integer &gt; 0 and &le; MAX_KEY.
+        </p>
+        
+        <p>The <span class="param">flags</span> specify whether you want to create a
+            new semaphore or open an existing one.
+        </p> 
+            
+        <ul>
+            <li>With <span class="param">flags</span> set to the default of <tt>0</tt>, the module attempts
+                to open an existing semaphore identified by <span class="param">key</span> and raises 
+                a <tt>SysVIpcExistentialError</tt> if that semaphore doesn't exist.
+            </li>
+            
+            <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
+                opens the semaphore identified by <span class="param">key</span> or creates a new
+                one if no such semaphore exists. Using <tt>IPC_CREAT</tt> by itself
+                is not recommended. (See <a href="#init">Semaphore Initialization</a>.)
+            </li>
+            
+            <li>With <span class="param">flags</span> set to <tt>IPC_CREAT | IPC_EXCL</tt>, the module 
+                creates a new semaphore identified by <span class="param">key</span>. If a 
+                semaphore with that key already exists, the call raises a
+                <tt>SysVIpcExistentialError</tt>. 
+                <strong>The <span class="param">initial_value</span> is ignored unless
+                    both of these flags are specified.</strong>
+            </li>
+        </ul>
+        
+        <p>When opening an existing semaphore, <span class="param">mode</span> is ignored.
+        </p>
+    </dd>
+    
+    <dt>acquire([timeout = None, [delta = 1]])</dt>
+    <dd>Waits (conditionally) until the semaphore's value is &gt; 0 and then returns, 
+        decrementing the semaphore. 
+        
+        <p>The <span class="param">timeout</span> (which can be a float) specifies how
+            many seconds this call should wait, if at all.
+        </p>
+            
+        <ul>
+            <li>A <span class="param">timeout</span> of None (the default)
+                implies no time limit. The call will not return until its wait 
+                condition is satisfied. 
+
+                <p>This behavior can be overriden by the semaphore object's 
+                    <tt>.block</tt> flag. When that flag is True (the default), the
+                    call waits. When that flag is False, the call 
+                    raises a <tt>SysVIpcBusyError</tt> if it can't immediately
+                    acquire the semaphore.
+                </p>
+            </li>
+
+            <li>When <span class="param">timeout</span> is 0, the call 
+                raises a <tt>SysVIpcBusyError</tt> if it can't immediately
+                acquire the semaphore. Since it will 
+                return immediately if <em>not</em> asked to wait, this can be 
+                thought of as "non-blocking" mode.
+            </li>
+            
+            <li>When the <span class="param">timeout</span> is &gt; 0, the call
+                will wait no longer than <span class="param">timeout</span> 
+                seconds before either returning (having acquired the semaphore)
+                or raising a <tt>SysVIpcBusyError</tt>.
+
+                <p>On platforms that don't support the <tt>semtimedop()</tt> API
+                  (OS X falls in this category), 
+                   a <span class="param">timeout</span> &gt; 0 is treated as 
+                   a timeout of infinity; i.e. 
+                   the call should wait indefinitely regardless of the
+                   value of the semaphore's <tt>.block</tt> flag.
+                </p>
+                
+                <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
+                    is True on platforms that support <tt>semtimedop()</tt>.
+                </p>
+            </li>        
+        </ul>
+
+        <p>When the call returns, the semaphore's value decreases by <span class="param">delta</span> 
+            (or more precisely,  <tt>abs(<span class="param">delta</span>)</tt>)
+            which defaults to 1.
+        </p>
+    </dd>
+    
+    
+    <dt>release([delta = 1])</dt>
+    <dd>
+        Releases (increments) the semaphore.
+        
+        <p>The semaphore's value increases by <span class="param">delta</span> 
+            (or more precisely, <tt>abs(<span class="param">delta</span>)</tt>)
+            which defaults to 1. 
+        </p>
+    </dd>
+
+    <dt>P()</dt>
+    <dd>A synonym for <tt>.acquire()</tt> that takes the same parameters.
+        
+        <p>"P" stands for 
+        <span lang="nl">prolaag</span> or <span lang="nl">probeer te verlagen</span>
+        (try to decrease), the original name given by 
+        <a href="http://en.wikipedia.org/wiki/Semaphore_(programming)">Edsger Dijkstra</a>.
+        </p>
+    </dd>    
+    
+    <dt>V()</dt>
+    <dd>A synonym for <tt>.release()</tt> that takes the same parameters.
+
+        <p>"V" stands for 
+        <span lang="nl">verhoog</span> (increase), the original name given by 
+        <a href="http://en.wikipedia.org/wiki/Semaphore_(programming)">Edsger Dijkstra</a>.
+        </p>
+    </dd>
+    
+    <dt>Z([timeout = 0.0])</dt>
+    <dd>Blocks until zee zemaphore is zero.
+        
+        <p><span class="param">Timeout</span> has
+            the same meaning as described in <tt>.acquire()</tt>.
+        </p>
+    </dd>
+    
+    <dt>remove()</dt>
+    <dd>
+        Removes (deletes) the semaphore from the system. 
+        
+        <p>As far as I can tell, the effect of deleting a semaphore that
+            other processes are still using is OS-dependent. Check your system's
+            man pages for <tt>semctl(IPC_RMID)</tt>. 
+        </p>
+    </dd>
+</dl>
+
+<h4>Attributes</h4>
+
+<dl>
+    <dt>key (read-only)</dt>
+    <dd>The key passed in the call to the constructor.</dd>
+    
+    <dt>id (read-only)</dt>
+    <dd>The id assigned to this semaphore by the OS.</dd>
+    
+    <dt>value</dt>
+    <dd>The integer value of the semaphore.</dd>
+    
+    <dt>undo</dt>
+    <dd>
+        Defaults to False.
+        
+        <p>When True, operations that change the
+        semaphore's value will be undone (reversed) when 
+        the process exits. Note that when a process exits, an undo operation
+        may imply that a semaphore's value should become negative or 
+        exceed its maximum.
+        Behavior in this case is system-dependent, which means that 
+        <strong>using this flag can make your code non-portable</strong>.
+        </p>
+    </dd>
+    
+    <dt>block</dt>
+    <dd>
+        Defaults to True, which means that calls to <tt>P()</tt> and 
+        <tt>Z()</tt> that specify a <span class="param">timeout</span>
+        of None will not return
+        until their wait conditions are satisfied. 
+        
+        <p>When False, these calls
+        will not block but will instead raise an error if they are unable
+        to return immediately.
+        </p>
+        
+        
+    </dd>
+    
+    <dt>mode</dt>
+    <dd>The semaphore's permission bits.
+        
+        <p>Tip: the following Python code will display
+        the mode in octal:<br>
+        <tt>print int(str(mysem.mode), 8)</tt>
+        </p>
+    </dd>
+    
+    <dt>uid</dt>
+    <dd>The semaphore's user id.</dd>
+    
+    <dt>gid</dt>
+    <dd>The semaphore's group id.</dd>
+    
+    <dt>cuid (read-only)</dt>
+    <dd>The semaphore creator's user id.</dd>
+    
+    <dt>cgid (read-only)</dt>
+    <dd>The semaphore creator's group id.</dd>
+    
+    <dt>last_pid (read-only)</dt>
+    <dd>The PID of the process that last called <tt>semop()</tt> (<tt>.P()</tt>, 
+        <tt>.V()</tt> or <tt>.Z()</tt>) on this semaphore.
+    </dd>
+    
+    <dt>waiting_for_nonzero (read-only)</dt>
+    <dd>The number of processes waiting for the value of the semaphore to become
+        non-zero (i.e. the number waiting in a call to <tt>.P()</tt>).
+    </dd>
+    
+    <dt>waiting_for_zero (read-only)</dt>
+    <dd>The number of processes waiting for the value of the semaphore to become 
+        zero (i.e. the number waiting in a call to <tt>.Z()</tt>).
+    </dd>
+
+    <dt>o_time (read-only)</dt>
+    <dd>The last time <tt>semop()</tt> (i.e. <tt>.P()</tt>, <tt>.V()</tt> or
+        <tt>.Z()</tt>) was called on this semaphore.
+    </dd>
+</dl>
+
+<h3>The SysVSharedMemory Class</h3>
+
+<p>This is a handle to a shared memory segment. 
+</p>
+
+
+<h4>Methods</h4>
+
+<dl>
+    <dt>SysVSharedMemory(key, [flags = 0, [mode = 0600, [size = 0, [init_character = ' ']]]])</dt>
+    <dd>Creates a new shared memory segment or opens an existing one. 
+        The memory is automatically attached.
+        
+        <p>
+        <span class="param">key</span> must be either the value IPC_PRIVATE or 
+        an integer &gt; 0 and &le; MAX_KEY. 
+        </p>
+
+        <p>The <span class="param">flags</span> specify whether you want to create a
+            new shared memory segment or open an existing one.
+        </p> 
+            
+        <ul>
+                
+        <li>With <span class="param">flags</span> set to the default of <tt>0</tt>,
+            the module attempts
+            to open an existing shared memory segment identified by 
+            <span class="param">key</span> and raises 
+            a <tt>SysVIpcExistentialError</tt> if it doesn't exist.
+        </li>
+            
+        <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
+            opens the shared memory segment identified by <span class="param">key</span> or 
+            creates a new one if no such segment exists.
+        </li>
+            
+        <li>With <span class="param">flags</span> set to <tt>IPC_CREAT | IPC_EXCL</tt>, the module 
+            creates a new shared memory segment identified by 
+            <span class="param">key</span>. If 
+            a segment with that key already exists, the call raises 
+            a <tt>SysVIpcExistentialError</tt>.
+        
+        <p>When both <tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are specified,
+            each byte in the new memory segment will be 
+            initialized to the value of <span class="param">init_character</span>.
+        </p>
+        </li>
+</ul>
+        <p>It's not required, but you might want to make <span class="param">size</span> 
+            a multiple of the constant PAGE_SIZE.
+        </p>
+        
+        <p>When opening an existing shared memory segment, <span class="param">mode</span>,
+            <span class="param">size</span> and <span class="param">init_character</span>
+             are ignored.
+        </p>
+    </dd>
+
+    <dt>attach([address = None, [flags = 0]])</dt>
+    <dd>
+        Attaches this process to the shared memory. The memory must be attached 
+        before calling <tt>.read()</tt> or <tt>.write()</tt>. Note that the
+        constructor automatically attaches the memory
+        so you won't need to call this method unless you explicitly detach it 
+        and then want to use it again.
+        
+        <p>The address parameter allows one to specify (as a Python long) a memory
+            address at which to attach the segment. Passing None (the default)
+            is equivalent to passing C NULL to <tt>shmat()</tt>. See that
+            function's man page for details.
+        </p>
+        
+        <p>The flags are mostly only relevant if one specifies a specific address.
+            One exception is the flag <tt>SHM_RDONLY</tt> which, surprisingly,
+            attaches the segment read-only.
+        </p>
+        
+        <p>Note that on some (and perhaps all) platforms, each call to <tt>.attach()</tt>
+            increments the system's "attached" count. Thus, if each call to 
+            <tt>.attach()</tt> isn't paired with a call to <tt>.detach()</tt>,
+            the system's "attached" count for the shared memory segment will not
+            go to zero when the process exits. As a result, the shared memory
+            segment may not disappear even when its creator calls <tt>.remove()</tt>
+            and exits.
+        </p>
+    </dd>
+    
+    <dt>detach()</dt>
+    <dd>Detaches this process from the shared memory.</dd>
+    
+    <dt>read([byte_count = 0, [offset = 0]])</dt>
+    <dd>Reads up to <span class="param">byte_count</span> bytes from the 
+        shared memory segment starting at <span class="param">offset</span>
+        and returns them as a Python string. 
+        
+        <p>If <span class="param">byte_count</span> is zero (the default) the entire 
+            buffer is returned.
+        </p>
+        
+        <p>This method will never attempt to read past the end of the shared 
+            memory segment, even when 
+            <span class="param">offset</span> + <span class="param">byte_count</span> 
+            exceeds the memory segment's size. In that case, the bytes
+            from <span class="param">offset</span> to the end of the segment are returned.
+        </p>
+    </dd>
+    
+    <dt>write(s, [offset = 0])</dt>
+    <dd>Writes the string <span class="param">s</span> to the shared memory,
+        starting at <span class="param">offset</span>. 
+        
+        <p>At most <tt><i>n</i></tt> bytes will be written, where 
+            <tt><i>n</i></tt> = the segment's size minus <span class="param">offset</span>.
+        </p>
+        
+        <p>The string may contain embedded NULL bytes ('\0').
+    </dd>
+    
+    <dt>remove()</dt>
+    <dd>Removes (destroys) the shared memory. Note that actual destruction of the
+        segment only occurs when all processes have detached.
+    </dd>
+
+</dl>
+
+<h4>Attributes</h4>
+
+<dl>
+    <dt>key (read-only)</dt>
+    <dd>The key provided in the constructor.</dd>
+
+    <dt>id (read-only)</dt>
+    <dd>The id assigned to this semaphore by the OS.</dd>
+
+    <dt>size (read-only)</dt>
+    <dd>The size of the segment in bytes.</dd>
+    
+    <dt>address (read-only)</dt>
+    <dd>The address of the segment as Python long.</dd>
+
+    <dt>attached (read-only)</dt>
+    <dd>If True, this segment is currently attached.</dd>
+
+    <dt>last_attach_time (read-only)</dt>
+    <dd>The last time a process attached this segment.</dd>
+
+    <dt>last_detach_time (read-only)</dt>
+    <dd>The last time a process detached this segment.</dd>
+
+    <dt>last_change_time (read-only)</dt>
+    <dd>The last time a process changed the uid, gid or mode on this segment.</dd>
+
+    <dt>creator_pid (read-only)</dt>
+    <dd>The PID of the process that created this segment.</dd>
+
+    <dt>last_pid (read-only)</dt>
+    <dd>The PID of the most last process to attach or detach this segment.</dd>
+
+    <dt>number_attached (read-only)</dt>
+    <dd>The number of processes attached to this segment.</dd>
+
+    <dt>uid</dt>
+    <dd>The segment's user id.</dd>
+
+    <dt>gid</dt>
+    <dd>The segment's group id.</dd>
+
+    <dt>mode</dt>
+    <dd>The shared memory's permission bits.
+
+        <p>Tip: the following Python code will display
+        the mode in octal:<br>
+        <tt>print int(str(sem.mode), 8)</tt>
+        </p>
+    </dd>
+    
+    <dt>cuid (read-only)</dt>
+    <dd>The segment creator's user id.</dd>
+
+    <dt>cgid (read-only)</dt>
+    <dd>The segment creator's group id.</dd>
+</dl>
+
+<p>Due to <a href="http://bugs.python.org/issue1687163">Python bug 1687163</a>, 
+assigning to a SysVSharedMemory object's <tt>id</tt> attribute 
+will give a TypeError 
+while assigning to any other read-only attributes will give an AttributeError. 
+This inconsistency is corrected in Python 3.
+</p>
+
+<h3>Supported Features and Differences from SHM</h3>
+
+<p>This module is almost, but not quite, a superset of 
+<a href="http://nikitathespider.com/python/shm/"><tt>shm</tt></a>.
+Some of the additional features are the ability to override the <tt>block</tt>
+flag on a per-call basis, the ability to change the semaphore's value
+in increments &gt; 1 when calling <tt>.P()</tt> and <tt>.V()</tt>
+and exposure of <tt>sem_otime</tt>.
+</p>
+
+<p>Differences that might trip you up are listed below.</p>
+
+<ul>
+    <li><tt>Shm</tt> compiles on more platforms and under more versions of Python.</li>
+    <li>Attribute names and method signatures are different.</li>
+    <li>This module offers neither the functions <tt>semaphore_haskey()</tt>
+        nor <tt>memory_haskey()</tt>.
+    </li>
+    <li>This module doesn't offer access to <tt>ftok()</tt> which is
+        for the best because 
+        <a href="http://nikitathespider.com/python/shm/#ftok">ftok is
+        probably broken on your system</a>.
+    </li>
+    <li>This module's default permission on objects is <tt>0600</tt> as opposed
+        to <tt>shm</tt>'s <tt>0666</tt>.
+    </li>
+    <li><tt>Shm</tt> maintained an internal dictionary of semaphores and shared memory
+        segments. The object keys served as the dictionary keys.
+        If you asked for the same object multiple times, <tt>shm</tt> would
+        return the same Python object. I'm not convinced this was safe,
+        particularly in the case where an object may have been destroyed 
+        and another with the same key created in its place.
+    </li>
+</ul>
+
+<h3>Usage Tips</h3>
+
+<h4 id="init">Semaphore Initialization</h4>
+
+<p>When a System V sempahore is created at the C API level, the OS is not required
+to initialize the semaphore's value. (This per 
+<a href="http://www.opengroup.org/onlinepubs/009695399/functions/semget.html">the 
+POSIX standard for <tt>semget()</tt></a>.) 
+Some (most?) operating systems initialize it to zero, but this behavior
+is non-standard and therefore can't be relied upon. 
+</p>
+
+<p>If sempahore creation happens in an predictable, orderly fashion, this isn't a 
+problem. But a
+race condition arises when multiple processes vie to create/open the same semaphore. The 
+problem lies in the fact that when an application calls <tt>semget()</tt> with only
+the <tt>IPC_CREAT</tt> flag, the caller can't tell whether or not he has
+created a new semaphore or opened an existing one. 
+<strong>This makes it
+difficult to create reliable code without using <tt>IPC_EXCL</tt>.</strong>
+</p>
+
+<p>
+For instance, imagine processes P1 and P2. They're executing the same code, 
+and that code intends to share a binary semaphore.
+Consider the following sequence of events at the startup of P1 and P2 &ndash;
+</p>
+
+<ol>
+    <li>P1 calls <tt>semget(IPC_CREAT)</tt> to create the semaphore S.</li>
+    <li>P2 calls <tt>semget(IPC_CREAT)</tt> to open S.</li>
+    <li>P1 initializes the semaphore's value to 1.</li>
+    <li>P1 calls <tt>acquire()</tt>, decrementing the value to 0.</li>
+    <li>P2, assuming S is a newly-created semaphore that needs to be initialized,
+        incorrectly sets the semaphore's value to 1.</li>
+    <li>P2 calls <tt>acquire()</tt>, decrementing the value to 0. Both processes
+        now think they own the lock.</li>
+</ol>
+
+<p>The common wisdom on the Net for avoiding this race 
+refers to Stevens' <span class="title">Unix Network 
+Programming, Volume 2</span>. His advice is to check the value of <tt>sem_otime</tt>
+(an element in the <tt>semid_ds</tt> struct that's populated on call to 
+<tt>semctl(IPC_STAT)</tt>) which
+is initialized to zero when the semaphore is created and otherwise holds the time of the last 
+call to <tt>semop()</tt>. I haven't read Stevens' book so I don't know exactly what he 
+recommends one do with this value. But I suspect his advice is that one process 
+create and initialize the semaphore while others wait for <tt>sem_otime</tt> to 
+become non-zero before using the semaphore.</p>
+
+
+<p>This still requires that you either nominate one process to do the initialization
+or use the alternative described below. With a nominated creator process, there's
+no advantage to using <tt>semget(IPC_CREAT)</tt>, but there is a disadvantage 
+which is that you might be opening a semaphore created by an entirely
+unrelated application. Therefore, you should still use <tt>semget(IPC_CREAT | IPC_EXCL)</tt>.
+</p>
+
+<p>An alternative to nominating a creator process is to impose no order and
+allow each process to
+attempt to create the semaphore via
+<tt>semget(IPC_CREAT | IPC_EXCL)</tt>. In this case, failure means that
+one of the peer processes created the semaphore first so the failing process should
+loop until <tt>sem_otime</tt> becomes non-zero at which point it can use the semaphore.
+</p>
+
+<p>No matter which method you use, I see only trouble when using 
+<tt>IPC_CREAT</tt> without <tt>IPC_EXCL</tt>.
+</p>
+
+<p>Note that <tt>sem_otime</tt> is available on Python SysVSemaphore objects as
+the attribute <tt>o_time</tt>.
+</p>
+
+<h4>Shared Memory Initialization</h4>
+
+<p>As with semaphores, a caller passing only the <tt>IPC_CREAT</tt> flag 
+to <tt>shmget()</tt> can't tell whether
+he's created a new shared memory segment or gotten a handle to an existing one. 
+That's not a big deal with shared memory, because presumably you'll use something
+(like a semaphore!) to synchronize access to the shared memory anyway.
+</p>
+
+
+<h4>Nobody Likes a Mr. Messy</h4>
+
+<p>Semaphores and especially shared memory are a little different from most Python objects 
+and therefore require a little more care on the part of the programmer. When a 
+program creates a semaphore or shared memory object, it creates something that 
+resides <em>outside of its own process</em>, just like a file on a hard drive. It 
+won't go away when your process ends unless you explicitly remove it.
+</p>
+
+<p>In short, remember to clean up after yourself.</p>
+
+<h4>Consult Your Local <tt>man</tt> Pages</h4>
+
+<p>The sysv_ipc module is just a wrapper around your system's API. If your 
+system's implementation has quirks, the <tt>man</tt> pages for <tt>semget, semctl, semop
+shmget, shmat, shmdt</tt> and <tt>shmctl</tt> will probably cover them.
+</p>
+
+<h4>Interesting Tools</h4>
+
+<p>Many systems (although not some older versions of OS X) come 
+with <tt>ipcs</tt> and <tt>ipcrm</tt>.
+The former shows existing shared memory, semaphores and message queues on your system and
+the latter allows you to remove them.
+</p>
+
+
+<h4>Last But Not Least</h4>
+
+<p>For Pythonistas &ndash;</p>
+<ul>
+    <li><a href="http://www.youtube.com/watch?v=HSQeMBzHR0o">A meditation on the inaccuracy 
+        of shared memories</a>
+    </li>
+    <li><a href="http://www.youtube.com/watch?v=q9v3C08oLqA">Proper use of semaphores</a></li>
+</ul>
+
+<h3 id="bugs">Known Bugs</h3>
+
+<p>Bugs? My code never has bugs! There are, however, some suboptimal anomalies...</p>
+
+<ul>
+    <li>Compilation produces 3 warnings from <tt>pyport.h</tt>. They're caused by
+        the <tt>#define _XOPEN_SOURCE 600</tt> line at the top of the .c module.
+    </li>        
+    <li>When setting the <span class="attribute">value</span> attribute directly,
+        one can set it to a negative number which wraps around to become 0xffff-ish.
+        Also, large values (e.g. 999999999) which overflow the maximum semaphore value 
+        are accepted with predictably odd results.
+    </li>
+    <li>This code hasn't been vetted for memory leaks. I'm sure there are some.</li>
+
+</ul>
+
+<h3>Version History</h3>
+
+<p>This module is a ground-up rewrite 
+of <a href="http://nikitathespider.com/python/shm/">the shm 
+module</a> which I adopted in February 2007. The shm module was originally written by 
+Vladimir Marangozov.
+</p>
+
+
+<ul id="history">
+    <li><strong>Current &ndash; 0.1 (4 Dec 2008) &ndash;</strong> Original (alpha) version.</li>
+</ul>
+
+
+<h3>Future Features/Changes</h3>
+
+<p>These are features that may or may not be added depending on technical 
+difficulty, user interest and so forth.
+</p>
+
+<ul>
+    <li>Support for Python versions other than 2.5 and more operating systems.</li>
+    
+    <li>Fix compiler warnings.</li>
+
+    <li>Support for message queues.</li>
+
+    <li>Expose Linux-specific flags SHM_DEST and SHM_LOCKED.</li>
+    
+    <li>Add __str__ and __repr__ support.</li>
+
+    <li>Update this documentation with a list of platforms that support semtimedop().</li>
+    
+    <li>Add a way for callers to indicate "please generate a key for me" in
+        the objec constructors.
+    </li>
+    
+    <li>Find a way to make <tt>MAX_SEMAPHORE_VALUE</tt> available on system where SEMVMX
+        is a tunable parameter.
+    </li>
+    
+    <li>Raise a ValueError if a key parameter exceeds KEY_MAX.</li>
+    
+    <li>Move the call to PyInt_GetMax() into setup.py and pass it to the .c 
+        code as a #define since it is a compile-time constant.
+    </li>
+    
+    
+</ul>
+
+<p>I don't plan on adding support for semaphore sets.</p>
+
+
+</body>
+</html>

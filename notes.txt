@@ -1,0 +1,50 @@
+compile on linux
+
+PayPal donation button!
+
+
+
+Make sure prober gets the same compile options as the module (e.g. -D_POSIX_C_SOURCE)
+
+review all instances of "goto error_return"
+
+
+prober.py is messy  & inelegant
+
+
+
+
+
+Things to deal with in upcoming versions:
+
+Might use Mach semaphores under OS X to provide semtimedop().
+    
+
+sem.value -- if I set it to a negative number, the value wraps around to become 0xffff-ish. This should probably not be permitted. This is also should raise an error (but it does not):
+sem.value=999999999
+
+FInd a way to get max semaphore value on *all* platforms. Note that a semaphore's value is set via the semun union which is either defined in my code as an int or in a header file. You could set MAX_SEM_VALUE to the max value expressible in that union element.
+
+
+Ctors should raise a ValueError for keys that are > MAX_KEY
+
+
+Code is OK at returning uid_t, gid_t, time_t thanks to py_int_or_long_from_long(). However, when setting uid or gid, the value accepted -- even if verified to be a Python int -- could overflow uid_t or gid_t. 
+
+check size of shm segment -- it is a size_t. Is it cast correctly in all cases? 
+
+
+Check against posix_ipc call signatures. Are they similar? Almost -- posix.try_acquire() needs to be replaced with a block flag, and the default timeout is None as opposed to 0.0. Why the difference?
+
+
+
+http://linux.die.net/man/2/shmat says that "The segment will automatically be detached at process exit." Does that imply that n_attach will go to zero? OS X and FreeBSD make no such promise, but they don't explicitly deny it either.
+
+Auto-generate an unused key if the caller passes None for the key.
+
+Need to expose SHM_DEST as an attribute (see http://linux.die.net/man/2/shmctl)
+
+There's SOMETIMES a semtimedop() function; could be made available for P/V/Z? "semtimedop() first appeared in Linux 2.5.52, and was subsequently backported into kernel 2.4.22."
+
+
+Seems like Sun supports semtimedop
