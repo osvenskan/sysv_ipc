@@ -792,7 +792,7 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
 
     PyModule_AddStringConstant(module, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddStringConstant(module, "__version__", SYSV_IPC_VERSION);
-    PyModule_AddStringConstant(module, "__copyright__", "Copyright 20016 Philip Semanchuk");
+    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2016 Philip Semanchuk");
     PyModule_AddStringConstant(module, "__author__", "Philip Semanchuk");
     PyModule_AddStringConstant(module, "__license__", "BSD");
 
@@ -837,7 +837,7 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
     else
         PyDict_SetItemString(module_dict, "Error", pBaseException);
 
-    if (!(pInternalException = PyErr_NewException("sysv_ipc.InternalError", NULL, NULL)))
+    if (!(pInternalException = PyErr_NewException("sysv_ipc.InternalError", pBaseException, NULL)))
         goto error_return;
     else
         PyDict_SetItemString(module_dict, "InternalError", pInternalException);
