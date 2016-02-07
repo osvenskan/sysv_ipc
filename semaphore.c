@@ -54,10 +54,12 @@ convert_timeout(PyObject *py_timeout, void *converted_timeout) {
         rc = 1;
         simple_timeout = PyFloat_AsDouble(py_timeout);
     }
+#if PY_MAJOR_VERSION < 3
     else if (PyInt_Check(py_timeout)) {
         rc = 1;
         simple_timeout = (double)PyInt_AsLong(py_timeout);
     }
+#endif
     else if (PyLong_Check(py_timeout)) {
         rc = 1;
         simple_timeout = (double)PyLong_AsLong(py_timeout);
@@ -92,13 +94,21 @@ convert_timeout(PyObject *py_timeout, void *converted_timeout) {
 
 PyObject *
 sem_str(Semaphore *self) {
+#if PY_MAJOR_VERSION > 2
+    return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+#else
     return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+#endif
 }
 
 
 PyObject *
 sem_repr(Semaphore *self) {
+#if PY_MAJOR_VERSION > 2
+    return PyUnicode_FromFormat("sysv_ipc.Semaphore(%ld)", (long)self->key);
+#else
     return PyString_FromFormat("sysv_ipc.Semaphore(%ld)", (long)self->key);
+#endif
 }
 
 
@@ -108,12 +118,12 @@ sem_set_error(void) {
         case ENOENT:
         case EINVAL:
             PyErr_SetString(pExistentialException, 
-                "No semaphore exists with the specified key");
+                                "No semaphore exists with the specified key");
         break;
 
         case EEXIST:
             PyErr_SetString(pExistentialException, 
-                "A semaphore with the specified key already exists");
+                        "A semaphore with the specified key already exists");
         break;
 
         case EACCES:
@@ -277,7 +287,11 @@ sem_get_semctl_value(int semaphore_id, int cmd) {
         goto error_return;
     }
 
+#if PY_MAJOR_VERSION > 2
+    return PyLong_FromLong(rc);
+#else
     return PyInt_FromLong(rc);
+#endif
 
     error_return:
     return NULL;    
@@ -299,28 +313,28 @@ sem_get_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field) {
     }
     
     switch (field) {
-        case IPC_PERM_UID:
+        case SVIFP_IPC_PERM_UID:
             py_value = UID_T_TO_PY(sem_info.sem_perm.uid);
         break;
 
-        case IPC_PERM_GID:
+        case SVIFP_IPC_PERM_GID:
             py_value = GID_T_TO_PY(sem_info.sem_perm.gid);
         break;
         
-        case IPC_PERM_CUID:
+        case SVIFP_IPC_PERM_CUID:
             py_value = UID_T_TO_PY(sem_info.sem_perm.cuid);
         break;
         
-        case IPC_PERM_CGID:
+        case SVIFP_IPC_PERM_CGID:
             py_value = GID_T_TO_PY(sem_info.sem_perm.cgid);
         break;
         
-        case IPC_PERM_MODE:
+        case SVIFP_IPC_PERM_MODE:
             py_value = MODE_T_TO_PY(sem_info.sem_perm.mode);
         break;
         
         // This isn't an ipc_perm value but it fits here anyway.
-        case SEM_OTIME:
+        case SVIFP_SEM_OTIME:
             py_value = TIME_T_TO_PY(sem_info.sem_otime);
         break;
         
@@ -345,7 +359,12 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_valu
     
     arg.buf = &sem_info;
 
-    if (!PyInt_Check(py_value)) {
+#if PY_MAJOR_VERSION > 2
+    if (!PyLong_Check(py_value)) 
+#else
+    if (!PyInt_Check(py_value))
+#endif
+    {
         PyErr_Format(PyExc_TypeError, "The attribute must be an integer");
         goto error_return;
     }
@@ -367,16 +386,28 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_valu
     // uid_t, gid_t or mode_t. A long might not fit, hence the explicit
     // cast. If the user passes a value that's too big, tough cookies.
     switch (field) {
-        case IPC_PERM_UID:
+        case SVIFP_IPC_PERM_UID:
+#if PY_MAJOR_VERSION > 2
+            sem_info.sem_perm.uid = (uid_t)PyLong_AsLong(py_value);
+#else
             sem_info.sem_perm.uid = (uid_t)PyInt_AsLong(py_value);
+#endif
         break;
         
-        case IPC_PERM_GID:
+        case SVIFP_IPC_PERM_GID:
+#if PY_MAJOR_VERSION > 2
+            sem_info.sem_perm.gid = (gid_t)PyLong_AsLong(py_value);
+#else
             sem_info.sem_perm.gid = (gid_t)PyInt_AsLong(py_value);
+#endif
         break;
         
-        case IPC_PERM_MODE:
+        case SVIFP_IPC_PERM_MODE:
+#if PY_MAJOR_VERSION > 2
+            sem_info.sem_perm.mode = (mode_t)PyLong_AsLong(py_value);
+#else
             sem_info.sem_perm.mode = (mode_t)PyInt_AsLong(py_value);
+#endif
         break;
 
         default:
@@ -409,7 +440,7 @@ sem_remove(int id) {
 
 void 
 Semaphore_dealloc(Semaphore *self) {
-    self->ob_type->tp_free((PyObject*)self); 
+    Py_TYPE(self)->tp_free((PyObject*)self); 
 }
 
 PyObject *
@@ -561,12 +592,21 @@ sem_set_value(Semaphore *self, PyObject *py_value)
     union semun arg;
     long value;
 
-    if (!PyInt_Check(py_value)) {
+#if PY_MAJOR_VERSION > 2
+    if (!PyLong_Check(py_value))
+#else
+    if (!PyInt_Check(py_value))
+#endif
+    {
 		PyErr_Format(PyExc_TypeError, "Attribute 'value' must be an integer");
         goto error_return;
     }
     
+#if PY_MAJOR_VERSION > 2
+    value = PyLong_AsLong(py_value);
+#else
     value = PyInt_AsLong(py_value);
+#endif
     
     DPRINTF("C value is %ld\n", value);
     
@@ -621,13 +661,13 @@ sem_set_block(Semaphore *self, PyObject *py_value)
 
 PyObject *
 sem_get_mode(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_MODE);
+    return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_MODE);
 }
 
 
 int
 sem_set_mode(Semaphore *self, PyObject *py_value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_MODE, py_value);
+    return sem_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_MODE, py_value);
 }
 
 
@@ -655,35 +695,35 @@ sem_set_undo(Semaphore *self, PyObject *py_value)
 
 PyObject *
 sem_get_uid(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_UID);
+    return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_UID);
 }
 
 
 int
 sem_set_uid(Semaphore *self, PyObject *py_value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_UID, py_value);
+    return sem_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_UID, py_value);
 }
 
 
 PyObject *
 sem_get_gid(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_GID);
+    return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_GID);
 }
 
 
 int
 sem_set_gid(Semaphore *self, PyObject *py_value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_GID, py_value);
+    return sem_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_GID, py_value);
 }
 
 PyObject *
 sem_get_c_uid(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_CUID);
+    return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_CUID);
 }
 
 PyObject *
 sem_get_c_gid(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_CGID);
+    return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_CGID);
 }
 
 PyObject *
@@ -703,6 +743,6 @@ sem_get_waiting_for_zero(Semaphore *self) {
 
 PyObject *
 sem_get_o_time(Semaphore *self) {
-    return sem_get_ipc_perm_value(self->id, SEM_OTIME);
+    return sem_get_ipc_perm_value(self->id, SVIFP_SEM_OTIME);
 }
 

@@ -33,6 +33,7 @@ get_random_key(void) {
     return (key_t)key;
 }
 
+#if PY_MAJOR_VERSION < 3 
 PyObject *
 py_int_or_long_from_ulong(unsigned long value) {
     // Python ints are guaranteed to accept up to LONG_MAX. Anything 
@@ -42,6 +43,7 @@ py_int_or_long_from_ulong(unsigned long value) {
     else
         return PyInt_FromLong(value);
 }
+#endif
 
 
 int
@@ -59,10 +61,12 @@ convert_key_param(PyObject *py_key, void *converted_key) {
         rc = 1;
         ((NoneableKey *)converted_key)->is_none = 1;
     }
+#if PY_MAJOR_VERSION < 3     
     else if (PyInt_Check(py_key)) {
         rc = 1;
         key = PyInt_AsLong(py_key);
     }
+#endif
     else if (PyLong_Check(py_key)) {
         rc = 1;
         key = PyLong_AsLong(py_key);

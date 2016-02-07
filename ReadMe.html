@@ -55,23 +55,22 @@
 
 <p>This describes the <tt>sysv_ipc</tt> module which gives Python access
 to System V inter-process semaphores, shared memory and message queues 
-on systems that support them. That includes most (all?) *nix flavors
-including OS X. 
-The module might work under Windows with a library like 
+on most (all?) *nix flavors. Examples include OS X 10.5 &amp; 10.6, 
+Ubuntu 8 &amp; 9, OpenSolaris 2008.11, FreeBSD 6, 7 and 8,
+and <a href="http://f-utility.tumblr.com/post/525726296/compiling-sysv-ipc-python-module-with-gcc-on-aix-5-2">AIX 5.2</a>.
+It might also work under Windows with a library like 
 <a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
-<p>You might be interested in the very similar module 
-<a href="/philip/posix_ipc/"><tt>posix_ipc</tt></a>
-which provides Python access to POSIX IPC primitives. POSIX IPC is a little
-easier to use than SysV IPC, but not all operating systems support it 
-completely.
+<p>It works with Python 2.4 &ndash; 3.1 (but <em>not</em> 3.0). 
+It's released 
+under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.5.2.tar.gz">sysv_ipc version 0.5.2</a>
+<a href="sysv_ipc-0.6.tar.gz">sysv_ipc version 0.6</a>
 </strong>
-<a href="sysv_ipc-0.5.2.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.6.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -81,11 +80,21 @@ which contains the source code, setup.py, installation instructions and
 <p>
 You might also want to read
 about some <a href="#bugs">known bugs</a>. 
-I've tested <tt>sysv_ipc</tt> on 
-OS X 10.5, Ubuntu 8 &amp; 9, OpenSolaris 2008.11 and FreeBSD 6 and 7.
+</p>
+
+<p>You might be interested in the very similar module 
+<a href="/philip/posix_ipc/"><tt>posix_ipc</tt></a>
+which provides Python access to POSIX IPC primitives. POSIX IPC is a little
+easier to use than SysV IPC, but not all operating systems support it 
+completely.
 </p>
 
 <h2>Module <tt>sysv_ipc</tt></h2>
+
+<p>Jump to <a href="#semaphore">semaphores</a>, 
+<a href="#shared_memory">shared memory</a>, or 
+<a href="#message_queue">message queues</a>.</p>
+
 
 <h3>Module Functions</h3>
 
@@ -202,7 +211,7 @@ situations specific to IPC.
 </dl>
 
 
-<h3>The Semaphore Class</h3>
+<h3 id="semaphore">The Semaphore Class</h3>
 
 <p>This is a handle to a semaphore.</p>
 
@@ -252,8 +261,8 @@ situations specific to IPC.
     </dd>
     
     <dt>acquire([timeout = None, [delta = 1]])</dt>
-    <dd>Waits (conditionally) until the semaphore's value is &gt; 0 and then returns, 
-        decrementing the semaphore. 
+    <dd>Waits (conditionally) until the semaphore's value is &gt; 0 and then 
+        returns, decrementing the semaphore. 
         
         <p>The <span class="param">timeout</span> (which can be a float) specifies how
             many seconds this call should wait, if at all.
@@ -282,18 +291,21 @@ situations specific to IPC.
             </li>        
         </ul>
         
-        <p>On platforms that don't support the <tt>semtimedop()</tt> API
-            (OS X doesn't support it), the <span class="param">timeout</span>
-            is ignored (treated as <tt>None</tt>).
-        </p>
-
-        <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
-            is True on platforms that support <tt>semtimedop()</tt>.
-        </p>
-
-        <p>When the call returns, the semaphore's value decreases by <span class="param">delta</span> 
-            (or more precisely,  <tt>abs(<span class="param">delta</span>)</tt>)
+        <p>When the call returns, the semaphore's value decreases by 
+            <span class="param">delta</span> 
+            (or more precisely, <tt>abs(<span class="param">delta</span>)</tt>)
             which defaults to 1.
+        </p>
+
+        <p>On platforms that don't support the <tt>semtimedop()</tt> API call,
+            all timeouts (including zero) are treated as infinite. The call 
+            will not return until its wait condition is satisfied.
+        </p>
+
+        <p>Most platforms provide <tt>semtimedop()</tt>. OS X is a 
+            notable exception. The module's Boolean constant 
+            <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
+            is True on platforms that support <tt>semtimedop()</tt>.
         </p>
     </dd>
     
@@ -425,7 +437,7 @@ situations specific to IPC.
     </dd>
 </dl>
 
-<h3>The SharedMemory Class</h3>
+<h3 id="shared_memory">The SharedMemory Class</h3>
 
 <p>This is a handle to a shared memory segment. 
 </p>
@@ -537,10 +549,11 @@ situations specific to IPC.
     <dt>read([byte_count = 0, [offset = 0]])</dt>
     <dd>Reads up to <span class="param">byte_count</span> bytes from the 
         shared memory segment starting at <span class="param">offset</span>
-        and returns them as a Python string. 
+        and returns them as a string under Python 2 or as a bytes object
+        under Python 3.
         
-        <p>If <span class="param">byte_count</span> is zero (the default) the entire 
-            buffer is returned.
+        <p>If <span class="param">byte_count</span> is zero (the default) the 
+            entire buffer is returned.
         </p>
         
         <p>This method will never attempt to read past the end of the shared 
@@ -628,10 +641,9 @@ situations specific to IPC.
 </dl>
 
 
-<h3>The MessageQueue Class</h3>
+<h3 id="message_queue">The MessageQueue Class</h3>
 
 <p>This is a handle to a message queue.</p>
-
 
 <h4>Methods</h4>
 
@@ -702,7 +714,8 @@ situations specific to IPC.
     <dt>receive([block = True, [type = 0]])</dt>
     <dd>
         Receives a message from the queue, returning a tuple of 
-        <tt>(message, type)</tt>. 
+        <tt>(message, type)</tt>. Under Python 3, the message is a 
+        bytes object.
 
         <p>The <span class="param">block</span> flag specifies whether or
             not the call should wait if there's no messages of the 
@@ -724,8 +737,8 @@ situations specific to IPC.
                 returns the first message of that type.
             </li>
             <li>When <span class="param">type</span> <tt>&lt; 0</tt>, the call
-                returns the first message of the lowest type that is 
-                ≤ to the absolute value of <span class="param">type</span>.
+                returns the first message of the lowest type that is ≤ the
+                absolute value of <span class="param">type</span>.
             </li>
         </ul>
     </dd>
@@ -805,7 +818,9 @@ and exposure of <tt>sem_otime</tt>.
 <p>Differences that might trip you up are listed below.</p>
 
 <ul>
-    <li><tt>Shm</tt> compiles on more platforms and under more versions of Python.</li>
+    <li><tt>Shm</tt> compiles under Python 2.3 and older; this module has
+        not been tested with Python older than 2.4
+    </li>
     <li>Attribute names and method signatures are different.</li>
     <li>This module offers neither the functions <tt>semaphore_haskey()</tt>
         nor <tt>memory_haskey()</tt>.
@@ -989,7 +1004,7 @@ to 2048 bytes and OS X silently ignores attempts to increase this (just like
 FreeBSD). To add insult to injury, there appears to be no way to increase
 this limit short of recompiling the kernel.
 I'm guessing at this based on the 
-<a href="http://www.opensource.apple.com/darwinsource/projects/other/xnu-1228.3.13/bsd/sys/msg.h">Darwin
+<a href="http://www.google.com/search?q=site%3Aopensource.apple.com+%22msg.h%22">Darwin
 message queue limits</a>.
 </p>
 
@@ -1059,7 +1074,17 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_5_2"><strong><span id="current">Current</span> &ndash; 0.5.2 (17 Jan 2010) &ndash;</strong>
+    <li id="v0_6_0"><strong><span id="current">Current</span> &ndash; 0.6.0 (20 May 2010) &ndash;</strong>
+        <ul>
+            <li>Added Python 3 support.</li>
+            <li>Renamed a constant that caused a problem under AIX.
+                Thanks to Loic Nageleisen for the bug report.
+            </li>
+            <li>Updated this documentation a little.</li>
+        </ul>
+    </li>
+
+    <li id="v0_5_2">0.5.2 (17 Jan 2010)</strong>
         <ul>
             <li>Fixed a bug that insisted on keys &gt; 0. Thanks to 原志 
                 (Daniel) for the bug report and patch.

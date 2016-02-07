@@ -7,13 +7,21 @@
 
 PyObject *
 mq_str(MessageQueue *self) {
+#if PY_MAJOR_VERSION > 2 
+    return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+#else
     return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+#endif
 }
 
 
 PyObject *
 mq_repr(MessageQueue *self) {
+#if PY_MAJOR_VERSION > 2 
+    return PyUnicode_FromFormat("sysv_ipc.MessageQueue(%ld)", (long)self->key);
+#else
     return PyString_FromFormat("sysv_ipc.MessageQueue(%ld)", (long)self->key);
+#endif
 }
 
 
@@ -28,7 +36,7 @@ get_a_value(int queue_id, enum GET_SET_IDENTIFIERS field) {
             case EIDRM:
             case EINVAL:
                 PyErr_Format(pExistentialException, 
-                    "The queue no longer exists");
+                                                "The queue no longer exists");
             break;
         
             case EACCES:
@@ -44,51 +52,51 @@ get_a_value(int queue_id, enum GET_SET_IDENTIFIERS field) {
     }
 
     switch (field) {
-        case MQ_LAST_SEND_TIME:
+        case SVIFP_MQ_LAST_SEND_TIME:
             py_value = TIME_T_TO_PY(q_info.msg_stime);
         break;
 
-        case MQ_LAST_RECEIVE_TIME:
+        case SVIFP_MQ_LAST_RECEIVE_TIME:
             py_value = TIME_T_TO_PY(q_info.msg_rtime);
         break;
 
-        case MQ_LAST_CHANGE_TIME:
+        case SVIFP_MQ_LAST_CHANGE_TIME:
             py_value = TIME_T_TO_PY(q_info.msg_ctime);
         break;
 
-        case MQ_CURRENT_MESSAGES:
+        case SVIFP_MQ_CURRENT_MESSAGES:
             py_value = MSGQNUM_T_TO_PY(q_info.msg_qnum);
         break;
 
-        case MQ_QUEUE_BYTES_MAX:
+        case SVIFP_MQ_QUEUE_BYTES_MAX:
             py_value = MSGLEN_T_TO_PY(q_info.msg_qbytes);
         break;
 
-        case MQ_LAST_SEND_PID:
+        case SVIFP_MQ_LAST_SEND_PID:
             py_value = PID_T_TO_PY(q_info.msg_lspid);
         break;
 
-        case MQ_LAST_RECEIVE_PID:
+        case SVIFP_MQ_LAST_RECEIVE_PID:
             py_value = PID_T_TO_PY(q_info.msg_lrpid);
         break;
 
-        case IPC_PERM_UID:            
+        case SVIFP_IPC_PERM_UID:            
             py_value = UID_T_TO_PY(q_info.msg_perm.uid);
         break;
 
-        case IPC_PERM_GID:
+        case SVIFP_IPC_PERM_GID:
             py_value = GID_T_TO_PY(q_info.msg_perm.gid);
         break;
 
-        case IPC_PERM_CUID:
+        case SVIFP_IPC_PERM_CUID:
             py_value = UID_T_TO_PY(q_info.msg_perm.cuid);
         break;
 
-        case IPC_PERM_CGID:
+        case SVIFP_IPC_PERM_CGID:
             py_value = GID_T_TO_PY(q_info.msg_perm.cgid);
         break;
 
-        case IPC_PERM_MODE:
+        case SVIFP_IPC_PERM_MODE:
             py_value = MODE_T_TO_PY(q_info.msg_perm.mode);
         break;
 
@@ -110,7 +118,12 @@ int
 set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
     struct msqid_ds mq_info;
     
-    if (!PyInt_Check(py_value)) {
+#if PY_MAJOR_VERSION > 2 
+    if (!PyLong_Check(py_value)) 
+#else
+    if (!PyInt_Check(py_value)) 
+#endif
+    {
         PyErr_Format(PyExc_TypeError, "The attribute must be an integer");
         goto error_return;
     }
@@ -130,7 +143,7 @@ set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
             
             case EINVAL:
                 PyErr_SetString(pExistentialException, 
-                    "The queue no longer exists");
+                                                "The queue no longer exists");
             break;
             
             default:
@@ -141,28 +154,43 @@ set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
     }
     
     switch (field) {
-        case IPC_PERM_UID:
+        case SVIFP_IPC_PERM_UID:
+#if PY_MAJOR_VERSION > 2 
+            mq_info.msg_perm.uid = PyLong_AsLong(py_value);
+#else
             mq_info.msg_perm.uid = PyInt_AsLong(py_value);
+#endif
         break;
         
-        case IPC_PERM_GID:
+        case SVIFP_IPC_PERM_GID:
+#if PY_MAJOR_VERSION > 2 
+            mq_info.msg_perm.gid = PyLong_AsLong(py_value);
+#else
             mq_info.msg_perm.gid = PyInt_AsLong(py_value);
+#endif
         break;
         
-        case IPC_PERM_MODE:
+        case SVIFP_IPC_PERM_MODE:
+#if PY_MAJOR_VERSION > 2 
+            mq_info.msg_perm.mode = PyLong_AsLong(py_value);
+#else
             mq_info.msg_perm.mode = PyInt_AsLong(py_value);
+#endif
         break;
 
-        case MQ_QUEUE_BYTES_MAX:
+        case SVIFP_MQ_QUEUE_BYTES_MAX:
             // A msglen_t is unsigned.
             // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/msg.h.html
+#if PY_MAJOR_VERSION > 2 
+            mq_info.msg_qbytes = PyLong_AsUnsignedLongMask(py_value);
+#else
             mq_info.msg_qbytes = PyInt_AsUnsignedLongMask(py_value);
+#endif
         break;
 
         default:
             PyErr_Format(pInternalException, 
-                         "Bad field %d passed to set_a_value", 
-                         field);
+                         "Bad field %d passed to set_a_value", field);
             goto error_return;
         break;
     }
@@ -176,7 +204,7 @@ set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
             
             case EINVAL:
                 PyErr_SetString(pExistentialException, 
-                    "The queue no longer exists");
+                                                "The queue no longer exists");
             break;
             
             default:
@@ -200,82 +228,82 @@ mq_get_key(MessageQueue *self) {
 
 PyObject *
 mq_get_last_send_time(MessageQueue *self) {
-    return get_a_value(self->id, MQ_LAST_SEND_TIME);
+    return get_a_value(self->id, SVIFP_MQ_LAST_SEND_TIME);
 }
 
 PyObject *
 mq_get_last_receive_time(MessageQueue *self) {
-    return get_a_value(self->id, MQ_LAST_RECEIVE_TIME);
+    return get_a_value(self->id, SVIFP_MQ_LAST_RECEIVE_TIME);
 }
 
 PyObject *
 mq_get_last_change_time(MessageQueue *self) {
-    return get_a_value(self->id, MQ_LAST_CHANGE_TIME);
+    return get_a_value(self->id, SVIFP_MQ_LAST_CHANGE_TIME);
 }
 
 PyObject *
 mq_get_last_send_pid(MessageQueue *self) {
-    return get_a_value(self->id, MQ_LAST_SEND_PID);
+    return get_a_value(self->id, SVIFP_MQ_LAST_SEND_PID);
 }
 
 PyObject *
 mq_get_last_receive_pid(MessageQueue *self) {
-    return get_a_value(self->id, MQ_LAST_RECEIVE_PID);
+    return get_a_value(self->id, SVIFP_MQ_LAST_RECEIVE_PID);
 }
 
 PyObject *
 mq_get_current_messages(MessageQueue *self) {
-    return get_a_value(self->id, MQ_CURRENT_MESSAGES);
+    return get_a_value(self->id, SVIFP_MQ_CURRENT_MESSAGES);
 }
 
 PyObject *
 mq_get_max_size(MessageQueue *self) {
-    return get_a_value(self->id, MQ_QUEUE_BYTES_MAX);
+    return get_a_value(self->id, SVIFP_MQ_QUEUE_BYTES_MAX);
 }
 
 int
 mq_set_max_size(MessageQueue *self, PyObject *py_value) {
-    return set_a_value(self->id, MQ_QUEUE_BYTES_MAX, py_value);
+    return set_a_value(self->id, SVIFP_MQ_QUEUE_BYTES_MAX, py_value);
 }
 
 PyObject *
 mq_get_mode(MessageQueue *self) {
-    return get_a_value(self->id, IPC_PERM_MODE);
+    return get_a_value(self->id, SVIFP_IPC_PERM_MODE);
 }
 
 int
 mq_set_mode(MessageQueue *self, PyObject *py_value) {
-    return set_a_value(self->id, IPC_PERM_MODE, py_value);
+    return set_a_value(self->id, SVIFP_IPC_PERM_MODE, py_value);
 }
 
 PyObject *
 mq_get_uid(MessageQueue *self) {
-    return get_a_value(self->id, IPC_PERM_UID);
+    return get_a_value(self->id, SVIFP_IPC_PERM_UID);
 }
 
 int
 mq_set_uid(MessageQueue *self, PyObject *py_value) {
-    return set_a_value(self->id, IPC_PERM_UID, py_value);
+    return set_a_value(self->id, SVIFP_IPC_PERM_UID, py_value);
 }
 
 PyObject *
 mq_get_gid(MessageQueue *self) {
-    return get_a_value(self->id, IPC_PERM_GID);
+    return get_a_value(self->id, SVIFP_IPC_PERM_GID);
 }
 
 int
 mq_set_gid(MessageQueue *self, PyObject *py_value) {
-    return set_a_value(self->id, IPC_PERM_GID, py_value);
+    return set_a_value(self->id, SVIFP_IPC_PERM_GID, py_value);
 }
 
 PyObject *
 mq_get_c_uid(MessageQueue *self) {
-    return get_a_value(self->id, IPC_PERM_CUID);
+    return get_a_value(self->id, SVIFP_IPC_PERM_CUID);
 }
 
 PyObject *
 mq_get_c_gid(MessageQueue *self) {
-    return get_a_value(self->id, IPC_PERM_CGID);
+    return get_a_value(self->id, SVIFP_IPC_PERM_CGID);
 }
 
 
@@ -313,7 +341,7 @@ mq_remove(int queue_id) {
 
 void 
 MessageQueue_dealloc(MessageQueue *self) {
-    self->ob_type->tp_free((PyObject*)self); 
+    Py_TYPE(self)->tp_free((PyObject*)self); 
 }
 
 PyObject *
@@ -349,13 +377,13 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
 
     if ( !(flags & IPC_CREAT) && (flags & IPC_EXCL) ) {
 		PyErr_SetString(PyExc_ValueError, 
-                "IPC_EXCL must be combined with IPC_CREAT");
+                                "IPC_EXCL must be combined with IPC_CREAT");
         goto error_return;
     }
 
     if (key.is_none && ((flags & IPC_EXCL) != IPC_EXCL)) {
 		PyErr_SetString(PyExc_ValueError, 
-                "Key can only be None if IPC_EXCL is set");
+                                "Key can only be None if IPC_EXCL is set");
         goto error_return;
     }
     
@@ -374,7 +402,7 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
             self->key = get_random_key();
 
             DPRINTF("Calling msgget, key=%ld, flags=0x%x\n", 
-                        (long)self->key, flags);
+                                                    (long)self->key, flags);
             self->id = msgget(self->key, mode | flags);
         } while ( (-1 == self->id) && (EEXIST == errno) );
     }
@@ -391,18 +419,17 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
     if (self->id == -1) {
         switch (errno) {
             case EACCES:
-                PyErr_SetString(pPermissionsException, 
-                    "Permission denied");
+                PyErr_SetString(pPermissionsException, "Permission denied");
             break;
         
             case EEXIST:
                 PyErr_SetString(pExistentialException, 
-                    "A queue with the specified key already exists");
+                            "A queue with the specified key already exists");
             break;
 
             case ENOENT:
                 PyErr_SetString(pExistentialException, 
-                    "No queue exists with the specified key");
+                                    "No queue exists with the specified key");
             break;
 
             case ENOMEM:
@@ -437,8 +464,18 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
        py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
        Python doesn't write to is zeroed out.
    */
-    unsigned long message_length = 0;
-    char *p_message = NULL;
+#if PY_MAJOR_VERSION > 2
+    static char args_format[] = "s*|O&i";
+    Py_buffer user_msg;
+#else
+    static char args_format[] = "s#|O&i";
+    typedef struct {
+        char *buf;
+        long len;
+    } MyBuffer;    
+    MyBuffer user_msg;
+    user_msg.len = 0;
+#endif
     PyObject *py_block = NULL;
     int flags = 0;
     int type = 1;
@@ -447,8 +484,12 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
     char *keyword_list[ ] = {"message", "block", "type", NULL};
     
     // send(message, [block = True, [type = 1]])    
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "s#|Oi", keyword_list, 
-                                     &p_message, &message_length, 
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, args_format, keyword_list,
+#if PY_MAJOR_VERSION > 2
+                                     &user_msg, 
+#else
+                                     &(user_msg.buf), &(user_msg.len), 
+#endif
                                      &py_block, &type))
         goto error_return;
         
@@ -457,7 +498,7 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
 
-    if (message_length > self->max_message_size) {
+    if (user_msg.len > self->max_message_size) {
         PyErr_Format(PyExc_ValueError, 
             "The message length exceeds queue's max_message_size (%lu)",
             self->max_message_size);
@@ -467,7 +508,7 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
     if (py_block && PyObject_Not(py_block))
         flags |= IPC_NOWAIT;
     
-    p_msg = (struct queue_message *)malloc(offsetof(struct queue_message, message) + message_length);
+    p_msg = (struct queue_message *)malloc(offsetof(struct queue_message, message) + user_msg.len);
     
     DPRINTF("p_msg is %p\n", p_msg);
 
@@ -476,13 +517,13 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
     
-    memcpy(p_msg->message, p_message, message_length);
+    memcpy(p_msg->message, user_msg.buf, user_msg.len);
     p_msg->type = type;
 
     Py_BEGIN_ALLOW_THREADS
     DPRINTF("Calling msgsnd(), id=%ld, p_msg=%p, length=%lu, flags=0x%x\n", 
-            (long)self->id, p_msg, message_length, flags);
-    rc = msgsnd(self->id, p_msg, (size_t)message_length, flags);
+            (long)self->id, p_msg, user_msg.len, flags);
+    rc = msgsnd(self->id, p_msg, (size_t)user_msg.len, flags);
     Py_END_ALLOW_THREADS
 
     if (-1 == rc) {
@@ -493,12 +534,12 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
             
             case EAGAIN:
                 PyErr_SetString(pBusyException, 
-                    "The queue is full, or a system-wide limit on the number of queue messages has been reached");
+                        "The queue is full, or a system-wide limit on the number of queue messages has been reached");
             break;
             
             case EIDRM:
                 PyErr_SetString(pExistentialException, 
-                    "The queue no longer exists");
+                                                "The queue no longer exists");
             break;
             
             case EINTR:
@@ -512,12 +553,20 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
         
         goto error_return;
     }
+
     
+#if PY_MAJOR_VERSION > 2
+    PyBuffer_Release(&user_msg);
+#endif
+
     free(p_msg);
 
     Py_RETURN_NONE;
 
     error_return:
+#if PY_MAJOR_VERSION > 2
+    PyBuffer_Release(&user_msg);
+#endif
     free(p_msg);
     return NULL;    
 }
@@ -527,8 +576,6 @@ PyObject *
 MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
     PyObject *py_block = NULL;
     PyObject *py_return_tuple = NULL;
-    // PyObject *py_msg = NULL;
-    // PyObject *py_type = NULL;
     int flags = 0;
     int type = 0;
     ssize_t rc;
@@ -573,7 +620,7 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
             case EIDRM:
             case EINVAL:
                 PyErr_SetString(pExistentialException, 
-                    "The queue no longer exists"); 
+                                                "The queue no longer exists"); 
             break;
                 
             case EINTR:
@@ -582,7 +629,7 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
                 
             case ENOMSG:
                 PyErr_SetString(pBusyException, 
-                    "No available messages of the specified type"); 
+                            "No available messages of the specified type"); 
             break;
                 
             default:
@@ -593,9 +640,14 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
     
-   py_return_tuple = Py_BuildValue("NN", 
-                                    PyString_FromStringAndSize(p_msg->message, rc), 
+    py_return_tuple = Py_BuildValue("NN", 
+#if PY_MAJOR_VERSION > 2
+                                    PyBytes_FromStringAndSize(p_msg->message, rc),
+                                    PyLong_FromLong(p_msg->type)
+#else
+                                    PyString_FromStringAndSize(p_msg->message, rc),
                                     PyInt_FromLong(p_msg->type)
+#endif
                                    );
 
     free(p_msg);

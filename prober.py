@@ -46,7 +46,9 @@ def print_bad_news(value_name, default):
 
     border = '*' * MAX_LINE_LENGTH
     
-    print border + "\n* " + ('\n* '.join(lines)) + '\n' + border
+    s = border + "\n* " + ('\n* '.join(lines)) + '\n' + border
+    
+    print (s)
 
 
 def does_build_succeed(filename):
@@ -75,7 +77,7 @@ def compile_and_run(filename, linker_options = ""):
     else:
         s = subprocess.Popen(["./prober/foo"], 
                              stdout=subprocess.PIPE).communicate()[0]
-        return s.strip()
+        return s.strip().decode()
 
 
 def sniff_semtimedop():
@@ -180,4 +182,5 @@ you should never #define them to anything larger than LONG_MAX.
     return d
 
 if __name__ == "__main__":
-    print probe()
+    s = probe()
+    print (s)
