@@ -19,13 +19,13 @@ source_files = ["sysv_ipc_module.c", "common.c", "semaphore.c", "memory.c",
 # http://pypi.python.org/pypi?:action=list_classifiers
 classifiers = [ "Development Status :: 4 - Beta",
                 "Intended Audience :: Developers", 
-                "License :: OSI Approved :: GNU General Public License (GPL)",
+                'License :: OSI Approved :: BSD License',
                 "Operating System :: MacOS :: MacOS X",
                 "Operating System :: POSIX", 
                 "Operating System :: Unix", 
                 "Programming Language :: Python", 
                 "Topic :: Utilities" ]
-license = "http://gplv3.fsf.org/"
+license = "http://creativecommons.org/licenses/BSD/"
 keywords = "ipc inter-process communication semaphore shared memory shm message queue"
 
 
