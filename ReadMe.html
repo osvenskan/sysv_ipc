@@ -4,9 +4,9 @@
 
 <head>
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2013 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2014 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
-	
+
     <title>System V IPC for Python - Semaphores, Shared Memory and Message Queues</title>
 
     <style type="text/css">
@@ -17,14 +17,18 @@
             margin-top: 1em;
         }
         span[lang] { font-style: italic; }
-        
+
         span.param {
             font-family: monospace;
             font-style: italic;
         }
 
+        span.book_title {
+        	text-decoration: underline;
+        }
+
         pre { margin-left: 2em; }
-        
+
         li { margin-top: 1em; margin-bottom: 1em; }
 
         form {
@@ -38,7 +42,7 @@
         fieldset, legend {
             background-color: #d0d0a9;
         }
-        /* This style is only present on the local version of the readme. 
+        /* This style is only present on the local version of the readme.
            In the online version, the RSS feed is displayed. */
         div.rss { display: none; }
     </style>
@@ -54,24 +58,24 @@
 </div>
 
 <p>This describes the <tt>sysv_ipc</tt> module which gives Python access
-to System V inter-process semaphores, shared memory and message queues 
+to System V inter-process semaphores, shared memory and message queues
 on most (all?) *nix flavors. Examples include OS X, Linux, FreeBSD,
-OpenSolaris 2008.11, 
+OpenSolaris 2008.11,
 and <a href="http://f-utility.tumblr.com/post/525726296/compiling-sysv-ipc-python-module-with-gcc-on-aix-5-2">AIX 5.2</a>.
-It might also work under Windows with a library like 
+It might also work under Windows with a library like
 <a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
-<p>It works with Python 2.4 &ndash; 3.x (but <em>not</em> 3.0). 
-It's released 
+<p>It works with Python 2.4 &ndash; 3.x (but <em>not</em> 3.0).
+It's released
 under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
-<p>You can <strong>download 
-<a href="sysv_ipc-0.6.6.tar.gz">sysv_ipc version 0.6.6</a>
+<p>You can <strong>download
+<a href="sysv_ipc-0.6.7.tar.gz">sysv_ipc version 0.6.7</a>
 </strong>
-(<a href="sysv_ipc-0.6.6.md5.txt">[md5 sum]</a>,
-<a href="sysv_ipc-0.6.6.sha1.txt">[sha1 sum]</a>)
+(<a href="sysv_ipc-0.6.7.md5.txt">[md5 sum]</a>,
+<a href="sysv_ipc-0.6.7.sha1.txt">[sha1 sum]</a>)
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -80,20 +84,20 @@ which contains the source code, setup.py, installation instructions and
 
 <p>
 You might also want to read
-about some <a href="#bugs">known bugs</a>. 
+about some <a href="#bugs">known bugs</a>.
 </p>
 
-<p>You might be interested in the very similar module 
+<p>You might be interested in the very similar module
 <a href="/philip/posix_ipc/"><tt>posix_ipc</tt></a>
 which provides Python access to POSIX IPC primitives. POSIX IPC is a little
-easier to use than SysV IPC, but not all operating systems support it 
+easier to use than SysV IPC, but not all operating systems support it
 completely.
 </p>
 
 <h2>Module <tt>sysv_ipc</tt></h2>
 
-<p>Jump to <a href="#semaphore">semaphores</a>, 
-<a href="#shared_memory">shared memory</a>, or 
+<p>Jump to <a href="#semaphore">semaphores</a>,
+<a href="#shared_memory">shared memory</a>, or
 <a href="#message_queue">message queues</a>.</p>
 
 
@@ -101,128 +105,130 @@ completely.
 
 <dl>
     <dt>attach(id, [address = None, [flags = 0]])</dt>
-    <dd>Attaches the (existing) shared memory that has the given <tt>id</tt> and 
-    	returns a new SharedMemory object. See 
-    	<a href="#attach">SharedMemory.attach()</a> for details on the 
+    <dd>Attaches the (existing) shared memory that has the given <tt>id</tt> and
+    	returns a new SharedMemory object. See
+    	<a href="#attach">SharedMemory.attach()</a> for details on the
     	<tt>address</tt> and <tt>flags</tt> parameters.
 
     <p>This method is useful only under fairly unusual circumstances.
     	You probably don't need it.
     </p>
     </dd>
-        
+
     <dt>ftok(path, id, [silence_warning = False])</dt>
-    <dd>Calls <tt>ftok(path, id)</tt>. Note that 
+    <dd>Calls <tt>ftok(path, id)</tt>. Note that
     <a href="#ftok_weakness"><tt>ftok()</tt> has limitations</a>, and this
-    function will issue a warning to that effect unless 
+    function will issue a warning to that effect unless
     <tt>silence_warning</tt> is True.
     </dd>
-        
+
     <dt>remove_semaphore(id)</dt>
     <dd>Removes the semaphore with the given <tt>id</tt>.</dd>
-        
+
     <dt>remove_shared_memory(id)</dt>
     <dd>Removes the shared memory with the given <tt>id</tt>.</dd>
 
     <dt>remove_message_queue(id)</dt>
     <dd>Removes the message queue with the given <tt>id</tt>.</dd>
 </dl>
-        
+
 
 <h3>Module Constants</h3>
 
 <dl>
     <dt>IPC_CREAT, IPC_EXCL and IPC_CREX</dt>
-    <dd><tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are flags used when 
+    <dd><tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are flags used when
         creating IPC objects. They're
-        bitwise unique and can be ORed together. <tt>IPC_CREX</tt> is 
+        bitwise unique and can be ORed together. <tt>IPC_CREX</tt> is
         shorthand for <tt>IPC_CREAT | IPC_EXCL</tt>.
-        
-        <p>When passed to an IPC object's constructor, <tt>IPC_CREAT</tt> indicates 
+
+        <p>When passed to an IPC object's constructor, <tt>IPC_CREAT</tt> indicates
             that you want to create a new object or open an existing one. If you want
-            the call to fail if an object with that key already exists, specify 
+            the call to fail if an object with that key already exists, specify
             the  <tt>IPC_EXCL</tt> flag, too.
         </p>
     </dd>
-    
+
     <dt>IPC_PRIVATE</dt>
-    <dd>This is a special value that can be passed in place of a key. It implies that 
+    <dd>This is a special value that can be passed in place of a key. It implies that
         the IPC object should be available only to the creating process or its
         child processes (e.g. those created with <tt>fork()</tt>).
     </dd>
-    
+
     <dt>KEY_MIN and KEY_MAX</dt>
     <dd>Denote the range of keys that this module accepts. Your OS might
-        limit keys to a smaller range depending on the typedef of 
+        limit keys to a smaller range depending on the typedef of
         <tt>key_t</tt>.
-        
-        <p>Keys randomly generated by this module are guaranteed to be safe
-            no matter how your OS defines the range of a <tt>key_t</tt>.
+
+        <p>Keys randomly generated by this module are in the range
+        	<tt>1 &lte; key &lte; SHRT_MAX</tt>.
+           That's type-safe unless your OS has a very bizarre
+           definition of <tt>key_t</tt>.
         </p>
     </dd>
 
     <dt>SEMAPHORE_VALUE_MAX</dt>
     <dd>The maximum value of a semaphore.
     </dd>
-    
+
     <dt>PAGE_SIZE</dt>
     <dd>The operating system's memory page size, in bytes. It's probably a good
         idea to make shared memory segments some multiple of this size.
     </dd>
-    
+
     <dt>SEMAPHORE_TIMEOUT_SUPPORTED</dt>
     <dd>True if the platform supports timed semaphore waits, False otherwise.</dd>
-    
+
     <dt>SHM_RND</dt>
-    <dd>You probably don't need this, but it can be used when attaching shared 
+    <dd>You probably don't need this, but it can be used when attaching shared
         memory to force the address to be
         rounded down to SHMLBA. See your system's man page for <tt>shmat()</tt>
         for more information.
     </dd>
-    
+
     <dt>SHM_HUGETLB, SHM_NORESERVE and SHM_REMAP</dt>
-    <dd>You probably don't need these. They're Linux-specific flags that can 
+    <dd>You probably don't need these. They're Linux-specific flags that can
         be passed to the SharedMemory
-        constructor, or to the <tt>.attach()</tt> function in the case of 
+        constructor, or to the <tt>.attach()</tt> function in the case of
         SHM_REMAP. See your system's man page for <tt>shmget()</tt>
         and <tt>shmat()</tt> for more information.
     </dd>
-</dl>    
+</dl>
 
 <h3>Module Errors</h3>
 
 <p>In addition to standard Python errors (e.g. <tt>ValueError</tt>),
-this module raises custom errors. These errors cover 
+this module raises custom errors. These errors cover
 situations specific to IPC.
 </p>
 
 <dl>
     <dt>Error</dt>
     <dd>The base error class for all the custom errors in this module. This
-        error is occasionally raised on its own but you'll almost 
+        error is occasionally raised on its own but you'll almost
         always see a more specific error.
     </dd>
-    
+
     <dt>InternalError</dt>
     <dd>Indicates that something has gone very wrong in the module code. Please
         report this to the maintainer.
     </dd>
-    
+
     <dt>PermissionsError</dt>
     <dd>Indicates that you've attempted something that the permissions on the
         IPC object don't allow.
     </dd>
-    
+
     <dt>ExistentialError</dt>
-    <dd>Indicates an error related to the existence or non-existence of 
-        an IPC object. 
+    <dd>Indicates an error related to the existence or non-existence of
+        an IPC object.
     </dd>
-    
+
     <dt>BusyError</dt>
-    <dd>Raised when a semaphore call to <tt>.P()</tt> or <tt>.Z()</tt> either times out 
+    <dd>Raised when a semaphore call to <tt>.P()</tt> or <tt>.Z()</tt> either times out
         or would be forced to wait when its <tt>block</tt> attribute is False.
     </dd>
-    
+
     <dt>NotAttachedError</dt>
     <dd>Raised when a process attempts to read from or write to a shared memory
         segment to which it is not attached.
@@ -239,140 +245,140 @@ situations specific to IPC.
 <dl>
     <dt>Semaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])</dt>
     <dd>Creates a new semaphore or opens an existing one.
-        
-        <p><span class="param">key</span> must be <tt>None</tt>, 
-            <tt>IPC_PRIVATE</tt> or 
-        an integer &gt; <tt>KEY_MIN</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+
+        <p><span class="param">key</span> must be <tt>None</tt>,
+            <tt>IPC_PRIVATE</tt> or
+        an integer &gt; <tt>KEY_MIN</tt> and &le; <tt>KEY_MAX</tt>. If the key
         is <tt>None</tt>, the module chooses a random unused key.
         </p>
-        
+
         <p>The <span class="param">flags</span> specify whether you want to create a
             new semaphore or open an existing one.
-        </p> 
-            
+        </p>
+
         <ul>
             <li>With <span class="param">flags</span> set to the <strong>default</strong> of <tt>0</tt>, the module attempts
-                to <strong>open an existing</strong> semaphore identified by <span class="param">key</span> and raises 
+                to <strong>open an existing</strong> semaphore identified by <span class="param">key</span> and raises
                 a <tt>ExistentialError</tt> if that semaphore doesn't exist.
             </li>
-            
-            <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
-                <strong>opens</strong> the semaphore identified by 
+
+            <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module
+                <strong>opens</strong> the semaphore identified by
                 <span class="param">key</span> <strong>or creates</strong> a new
                 one if no such semaphore exists. Using <tt>IPC_CREAT</tt> by itself
                 is not recommended. (See <a href="#sem_init">Semaphore Initialization</a>.)
             </li>
-            
-            <li>With <span class="param">flags</span> set to 
+
+            <li>With <span class="param">flags</span> set to
                 <tt>IPC_CREX</tt> (<tt>IPC_CREAT | IPC_EXCL</tt>),
-                the module 
-                <strong>creates a new semaphore</strong> identified by <span class="param">key</span>. If a 
+                the module
+                <strong>creates a new semaphore</strong> identified by <span class="param">key</span>. If a
                 semaphore with that key already exists, the call raises an
-                <tt>ExistentialError</tt>. 
+                <tt>ExistentialError</tt>.
                 <strong>The <span class="param">initial_value</span> is ignored unless
-                    both of these flags are specified</strong> or 
+                    both of these flags are specified</strong> or
                     if the semaphore is read-only.
             </li>
         </ul>
-        
+
         <p>When opening an existing semaphore, <span class="param">mode</span> is ignored.
         </p>
     </dd>
-    
+
     <dt>acquire([timeout = None, [delta = 1]])</dt>
-    <dd>Waits (conditionally) until the semaphore's value is &gt; 0 and then 
-        returns, decrementing the semaphore. 
-        
+    <dd>Waits (conditionally) until the semaphore's value is &gt; 0 and then
+        returns, decrementing the semaphore.
+
         <p>The <span class="param">timeout</span> (which can be a float) specifies how
             many seconds this call should wait, if at all.
-        </p> 
-        <p>The semantics of the timeout <a href="#v0_3">changed a little in 
+        </p>
+        <p>The semantics of the timeout <a href="#v0_3">changed a little in
             version 0.3</a>.
         </p>
-            
+
         <ul>
             <li>A <span class="param">timeout</span> of None (the default)
-                implies no time limit. The call will not return until its wait 
-                condition is satisfied. 
+                implies no time limit. The call will not return until its wait
+                condition is satisfied.
             </li>
 
-            <li>When <span class="param">timeout</span> is 0, the call 
+            <li>When <span class="param">timeout</span> is 0, the call
                 raises a <tt>BusyError</tt> if it can't immediately
-                acquire the semaphore. Since it will 
-                return immediately if <em>not</em> asked to wait, this can be 
+                acquire the semaphore. Since it will
+                return immediately if <em>not</em> asked to wait, this can be
                 thought of as "non-blocking" mode.
             </li>
-            
+
             <li>When the <span class="param">timeout</span> is &gt; 0, the call
-                will wait no longer than <span class="param">timeout</span> 
+                will wait no longer than <span class="param">timeout</span>
                 seconds before either returning (having acquired the semaphore)
                 or raising a <tt>BusyError</tt>.
-            </li>        
+            </li>
         </ul>
-        
-        <p>When the call returns, the semaphore's value decreases by 
-            <span class="param">delta</span> 
+
+        <p>When the call returns, the semaphore's value decreases by
+            <span class="param">delta</span>
             (or more precisely, <tt>abs(<span class="param">delta</span>)</tt>)
             which defaults to 1.
         </p>
 
         <p>On platforms that don't support the <tt>semtimedop()</tt> API call,
-            all timeouts (including zero) are treated as infinite. The call 
+            all timeouts (including zero) are treated as infinite. The call
             will not return until its wait condition is satisfied.
         </p>
 
-        <p>Most platforms provide <tt>semtimedop()</tt>. OS X is a 
-            notable exception. The module's Boolean constant 
+        <p>Most platforms provide <tt>semtimedop()</tt>. OS X is a
+            notable exception. The module's Boolean constant
             <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
             is True on platforms that support <tt>semtimedop()</tt>.
         </p>
     </dd>
-    
-    
+
+
     <dt>release([delta = 1])</dt>
     <dd>
         Releases (increments) the semaphore.
-        
-        <p>The semaphore's value increases by <span class="param">delta</span> 
+
+        <p>The semaphore's value increases by <span class="param">delta</span>
             (or more precisely, <tt>abs(<span class="param">delta</span>)</tt>)
-            which defaults to 1. 
+            which defaults to 1.
         </p>
     </dd>
 
     <dt>P()</dt>
     <dd>A synonym for <tt>.acquire()</tt> that takes the same parameters.
-        
-        <p>"P" stands for 
-        <span lang="nl">prolaag</span> or <span lang="nl">probeer te verlagen</span>
-        (try to decrease), the original name given by 
-        <a href="http://en.wikipedia.org/wiki/Semaphore_(programming)">Edsger Dijkstra</a>.
-        </p>
-    </dd>    
-    
-    <dt>V()</dt>
-    <dd>A synonym for <tt>.release()</tt> that takes the same parameters.
 
-        <p>"V" stands for 
-        <span lang="nl">verhoog</span> (increase), the original name given by 
+        <p>"P" stands for
+        <span lang="nl">prolaag</span> or <span lang="nl">probeer te verlagen</span>
+        (try to decrease), the original name given by
         <a href="http://en.wikipedia.org/wiki/Semaphore_(programming)">Edsger Dijkstra</a>.
         </p>
     </dd>
-    
+
+    <dt>V()</dt>
+    <dd>A synonym for <tt>.release()</tt> that takes the same parameters.
+
+        <p>"V" stands for
+        <span lang="nl">verhoog</span> (increase), the original name given by
+        <a href="http://en.wikipedia.org/wiki/Semaphore_(programming)">Edsger Dijkstra</a>.
+        </p>
+    </dd>
+
     <dt>Z([timeout = None])</dt>
     <dd>Blocks until zee zemaphore is zero.
-        
+
         <p><span class="param">Timeout</span> has
             the same meaning as described in <tt>.acquire()</tt>.
         </p>
     </dd>
-    
+
     <dt>remove()</dt>
     <dd>
-        Removes (deletes) the semaphore from the system. 
-        
+        Removes (deletes) the semaphore from the system.
+
         <p>As far as I can tell, the effect of deleting a semaphore that
             other processes are still using is OS-dependent. Check your system's
-            man pages for <tt>semctl(IPC_RMID)</tt>. 
+            man pages for <tt>semctl(IPC_RMID)</tt>.
         </p>
     </dd>
 </dl>
@@ -382,71 +388,71 @@ situations specific to IPC.
 <dl>
     <dt>key (read-only)</dt>
     <dd>The key passed in the call to the constructor.</dd>
-    
+
     <dt>id (read-only)</dt>
     <dd>The id assigned to this semaphore by the OS.</dd>
-    
+
     <dt>value</dt>
     <dd>The integer value of the semaphore.</dd>
-    
+
     <dt>undo</dt>
     <dd>Defaults to False.
-        
+
         <p>When True, operations that change the
-        semaphore's value will be undone (reversed) when 
+        semaphore's value will be undone (reversed) when
         the process exits. Note that when a process exits, an undo operation
-        may imply that a semaphore's value should become negative or 
+        may imply that a semaphore's value should become negative or
         exceed its maximum.
-        Behavior in this case is system-dependent, which means that 
+        Behavior in this case is system-dependent, which means that
         <strong>using this flag can make your code non-portable</strong>.
         </p>
     </dd>
-    
+
     <dt>block</dt>
     <dd>
-        Defaults to True, which means that calls to <tt>acquire()</tt> and 
-        <tt>release()</tt> will not return 
-        until their wait conditions are satisfied. 
-        
+        Defaults to True, which means that calls to <tt>acquire()</tt> and
+        <tt>release()</tt> will not return
+        until their wait conditions are satisfied.
+
         <p>When False, these calls
         will not block but will instead raise an error if they are unable
         to return immediately.
         </p>
     </dd>
-    
+
     <dt>mode</dt>
     <dd>The semaphore's permission bits.
-        
+
         <p>Tip: the following Python code will display
         the mode in octal:<br>
         <tt>print int(str(my_sem.mode), 8)</tt>
         </p>
     </dd>
-    
+
     <dt>uid</dt>
     <dd>The semaphore's user id.</dd>
-    
+
     <dt>gid</dt>
     <dd>The semaphore's group id.</dd>
-    
+
     <dt>cuid (read-only)</dt>
     <dd>The semaphore creator's user id.</dd>
-    
+
     <dt>cgid (read-only)</dt>
     <dd>The semaphore creator's group id.</dd>
-    
+
     <dt>last_pid (read-only)</dt>
-    <dd>The PID of the process that last called <tt>semop()</tt> (<tt>.P()</tt>, 
+    <dd>The PID of the process that last called <tt>semop()</tt> (<tt>.P()</tt>,
         <tt>.V()</tt> or <tt>.Z()</tt>) on this semaphore.
     </dd>
-    
+
     <dt>waiting_for_nonzero (read-only)</dt>
     <dd>The number of processes waiting for the value of the semaphore to become
         non-zero (i.e. the number waiting in a call to <tt>.P()</tt>).
     </dd>
-    
+
     <dt>waiting_for_zero (read-only)</dt>
-    <dd>The number of processes waiting for the value of the semaphore to become 
+    <dd>The number of processes waiting for the value of the semaphore to become
         zero (i.e. the number waiting in a call to <tt>.Z()</tt>).
     </dd>
 
@@ -467,14 +473,14 @@ with sysv_ipc.Semaphore(name) as sem:
     # Do something...
 </pre>
 
-<p>Entering the context acquires the semaphore, exiting the context releases 
+<p>Entering the context acquires the semaphore, exiting the context releases
 	the semaphore. See <tt>demo4/child.py</tt> for a complete example.
 </p>
 
 
 <h3 id="shared_memory">The SharedMemory Class</h3>
 
-<p>This is a handle to a shared memory segment. 
+<p>This is a handle to a shared memory segment.
 </p>
 
 
@@ -482,94 +488,94 @@ with sysv_ipc.Semaphore(name) as sem:
 
 <dl>
     <dt>SharedMemory(key, [flags = 0, [mode = 0600, [size = 0 or PAGE_SIZE, [init_character = ' ']]]])</dt>
-    <dd>Creates a new shared memory segment or opens an existing one. 
+    <dd>Creates a new shared memory segment or opens an existing one.
         The memory is automatically attached.
-        
-        <p><span class="param">key</span> must be <tt>None</tt>, 
-            <tt>IPC_PRIVATE</tt> or 
-        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+
+        <p><span class="param">key</span> must be <tt>None</tt>,
+            <tt>IPC_PRIVATE</tt> or
+        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key
         is <tt>None</tt>, the module chooses a random unused key.
         </p>
 
         <p>The <span class="param">flags</span> specify whether you want to create a
             new shared memory segment or open an existing one.
-        </p> 
-            
+        </p>
+
         <ul>
-            <li>With <span class="param">flags</span> set to the 
+            <li>With <span class="param">flags</span> set to the
                 <strong>default</strong> of <tt>0</tt>, the module attempts
-                to <strong>open an existing</strong> shared memory segment identified by 
-                <span class="param">key</span> and raises 
+                to <strong>open an existing</strong> shared memory segment identified by
+                <span class="param">key</span> and raises
                 a <tt>ExistentialError</tt> if it doesn't exist.
             </li>
-            
-            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module 
-                <strong>opens</strong> the shared memory segment identified 
-                by <span class="param">key</span> <strong>or 
+
+            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module
+                <strong>opens</strong> the shared memory segment identified
+                by <span class="param">key</span> <strong>or
                 creates</strong> a new one if no such segment exists.
                 Using <tt>IPC_CREAT</tt> by itself
                 is not recommended. (See <a href="#mem_init">Memory Initialization</a>.)
             </li>
-            
-            <li>With <span class="param">flags</span> set to 
+
+            <li>With <span class="param">flags</span> set to
                 <strong><tt>IPC_CREX</tt></strong> (<tt>IPC_CREAT | IPC_EXCL</tt>),
-                the module 
-                <strong>creates</strong> a new shared memory segment identified by 
-                <span class="param">key</span>. If 
-                a segment with that key already exists, the call raises 
+                the module
+                <strong>creates</strong> a new shared memory segment identified by
+                <span class="param">key</span>. If
+                a segment with that key already exists, the call raises
                 a <tt>ExistentialError</tt>.
-        
+
                 <p>When both <tt>IPC_CREX</tt> is specified
-                    and the caller has write permission, each byte in the new memory segment will be 
+                    and the caller has write permission, each byte in the new memory segment will be
                     initialized to the value of <span class="param">init_character</span>.
                 </p>
             </li>
         </ul>
-        
+
         <p>The value of <span class="param">size</span> depends on whether
             one is opening an existing segment or creating a new one.
         </p>
         <ul>
             <li>When opening an existing segment, <span class="param">size</span>
-                must be ≤ the existing segment's size. Zero is 
+                must be ≤ the existing segment's size. Zero is
                 always valid.
             </li>
-            
-            <li>When creating an new segment, 
+
+            <li>When creating an new segment,
                 many (most? all?) operating systems insist on a <span class="param">size</span>
                 &gt; <tt>0</tt>.
                 In addition, some round the size
                 up to the next multiple of PAGE_SIZE.
             </li>
         </ul>
-        
-        <p>This module supplies a default 
-            <span class="param">size</span> of <tt>PAGE_SIZE</tt> when 
-            <tt>IPC_CREX</tt> is specified and <tt>0</tt> otherwise. 
+
+        <p>This module supplies a default
+            <span class="param">size</span> of <tt>PAGE_SIZE</tt> when
+            <tt>IPC_CREX</tt> is specified and <tt>0</tt> otherwise.
         </p>
     </dd>
 
     <dt id="attach">attach([address = None, [flags = 0]])</dt>
     <dd>
-        Attaches this process to the shared memory. The memory must be attached 
+        Attaches this process to the shared memory. The memory must be attached
         before calling <tt>.read()</tt> or <tt>.write()</tt>. Note that the
         constructor automatically attaches the memory
-        so you won't need to call this method unless you explicitly detach it 
+        so you won't need to call this method unless you explicitly detach it
         and then want to use it again.
-        
+
         <p>The address parameter allows one to specify (as a Python long) a memory
             address at which to attach the segment. Passing None (the default)
             is equivalent to passing NULL to <tt>shmat()</tt>. See that
             function's man page for details.
         </p>
-        
+
         <p>The flags are mostly only relevant if one specifies a specific address.
             One exception is the flag <tt>SHM_RDONLY</tt> which, surprisingly,
             attaches the segment read-only.
         </p>
-        
+
         <p>Note that on some (and perhaps all) platforms, each call to <tt>.attach()</tt>
-            increments the system's "attached" count. Thus, if each call to 
+            increments the system's "attached" count. Thus, if each call to
             <tt>.attach()</tt> isn't paired with a call to <tt>.detach()</tt>,
             the system's "attached" count for the shared memory segment will not
             go to zero when the process exits. As a result, the shared memory
@@ -577,39 +583,39 @@ with sysv_ipc.Semaphore(name) as sem:
             and exits.
         </p>
     </dd>
-    
+
     <dt>detach()</dt>
     <dd>Detaches this process from the shared memory.</dd>
-    
+
     <dt>read([byte_count = 0, [offset = 0]])</dt>
-    <dd>Reads up to <span class="param">byte_count</span> bytes from the 
+    <dd>Reads up to <span class="param">byte_count</span> bytes from the
         shared memory segment starting at <span class="param">offset</span>
         and returns them as a string under Python 2 or as a bytes object
         under Python 3.
-        
-        <p>If <span class="param">byte_count</span> is zero (the default) the 
+
+        <p>If <span class="param">byte_count</span> is zero (the default) the
             entire buffer is returned.
         </p>
-        
-        <p>This method will never attempt to read past the end of the shared 
-            memory segment, even when 
-            <span class="param">offset</span> + <span class="param">byte_count</span> 
+
+        <p>This method will never attempt to read past the end of the shared
+            memory segment, even when
+            <span class="param">offset</span> + <span class="param">byte_count</span>
             exceeds the memory segment's size. In that case, the bytes
             from <span class="param">offset</span> to the end of the segment are returned.
         </p>
     </dd>
-    
+
     <dt>write(s, [offset = 0])</dt>
     <dd>Writes the string <span class="param">s</span> to the shared memory,
-        starting at <span class="param">offset</span>. 
-        
-        <p>At most <tt><i>n</i></tt> bytes will be written, where 
+        starting at <span class="param">offset</span>.
+
+        <p>At most <tt><i>n</i></tt> bytes will be written, where
             <tt><i>n</i></tt> = the segment's size minus <span class="param">offset</span>.
         </p>
-        
+
         <p>The string may contain embedded NULL bytes ('\0').
     </dd>
-    
+
     <dt>remove()</dt>
     <dd>Removes (destroys) the shared memory. Note that actual destruction of the
         segment only occurs when all processes have detached.
@@ -628,7 +634,7 @@ with sysv_ipc.Semaphore(name) as sem:
 
     <dt>size (read-only)</dt>
     <dd>The size of the segment in bytes.</dd>
-    
+
     <dt>address (read-only)</dt>
     <dd>The address of the segment as Python long.</dd>
 
@@ -667,7 +673,7 @@ with sysv_ipc.Semaphore(name) as sem:
         <tt>print int(str(my_mem.mode), 8)</tt>
         </p>
     </dd>
-    
+
     <dt>cuid (read-only)</dt>
     <dd>The segment creator's user id.</dd>
 
@@ -686,51 +692,51 @@ with sysv_ipc.Semaphore(name) as sem:
     <dt>MessageQueue(key, [flags = 0, [mode = 0600, [max_message_size = 2048]]])</dt>
     <dd>Creates a new message queue or opens an existing one.
 
-        <p><span class="param">key</span> must be <tt>None</tt>, 
-            <tt>IPC_PRIVATE</tt> or 
-        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key 
+        <p><span class="param">key</span> must be <tt>None</tt>,
+            <tt>IPC_PRIVATE</tt> or
+        an integer &gt; <tt>0</tt> and &le; <tt>KEY_MAX</tt>. If the key
         is <tt>None</tt>, the module chooses a random unused key.
         </p>
 
         <p>The <span class="param">flags</span> specify whether you want to create a
             new queue or open an existing one.
-        </p> 
-            
+        </p>
+
         <ul>
-            <li>With <span class="param">flags</span> set to the 
+            <li>With <span class="param">flags</span> set to the
                 <strong>default</strong> of <tt>0</tt>, the module attempts
-                to <strong>open an existing</strong> message queue identified by 
-                <span class="param">key</span> and raises 
+                to <strong>open an existing</strong> message queue identified by
+                <span class="param">key</span> and raises
                 a <tt>ExistentialError</tt> if it doesn't exist.
             </li>
-            
-            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module 
-                <strong>opens</strong> the message queue identified 
-                by <span class="param">key</span> <strong>or 
+
+            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module
+                <strong>opens</strong> the message queue identified
+                by <span class="param">key</span> <strong>or
                 creates</strong> a new one if no such queue exists.
             </li>
-            
-            <li>With <span class="param">flags</span> set to 
+
+            <li>With <span class="param">flags</span> set to
                 <strong><tt>IPC_CREX</tt></strong> (<tt>IPC_CREAT | IPC_EXCL</tt>),
-                the module 
-                <strong>creates</strong> a new message queue identified by 
-                <span class="param">key</span>. If 
-                a queue with that key already exists, the call raises 
+                the module
+                <strong>creates</strong> a new message queue identified by
+                <span class="param">key</span>. If
+                a queue with that key already exists, the call raises
                 a <tt>ExistentialError</tt>.
             </li>
         </ul>
-        
+
         <p>The <span class="param">max_message_size</span> can be increased
-            from the default, but be aware of the issues discussed in 
+            from the default, but be aware of the issues discussed in
             <a href="#message_queue_limits">Message Queue Limits</a>.
         </p>
     </dd>
 
     <dt>send(message, [block = True, [type = 1]])</dt>
-    <dd>Puts a message on the queue. 
-        
+    <dd>Puts a message on the queue.
+
         <p>The <span class="param">message</span> string can contain embedded
-            NULLs (ASCII <tt>0x00</tt>). 
+            NULLs (ASCII <tt>0x00</tt>).
         </p>
 
         <p>The <span class="param">block</span> flag specifies whether or
@@ -741,31 +747,31 @@ with sysv_ipc.Semaphore(name) as sem:
         </p>
 
         <p>The <span class="param">type</span> is
-            associated with the message and is relevant when calling 
+            associated with the message and is relevant when calling
             <tt>receive()</tt>. It must be &gt; 0.
         </p>
     </dd>
 
     <dt>receive([block = True, [type = 0]])</dt>
     <dd>
-        Receives a message from the queue, returning a tuple of 
-        <tt>(message, type)</tt>. Under Python 3, the message is a 
+        Receives a message from the queue, returning a tuple of
+        <tt>(message, type)</tt>. Under Python 3, the message is a
         bytes object.
 
         <p>The <span class="param">block</span> flag specifies whether or
-            not the call should wait if there's no messages of the 
+            not the call should wait if there's no messages of the
             specified type to retrieve. When <span class="param">block</span>
             is <tt>False</tt>, the call will raise a <tt>BusyError</tt> if
             a message can't be received immediately.
         </p>
 
         <p>The <span class="param">type</span> permits some control over
-            which messages are retrieved. 
+            which messages are retrieved.
         </p>
-        
+
         <ul>
             <li>When <span class="param">type</span> <tt>== 0</tt>, the call
-                returns the first message on the queue regardless of its 
+                returns the first message on the queue regardless of its
                 type.
             </li>
             <li>When <span class="param">type</span> <tt>&gt; 0</tt>, the call
@@ -777,7 +783,7 @@ with sysv_ipc.Semaphore(name) as sem:
             </li>
         </ul>
     </dd>
-    
+
     <dt>remove()</dt>
     <dd>Removes (deletes) the message queue.</dd>
 </dl>
@@ -792,12 +798,12 @@ with sysv_ipc.Semaphore(name) as sem:
     <dd>The id assigned to this queue by the OS.</dd>
 
     <dt id="queue_max_size">max_size</dt>
-    <dd>The maximum size of the queue in bytes. Only a process with 
+    <dd>The maximum size of the queue in bytes. Only a process with
         "appropriate privileges" can increase this value, and on some
-        systems even that won't work. See 
+        systems even that won't work. See
         <a href="#message_queue_limits">Message Queue Limits</a> for details.
     </dd>
-    
+
     <dt>last_send_time (read-only)</dt>
     <dd>The last time a message was placed on the queue.</dd>
 
@@ -830,7 +836,7 @@ with sysv_ipc.Semaphore(name) as sem:
         <tt>print int(str(my_mem.mode), 8)</tt>
         </p>
     </dd>
-    
+
     <dt>cuid (read-only)</dt>
     <dd>The queue creator's user id.</dd>
 
@@ -842,7 +848,7 @@ with sysv_ipc.Semaphore(name) as sem:
 
 <h3>Supported Features and Differences from SHM</h3>
 
-<p>This module is almost, but not quite, a superset of 
+<p>This module is almost, but not quite, a superset of
 <a href="http://nikitathespider.com/python/shm/"><tt>shm</tt></a>.
 Some of the additional features are the ability to override the <tt>block</tt>
 flag on a per-call basis, the ability to change the semaphore's value
@@ -867,7 +873,7 @@ and exposure of <tt>sem_otime</tt>.
         segments. The object keys served as the dictionary keys.
         If you asked for the same object multiple times, <tt>shm</tt> would
         return the same Python object. I'm not convinced this was safe,
-        particularly in the case where an object may have been destroyed 
+        particularly in the case where an object may have been destroyed
         and another with the same key created in its place.
     </li>
 </ul>
@@ -876,42 +882,42 @@ and exposure of <tt>sem_otime</tt>.
 
 <h4>Sample Code</h4>
 
-<p>This module comes with two demonstration apps. The first (in the 
+<p>This module comes with two demonstration apps. The first (in the
 directory <tt>demo</tt>) shows how to use shared memory and semaphores.
-The second (in the directory <tt>demo2</tt>) shows how to use 
+The second (in the directory <tt>demo2</tt>) shows how to use
 message queues.
 
 
 <h4 id="ftok_weakness">The Weakness of <tt>ftok()</tt></h4>
 
 <p>
-Most System V IPC sample code recommends <tt>ftok()</tt> for generating an 
-integer key that's more-or-less random. 
-It does not, however, guarantee that the key it generates is unused. If 
-<tt>ftok()</tt> gives your application a key that some other application is 
+Most System V IPC sample code recommends <tt>ftok()</tt> for generating an
+integer key that's more-or-less random.
+It does not, however, guarantee that the key it generates is unused. If
+<tt>ftok()</tt> gives your application a key that some other application is
 already using,
-your app is in trouble unless it has a reliable second mechanism for generating 
-a key. And if that's the case, why not just abandon <tt>ftok()</tt> and use the 
+your app is in trouble unless it has a reliable second mechanism for generating
+a key. And if that's the case, why not just abandon <tt>ftok()</tt> and use the
 second mechanism exclusively?
 </p>
 
 <p>This is the weakness of <tt>ftok()</tt> -- it isn't guaranteed to give you
-what you want. The <a href="http://www.unix.com/man-page/FreeBSD/3/ftok/">BSD 
-man page for <tt>ftok</tt></a> says it is "quite possible for the routine to 
+what you want. The <a href="http://www.unix.com/man-page/FreeBSD/3/ftok/">BSD
+man page for <tt>ftok</tt></a> says it is "quite possible for the routine to
 return duplicate keys". The term "quite possible" isn't quantified, but suppose
-it means one-tenth of one percent. Who wants to have 1-in-1000 odds of a 
-catastrophic failure in their program, or even 1-in-10000? 
+it means one-tenth of one percent. Who wants to have 1-in-1000 odds of a
+catastrophic failure in their program, or even 1-in-10000?
 </p>
 
 <p>This module obviates the need for <tt>ftok()</tt> by generating random
 keys for you. If your application can't use <tt>sysv_ipc</tt>'s automatically
-generated keys because it needs to know the key in advance, hardcoding a 
-random number like 123456 in your app might be no worse than using 
-<tt>ftok()</tt> and has the advantage of not hiding its limitations. 
+generated keys because it needs to know the key in advance, hardcoding a
+random number like 123456 in your app might be no worse than using
+<tt>ftok()</tt> and has the advantage of not hiding its limitations.
 </p>
 
 <p>This module provides <tt>ftok()</tt> in case you want to experiment with it.
-However, to emphasize its weakness, this version of <tt>ftok()</tt> raises a 
+However, to emphasize its weakness, this version of <tt>ftok()</tt> raises a
 warning with every call unless you explicitly pass a flag to silence it.
 </p>
 
@@ -923,25 +929,27 @@ how often <tt>ftok()</tt> generates duplicate keys on your system.
 <h4 id="sem_init">Semaphore Initialization</h4>
 
 <p>When a System V sempahore is created at the C API level, the OS is not required
-to initialize the semaphore's value. (This per 
-<a href="http://www.opengroup.org/onlinepubs/009695399/functions/semget.html">the 
-SUSv3 standard for <tt>semget()</tt></a>.) 
-Some (most?) operating systems initialize it to zero, but this behavior
-is non-standard and therefore can't be relied upon. 
+to initialize the semaphore's value. (This per
+<a href="http://www.opengroup.org/onlinepubs/009695399/functions/semget.html">the
+SUSv3 standard for <tt>semget()</tt></a>.)
+Some (most? all?) operating systems initialize it to zero, but this behavior
+is non-standard and therefore can't be relied upon.
 </p>
 
-<p>If sempahore creation happens in an predictable, orderly fashion, this isn't a 
+<p>If sempahore creation happens in an predictable, orderly fashion, this isn't a
 problem. But a
-race condition arises when multiple processes vie to create/open the same semaphore. The 
+race condition arises when multiple processes vie to create/open the same semaphore. The
 problem lies in the fact that when an application calls <tt>semget()</tt> with only
 the <tt>IPC_CREAT</tt> flag, the caller can't tell whether or not he has
-created a new semaphore or opened an existing one. 
+created a new semaphore or opened an existing one.
 <strong>This makes it
 difficult to create reliable code without using <tt>IPC_EXCL</tt>.</strong>
+W. Richard Stevens' <span class='book_title'>Unix Network Programming Volume 2</span>
+calls this "a fatal flaw in the design of System V semaphores" (p 284).
 </p>
 
 <p>
-For instance, imagine processes P1 and P2. They're executing the same code, 
+For instance, imagine processes P1 and P2. They're executing the same code,
 and that code intends to share a binary semaphore.
 Consider the following sequence of events at the startup of P1 and P2 &ndash;
 </p>
@@ -957,52 +965,54 @@ Consider the following sequence of events at the startup of P1 and P2 &ndash;
         now think they own the lock.</li>
 </ol>
 
-<p>The canonical solution for this race condition is to check the value of 
-<tt>sem_otime</tt> (an element in the <tt>semid_ds</tt> struct that's 
-populated on call to <tt>semctl(IPC_STAT)</tt> and which is exposed to 
+<p>W. Richard Stevens' solution for this race condition is to check the value of
+<tt>sem_otime</tt> (an element in the <tt>semid_ds</tt> struct that's
+populated on the call to <tt>semctl(IPC_STAT)</tt> and which is exposed to
 Python by this module) which
-is initialized to zero when the semaphore is created and otherwise holds 
-the time of the last 
-call to <tt>semop()</tt>. 
+is initialized to zero when the semaphore is created and otherwise holds
+the time of the last
+call to <tt>semop()</tt> (which is called by <tt>P()</tt>/<tt>acquire()</tt>,
+<tt>V()</tt>/<tt>release()</tt>, and <tt>Z()</tt>).
 </p>
 
 <p>In Python, each process would run something like this:
 <pre>
 try:
-   sem = sysv_ipc.Semaphore(42, sysv_ipc.CREX)
+   sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
+   sem.value = 1
 except sysv_ipc.ExistentialError:
    # One of my peers created the semaphore already
    sem = sysv_ipc.Semaphore(42)
-   
+
 while not sem.o_time:
     time.sleep(.1)
-    
+
 # Now the semaphore is safe to use.
 </pre>
 
 
 <h4 id="mem_init">Shared Memory Initialization</h4>
 
-<p>With shared memory, 
+<p>With shared memory,
 using the <tt>IPC_CREAT</tt> flag without <tt>IPC_EXCL</tt>
-is problematic <em>unless you know the size of the segment 
+is problematic <em>unless you know the size of the segment
 you're potentially opening</em>.
 </p>
 
-<p>Why? Because when creating a new segment, 
+<p>Why? Because when creating a new segment,
 many (most? all?) operating systems demand a non-zero size. However,
 when opening an existing segment, zero is the only guaranteed safe value
-(again, assuming one doesn't know the size of the segment in advance). 
+(again, assuming one doesn't know the size of the segment in advance).
 Since <tt>IPC_CREAT</tt>
 can open or create a segment, there's no safe value for the size under
 this circumstance.
 </p>
 
-<p>As a (sort of) side note, the 
+<p>As a (sort of) side note, the
 <a href="http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html">SUSv3
-specification for <tt>shmget()</tt></a> says only that the size of a new 
-segment must not be less than "the system-imposed minimum". I 
-gather that at one time, some systems set the minimum at zero despite the 
+specification for <tt>shmget()</tt></a> says only that the size of a new
+segment must not be less than "the system-imposed minimum". I
+gather that at one time, some systems set the minimum at zero despite the
 fact that it doesn't make much sense to create a zero-length shared memory
 segment. I think most modern systems do the sensible thing and insist on
 a minimum length of 1.
@@ -1011,62 +1021,62 @@ a minimum length of 1.
 
 <h4 id="message_queue_limits">Message Queue Limits</h4>
 
-<p>Python programmers can usually remain blissfully ignorant of memory 
+<p>Python programmers can usually remain blissfully ignorant of memory
 allocation issues. Unfortunately, a combination of factors makes them
 relevant when dealing with System V message queues.
 </p>
 
 <p><strong>Some implementations impose extremely stingy limits.</strong>
-For instance, many BSDish systems (OS X, FreeBSD, 
+For instance, many BSDish systems (OS X, FreeBSD,
 <a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=NETBSD">NetBSD</a>, and
 <a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=OPENBSD">OpenBSD</a>)
 limit queues to 2048 bytes. Note that that's the <em>total
 queue size</em>, not the message size. Two 1k messages would fill the queue.
 </p>
 
-<p><strong>Those limits can be very difficult to change.</strong> At best, 
-only privileged processes can increase the limit. At worst, the limit 
-is a kernel parameter and requires a kernel change via a tunable or 
+<p><strong>Those limits can be very difficult to change.</strong> At best,
+only privileged processes can increase the limit. At worst, the limit
+is a kernel parameter and requires a kernel change via a tunable or
 a recompile.
 </p>
-    
-<p><strong>This module can't figure out what the limits are</strong>, so 
+
+<p><strong>This module can't figure out what the limits are</strong>, so
 it can't cushion them or even report them to you.
-On some systems the limits are expressed in header files, on others 
+On some systems the limits are expressed in header files, on others
 they're available through kernel interfaces (like FreeBSD's <tt>sysctl</tt>).
-Under OS X and to some extent OpenSolaris I can't figure out where they're 
+Under OS X and to some extent OpenSolaris I can't figure out where they're
 defined and what I report here is the result of experimentation and educated
 guesses formed by Googling.
 </p>
 
 <p>The good news is that this module will still behave as advertised no
-matter what these limits are. Nevertheless you might be surprised when a 
-call to <tt>.send()</tt> get stuck because a queue is full even though you've 
+matter what these limits are. Nevertheless you might be surprised when a
+call to <tt>.send()</tt> get stuck because a queue is full even though you've
 only put 2048 bytes of messages in it.
 </p>
 
 <p>Here are the limits I've been able to find under my test operating
-systems, ordered from best (most generous) to worst (most stingy). 
-<strong>This information was current as of 2009</strong> when I wrote the 
+systems, ordered from best (most generous) to worst (most stingy).
+<strong>This information was current as of 2009</strong> when I wrote the
 message queue code. It's getting pretty stale now. I hope the situation has
 improved over the 2009 numbers I describe below.
 </p>
 
-<p>Under <strong>OpenSolaris 2008.05</strong> each queue's maximum size defaults 
-to 64k. A privileged process (e.g. root) can change this through the 
-<tt>max_size</tt> attribute of a <tt>sysv_ipc.MessageQueue</tt> object. 
+<p>Under <strong>OpenSolaris 2008.05</strong> each queue's maximum size defaults
+to 64k. A privileged process (e.g. root) can change this through the
+<tt>max_size</tt> attribute of a <tt>sysv_ipc.MessageQueue</tt> object.
 I was able to increase it to 16M and successfully sent sixteen 1M messages to
 the queue.
 </p>
 
-<p>Under <strong>Ubuntu 8.04</strong> (and perhaps other Linuxes) each 
-queue's maximum size defaults to 16k. As with OpenSolaris, I was able to 
+<p>Under <strong>Ubuntu 8.04</strong> (and perhaps other Linuxes) each
+queue's maximum size defaults to 16k. As with OpenSolaris, I was able to
 increase this to 16M, but only for a privileged process.
 </p>
 
-<p>Under <strong>FreeBSD 7</strong> and I think NetBSD and OpenBSD, each 
+<p>Under <strong>FreeBSD 7</strong> and I think NetBSD and OpenBSD, each
 queue's maximum size defaults to 2048 bytes. Furthermore, one can (as root)
-set <tt>max_size</tt> to something larger and FreeBSD doesn't complain, but 
+set <tt>max_size</tt> to something larger and FreeBSD doesn't complain, but
 it also ignores the change.
 </p>
 
@@ -1074,14 +1084,14 @@ it also ignores the change.
 to 2048 bytes and OS X silently ignores attempts to increase this (just like
 FreeBSD). To add insult to injury, there appears to be no way to increase
 this limit short of recompiling the kernel.
-I'm guessing at this based on the 
+I'm guessing at this based on the
 <a href="http://www.google.com/search?q=site%3Aopensource.apple.com+%22msg.h%22">Darwin
 message queue limits</a>.
 </p>
 
 <p>If you want
-to search for these limits on your operating system, the key constants are 
-<tt>MSGSEG</tt>, <tt>MSGSSZ</tt>, <tt>MSGTQL</tt>, <tt>MSGMNB</tt>, 
+to search for these limits on your operating system, the key constants are
+<tt>MSGSEG</tt>, <tt>MSGSSZ</tt>, <tt>MSGTQL</tt>, <tt>MSGMNB</tt>,
 <tt>MSGMNI</tt> and <tt>MSGMAX</tt>. Under BSD, <tt>sysctl kern.ipc</tt>
 should tell you what you need to know and may allow you to change these
 parameters.
@@ -1089,10 +1099,10 @@ parameters.
 
 <h4>Nobody Likes a Mr. Messy</h4>
 
-<p>Semaphores and especially shared memory are a little different from most Python objects 
-and therefore require a little more care on the part of the programmer. When a 
-program creates a semaphore or shared memory object, it creates something that 
-resides <em>outside of its own process</em>, just like a file on a hard drive. It 
+<p>Semaphores and especially shared memory are a little different from most Python objects
+and therefore require a little more care on the part of the programmer. When a
+program creates a semaphore or shared memory object, it creates something that
+resides <em>outside of its own process</em>, just like a file on a hard drive. It
 won't go away when your process ends unless you explicitly remove it.
 </p>
 
@@ -1100,14 +1110,14 @@ won't go away when your process ends unless you explicitly remove it.
 
 <h4>Consult Your Local <tt>man</tt> Pages</h4>
 
-<p>The sysv_ipc module is just a wrapper around your system's API. If your 
+<p>The sysv_ipc module is just a wrapper around your system's API. If your
 system's implementation has quirks, the <tt>man</tt> pages for <tt>semget, semctl, semop
 shmget, shmat, shmdt</tt> and <tt>shmctl</tt> will probably cover them.
 </p>
 
 <h4>Interesting Tools</h4>
 
-<p>Many systems (although not some older versions of OS X) come 
+<p>Many systems (although not some older versions of OS X) come
 with <tt>ipcs</tt> and <tt>ipcrm</tt>.
 The former shows existing shared memory, semaphores and message queues on your system and
 the latter allows you to remove them.
@@ -1118,7 +1128,7 @@ the latter allows you to remove them.
 
 <p>For Pythonistas &ndash;</p>
 <ul>
-    <li><a href="http://www.youtube.com/watch?v=13JK5kChbRw">A meditation on the inaccuracy 
+    <li><a href="http://www.youtube.com/watch?v=13JK5kChbRw">A meditation on the inaccuracy
         of shared memories</a>
     </li>
 </ul>
@@ -1128,16 +1138,16 @@ the latter allows you to remove them.
 <p>Bugs? My code never has bugs! There are, however, some suboptimal anomalies...</p>
 
 <ul>
-    <li>Under OS X, <tt>sys/ipc.h</tt> defines two versions of the 
+    <li>Under OS X, <tt>sys/ipc.h</tt> defines two versions of the
         <tt>ipc_perm</tt> struct. This module picks up the old, deprecated
         one which stores uid and gid values in 16 bit types. It's definitions
         in <tt>Python.h</tt> that cause this, though, so there's not much
-        I can do to change it. 
-    </li>        
+        I can do to change it.
+    </li>
     <li>This module can't report the exact min and max values for a key.
-        It turns out 
+        It turns out
         that <a href="http://groups.google.com/group/comp.lang.c/browse_thread/thread/14a1cdbfb111f4eb">it's
-        really difficult to determine the maximum value that a 
+        really difficult to determine the maximum value that a
         typedef-ed variable can hold</a>.
     </li>
 </ul>
@@ -1145,23 +1155,46 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_6"><strong><span id="current">Current</span> &ndash; 0.6.6 (15 October 2013) &ndash;</strong>
+    <li id="v0_6_7"><strong><span id="current">Current</span> &ndash; 0.6.7 (1 August 2014) &ndash;</strong>
+    	<p><i>Spasibo</i> to Yuriy Taraday for reporting some doc errors
+    		corrected in this version.
+    	</p>
+
+        <ul>
+            <li>Added KEY_MIN as a module-level constant. The documentation
+            	has claimed that it was available for a long time so now the
+            	code finally matches the documentation.
+            </li>
+
+            <li>Changed randomly generated keys to never use a value of 0.</li>
+
+            <li>Fixed two documenation errors in the special section on
+            	semaphore initialization and gave long overdue credit to
+            	W. Richard Stevens' book for the code idea. (Any code mistakes
+            	are mine, not his.)
+            </li>
+
+            <li>This is the first version downloadable from PyPI.</li>
+        </ul>
+    </li>
+
+    <li id="v0_6_6">0.6.6 (15 October 2013) &ndash;
         <p>Added the ability to use Semaphores in context managers.
         	Thanks to Matt Ruffalo for the suggestion and patch.
         </p>
     </li>
 
     <li id="v0_6_5">0.6.5 (31 March 2013) &ndash;
-		<p>Fixed a bug where SharedMemory.write() claimed to accept 
-            	keyword arguments but didn't actually do so. Thanks to 
+		<p>Fixed a bug where SharedMemory.write() claimed to accept
+            	keyword arguments but didn't actually do so. Thanks to
             	Matt Ruffalo for the bug report and patch.
         </p>
     </li>
 
     <li id="v0_6_4">0.6.4 (19 Dec 2012) &ndash;
         <ul>
-            <li>Added a module-level <tt>attach()</tt> method based on a 
-            	suggestion by Vladimír Včelák. 
+            <li>Added a module-level <tt>attach()</tt> method based on a
+            	suggestion by Vladimír Včelák.
             </li>
             <li>Added the <tt>ftok()</tt> method along with dire warnings about
             	its use.
@@ -1189,8 +1222,8 @@ the latter allows you to remove them.
     <li id="v0_6_1">0.6.1 (26 June 2010) &ndash;
         <ul>
             <li>Fixed a typo introduced in the previous version that caused
-                unpredictable behavior (usually a segfault) if a block flag 
-                was passed to <tt>MessageQueue.send()</tt>. <i>Obrigado</i> 
+                unpredictable behavior (usually a segfault) if a block flag
+                was passed to <tt>MessageQueue.send()</tt>. <i>Obrigado</i>
                 to Álvaro Justen and Ronald Kaiser for the bug report and
                 patch.
             </li>
@@ -1209,11 +1242,11 @@ the latter allows you to remove them.
 
     <li id="v0_5_2">0.5.2 (17 Jan 2010)</strong>
         <ul>
-            <li>Fixed a bug that insisted on keys &gt; 0. Thanks to 原志 
+            <li>Fixed a bug that insisted on keys &gt; 0. Thanks to 原志
                 (Daniel) for the bug report and patch.
             </li>
             <li>Fixed a bug where the module could have generated invalid
-                keys on systems that typedef <tt>key_t</tt> as a 
+                keys on systems that typedef <tt>key_t</tt> as a
                 <tt>short</tt>. I don't think such a system exists, though.
             </li>
             <li>Fixed a LICENSE file typo.</li>
@@ -1224,7 +1257,7 @@ the latter allows you to remove them.
     <li id="v0_5_1">0.5.1 (1 Dec 2009) &ndash;
         <p>No code changes in this version.</p>
         <ul>
-            <li>Fixed the comment in <tt>sysv_ipc_module.c</tt> that 
+            <li>Fixed the comment in <tt>sysv_ipc_module.c</tt> that
                 still referred to the GPL license.
             </li>
             <li>Added the attributes <tt>__version</tt>, <tt>__author__</tt>,
@@ -1258,12 +1291,12 @@ the latter allows you to remove them.
             <li>Added a message queue demo.</li>
             <li>Added <tt>str()</tt> and <tt>repr()</tt> support to all
                 objects.</li>
-            <li>Fixed a bug in <tt>SharedMemory.write()</tt> that could cause 
-                a spurious error of "Attempt to write past end of memory 
+            <li>Fixed a bug in <tt>SharedMemory.write()</tt> that could cause
+                a spurious error of "Attempt to write past end of memory
                 segment". This bug only occurred on platforms using
-                different sizes for <tt>long</tt> and <tt>int</tt>, or 
-                <tt>long</tt> and <tt>py_size_t</tt> 
-                (depending on Python version). <em>Tack</em> to Jesper 
+                different sizes for <tt>long</tt> and <tt>int</tt>, or
+                <tt>long</tt> and <tt>py_size_t</tt>
+                (depending on Python version). <em>Tack</em> to Jesper
                 for debug help.
             </li>
             <li>Plugged a memory leak in <tt>MessageQueue.receive()</tt>.</li>
@@ -1277,7 +1310,7 @@ the latter allows you to remove them.
             <li>Fixed a bug where the <tt>key</tt> attribute of SharedMemory objects
                 returned garbage.
             </li>
-            <li>Fixed a bug where keys &gt; INT_MAX would get truncated on 
+            <li>Fixed a bug where keys &gt; INT_MAX would get truncated on
                 platforms where longs are bigger than ints.
             </li>
             <li>Provided decent inline documentation for object attributes
@@ -1288,49 +1321,49 @@ the latter allows you to remove them.
     </li>
 
     <li id="v0_3">0.3 (16 Jan 2009) &ndash;
-        <p>This version features a rename of classes and errors 
+        <p>This version features a rename of classes and errors
             (sorry about breaking the names), some modifications to
             semaphore timeouts, and many small fixes.
         </p>
-        
+
         <p>A semaphore's <tt>.block</tt> flag now consistently trumps the
             timeout. When <tt>False</tt>, the timeout is irrelevant -- calls
             will never block. In prior versions, the flag was ignored
             when the timeout was non-zero.
         </p>
-        
+
         <p>Also, on platforms (such as OS X) where <tt>semtimedop()</tt> is
             not supported, all timeouts are now treated as <tt>None</tt>.
             In other words, when <tt>.block</tt> is True, all calls
             wait as long as necessary.
         </p>
-        
+
         <p>Other fixes &ndash;</p>
-        
+
         <ul>
-            <li>Fixed the poor choices I'd made for class and 
+            <li>Fixed the poor choices I'd made for class and
                 error names by removing the leading "SysV" and "SysVIpc".
             </li>
             <li>Removed dependencies on Python 2.5. The module now works
                 with Python 2.4.4 and perhaps earlier versions.
             </li>
-            <li>Fixed a bug where I was not following SysV semaphore semantics 
+            <li>Fixed a bug where I was not following SysV semaphore semantics
                 for interaction between timeouts and the block flag.
             </li>
             <li>Fixed compile problems on OpenSolaris 2008.05.</li>
             <li>Got rid of OS X compile warnings.</li>
-            <li>Fixed many instances where I was making potentially lossy 
-                conversions between Python values and Unix-specific 
+            <li>Fixed many instances where I was making potentially lossy
+                conversions between Python values and Unix-specific
                 types like <tt>key_t</tt>, <tt>pid_t</tt>, etc.
             </li>
             <li>Fixed a bug in the SharedMemory <tt>attach()</tt> function
-                 that would set an error string but not return an error 
+                 that would set an error string but not return an error
                  value if the passed address was not <tt>None</tt> or a long.
             </li>
             <li>Simplified the code a little.</li>
-            <li>Restricted the semaphore <tt>acquire()</tt> and 
-                <tt>release()</tt> delta to be between SHORT_MIN and 
-                SHORT_MAX since 
+            <li>Restricted the semaphore <tt>acquire()</tt> and
+                <tt>release()</tt> delta to be between SHORT_MIN and
+                SHORT_MAX since
                 <a href="http://opengroup.org/onlinepubs/007908775/xsh/semop.html">it
                     is a short in the SUSv2 spec</a>.
             </li>
@@ -1338,17 +1371,17 @@ the latter allows you to remove them.
                 <tt>release()</tt> with a delta of <tt>0</tt> would call
                 <tt>.Z()</tt> instead.
             </li>
-            <li>Disallowed byte counts ≤ <tt>0</tt> in 
+            <li>Disallowed byte counts ≤ <tt>0</tt> in
                 <tt>SharedMemory.read()</tt>
             </li>
-            <li>Fixed a bug in the <tt>SharedMemory</tt> init code that 
-                could, under vanishingly rare circumstances, return failure 
+            <li>Fixed a bug in the <tt>SharedMemory</tt> init code that
+                could, under vanishingly rare circumstances, return failure
                 without setting the error code.
             </li>
-            <li>Removed some dead code relating to the <tt>.seq</tt> member 
+            <li>Removed some dead code relating to the <tt>.seq</tt> member
                 of the <tt>sem_perm</tt> and <tt>shm_perm</tt> structs.
             </li>
-            <li>Stopped accessing the non-standard <tt>key</tt> 
+            <li>Stopped accessing the non-standard <tt>key</tt>
                 (a.k.a. <tt>_key</tt> and <tt>__key</tt>) element of the
                 <tt>ipc_perm</tt> struct.
             </li>
@@ -1365,13 +1398,13 @@ the latter allows you to remove them.
                 errors (<tt>ExistentialError</tt>, etc.) from
                 being visible in the module.
             </li>
-            <li>Fixed a bug that re-initialized shared memory with 
+            <li>Fixed a bug that re-initialized shared memory with
                 the init character when only <tt>IPC_CREAT</tt> was specified
                 and an existing segment was opened.
             </li>
-            <li>Fixed a bug that always defaulted the size of a shared 
-                memory segment to <tt>PAGE_SIZE</tt>. Updated code and 
-                documentation to use intelligent defaults. <em>Tack</em> to 
+            <li>Fixed a bug that always defaulted the size of a shared
+                memory segment to <tt>PAGE_SIZE</tt>. Updated code and
+                documentation to use intelligent defaults. <em>Tack</em> to
                 Jesper for the bug report.
             </li>
             <li>Several cosmetic changes. (Added more metadata to setup.py,
@@ -1380,24 +1413,24 @@ the latter allows you to remove them.
             </li>
         </ul>
     </li>
-    
+
     <li>0.2 (16 Dec 2008) &ndash;
         Lots of small fixes.
-        
+
         <ul>
-            <li>Fixed a bug where calling <tt>shm.remove()</tt> on shared 
-               memory that was already removed would cause a SystemError. 
+            <li>Fixed a bug where calling <tt>shm.remove()</tt> on shared
+               memory that was already removed would cause a SystemError.
                (I wasn't setting the Python error before returning.)
             </li>
-               
+
             <li>Fixed a couple of bugs that would cause the creation
                 of a new, read-only shared memory segment to fail.
             </li>
-            
+
             <li>Fixed a bug that would cause the creation
                 of a new, read-only semaphore to fail.
             </li>
-            
+
             <li>Added the constant <tt>IPC_CREX</tt>.</li>
 
             <li>Renamed (sorry) <tt>MAX_KEY</tt> to <tt>KEY_MAX</tt> and
@@ -1405,11 +1438,11 @@ the latter allows you to remove them.
                 to be consistent with the C naming convention in limits.h.
             </li>
 
-            <li>Hardcoded <tt>SEMAPHORE_VALUE_MAX</tt> to 32767 until I can 
+            <li>Hardcoded <tt>SEMAPHORE_VALUE_MAX</tt> to 32767 until I can
                 find a reliable way to determine it at install time.
             </li>
 
-            <li>Changed prober.py to write out a C header file with 
+            <li>Changed prober.py to write out a C header file with
                 platform-specific definitions in it.
             </li>
 
@@ -1421,7 +1454,7 @@ the latter allows you to remove them.
                 to assign an out-of-range value to a semaphore.
             </li>
 
-            <li>Added code to raise a ValueError when an out-of-range key 
+            <li>Added code to raise a ValueError when an out-of-range key
                 is passed to a constructor.
             </li>
 
@@ -1438,13 +1471,13 @@ the latter allows you to remove them.
 
 <h3>Future Features/Changes</h3>
 
-<p>These are features that may or may not be added depending on technical 
+<p>These are features that may or may not be added depending on technical
 difficulty, user interest and so forth.
 </p>
 
 <ul>
     <li>Update this documentation with a list of platforms that support semtimedop().</li>
-    
+
     <li>Find a way to make <tt>SEMAPHORE_VALUE_MAX</tt> more accurate.</li>
 </ul>
 

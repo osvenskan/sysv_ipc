@@ -75,7 +75,7 @@ sysv_ipc_attach(PyObject *self, PyObject *args, PyObject *keywords) {
     int flags = 0;
     char *keyword_list[ ] = {"id", "address", "flags", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "i|Oi", keyword_list, 
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "i|Oi", keyword_list,
                                       &id, &py_address, &flags))
         goto error_return;
 
@@ -91,8 +91,8 @@ sysv_ipc_attach(PyObject *self, PyObject *args, PyObject *keywords) {
     }
 
     DPRINTF("About to create a new SharedMemory object.\n");
-   
-    /* Create a new SharedMemory object. Some tutorials recommend using 
+
+    /* Create a new SharedMemory object. Some tutorials recommend using
     PyObject_CallObject() to create this, but that invokes the __init__ method
     which I don't want to do.
     */
@@ -106,7 +106,7 @@ sysv_ipc_attach(PyObject *self, PyObject *args, PyObject *keywords) {
 		return (PyObject *)shm;
 	else
 		// abandon this object and fall through to the error return below.
-		Py_DECREF(shm); 
+		Py_DECREF(shm);
 
     error_return:
     return NULL;
@@ -122,16 +122,16 @@ sysv_ipc_ftok(PyObject *self, PyObject *args, PyObject *keywords) {
 
     key_t rc = 0;
 
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "si|i", keyword_list, 
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "si|i", keyword_list,
                                      &path, &id, &silence_warning))
         goto error_return;
 
     if (!silence_warning) {
 	    DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
-	    PyErr_WarnEx(PyExc_Warning, 
+	    PyErr_WarnEx(PyExc_Warning,
 	                 "Use of ftok() is not recommended; see sysv_ipc documentation", 1);
 	}
-	
+
     rc = ftok(path, id);
 
     DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, rc);
@@ -792,11 +792,12 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
 
     PyModule_AddStringConstant(module, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddStringConstant(module, "__version__", SYSV_IPC_VERSION);
-    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2008 Philip Semanchuk");
+    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2008 - 2014 Philip Semanchuk");
     PyModule_AddStringConstant(module, "__author__", "Philip Semanchuk");
     PyModule_AddStringConstant(module, "__license__", "BSD");
 
     PyModule_AddIntConstant(module, "PAGE_SIZE", PAGE_SIZE);
+    PyModule_AddIntConstant(module, "KEY_MIN", KEY_MIN);
     PyModule_AddIntConstant(module, "KEY_MAX", KEY_MAX);
     PyModule_AddIntConstant(module, "SEMAPHORE_VALUE_MAX", SEMAPHORE_VALUE_MAX);
     PyModule_AddIntConstant(module, "IPC_CREAT", IPC_CREAT);
