@@ -1,22 +1,19 @@
 import os.path
 import os
 import subprocess
+import sys
 
-# Test compiles write their output to a folder called "junk" because 
-# I can't write to /dev/null under OS X.
-
-# Set these to None for compiler debugging or subprocess.PIPE to silence errors.
+# Set these to None for debugging or subprocess.PIPE to silence compiler
+# warnings and errors.
 STDOUT = subprocess.PIPE
 STDERR = subprocess.PIPE
 # STDOUT = None
 # STDERR = None
 
 
-
-# This module makes use of the ipc_perm structure defined in include/sys/ipc.h
-# (or include/bits/ipc.h on some systems). That structure includes an element 
-# called key, _key or __key depending on the OS. Here's the variations I've 
-# been able to find with OS version numbers where possible. 
+# This module makes use of the ipc_perm structure defined in <sys/ipc.h>. 
+# That structure includes an element called key, _key or __key depending on 
+# the OS. Here's the variations I've found:
 #     key: FreeBSD 6, AIX, Solaris, OS X 10.3, OS X 10.4+ (conditionally)
 #    _key: NetBSD, OS X 10.4+ (conditionally)
 #   __key: Debian 4 (Etch), Ubuntu 7, RH 3.3 & 3.4
@@ -30,25 +27,20 @@ STDERR = subprocess.PIPE
 # errand so instead I figure it out on the fly using the function 
 # count_key_underscores() below.
 
-# Lots of systems use the unadorned "key" so that's the default when I'm forced to guess.
+# Lots of systems use the unadorned "key" so that's the default when I'm 
+# forced to guess.
 COUNT_KEY_UNDERSCORES_DEFAULT = 0
 
-key_underscores = COUNT_KEY_UNDERSCORES_DEFAULT
-
 def count_key_underscores():
-    """ Uses trial-and-error with the system's C compiler to figure out the number of 
-        underscores preceding key in the ipc_perm structure. Returns 0, 1 or 2. In case of
-        error, it makes a guess and hopes for the best.
-    """
-    underscores_count = COUNT_KEY_UNDERSCORES_DEFAULT
-    
-    underscores = { }
-
     # Here I compile three mini-programs with key, _key and __key. Theoretically, 
     # two should fail and one should succeed, and that will tell me how this platform names
     # ipc_perm.key. If the number of successes != 1, something's gone wrong.
     # I use subprocess in order to trap (and discard) stderr so that the user doesn't 
     # see the compiler errors I'm deliberately generating here.
+    underscores_count = COUNT_KEY_UNDERSCORES_DEFAULT
+    
+    underscores = { }
+
     src = """
 #define _XOPEN_SOURCE 600
 #include <sys/ipc.h>
@@ -56,10 +48,10 @@ int main(void) { struct ipc_perm foo; foo.%skey = 42; }
 
 """
     for i in range(0, 3):
-        source_filename = "./junk/%d.c" % i
+        source_filename = "./prober/%d.c" % i
         file(source_filename, "w").write(src % ('_' * i))
         
-        cmd = "cc -o ./junk/foo " + source_filename
+        cmd = "cc -o ./prober/foo " + source_filename
         
         p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
         if not p.wait(): underscores[i] = True
@@ -84,8 +76,6 @@ int main(void) { struct ipc_perm foo; foo.%skey = 42; }
 
 COUNT_SEQ_UNDERSCORES_DEFAULT = 0
 
-seq_underscores = COUNT_KEY_UNDERSCORES_DEFAULT
-
 def count_seq_underscores():
     """ Uses trial-and-error with the system's C compiler to figure out the number of 
         underscores preceding key in the ipc_perm structure. Returns 0, 1 or 2. In case of
@@ -102,10 +92,10 @@ int main(void) { struct ipc_perm foo; foo.%sseq = 42; }
 
 """
     for i in range(0, 3):
-        source_filename = "./junk/%d.c" % i
+        source_filename = "./prober/%d.c" % i
         file(source_filename, "w").write(src % ('_' * i))
         
-        cmd = "cc -o ./junk/foo " + source_filename
+        cmd = "cc -o ./prober/foo " + source_filename
         
         p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
         if not p.wait(): underscores[i] = True
@@ -130,33 +120,79 @@ int main(void) { struct ipc_perm foo; foo.%sseq = 42; }
 
 def sniff_semtimedop():
     rc = False
+
+    cmd = "cc -o ./prober/foo ./prober/semtimedop_test.c"
     
-    cmd = '''printf "#define _XOPEN_SOURCE 600\n#include <sys/sem.h>\n#include <stdlib.h>\nint main(void) { semtimedop(0, NULL, 0, NULL); }\n" | cc -xc -o ./junk/foo -'''
     p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
-    if not p.wait(): 
-        rc = True
+    if not p.wait(): rc = True
 
     return rc
 
 
-def probe():
-    global key_underscores
-    global seq_underscores
-    global semtimedop_available
+def probe_semvmx():
+    # This is the hardcoded default that I chose for two reasons. First, 
+    # it's the default on my Mac so I know at least one system needs it 
+    # this low. Second, it fits neatly into a 16-bit signed int which 
+    # makes me hope that it's low enough to be safe on all systems.
+    semvmx = 32767
+    
+    # FIXME -- Ways to get SEMVMX -- 
+    # 1) Try to compile .c code assuming SEMVMX is #defined 
+    # 2) Parse the output from `sysctl kern.sysv.semvmx` (doesn't work 
+    #    on OS X).
+    # 3) Parse the output from `ipcs -S`
+    # 4) Run .c code that loops, releasing a semaphore until semop() 
+    #    returns ERANGE or the value goes wonky. OS X lets the latter
+    #    happen, which AFAICT is a violation of the spec.
+    
+    return semvmx
+    
 
+
+def probe():
+    d = { }
+
+    # AFAICT the semun union is supposed to be declared in one's code. 
+    # However, a lot of legacy code gets this wrong and some header files 
+    # define it, e.g.sem.h on OS X where it's #ifdef-ed so that legacy code 
+    # won't break. In fact it's my #define of _XOPEN_SOURCE that causes it 
+    # to not exist on darwin. Notably, some (all?) Linux platforms #define 
+    # _SEM_SEMUN_UNDEFINED if it's up to my code to declare this union, so 
+    # I use that flag as my standard.
+    if "darwin" in sys.platform:
+        d["_SEM_SEMUN_UNDEFINED"] = ""
     
-    if not os.path.exists("./junk"):
-        os.mkdir("./junk")
+    d["IPC_PERM_KEY_NAME"] = ("_" * count_key_underscores()) + "key"
+    d["IPC_PERM_SEQ_NAME"] = ("_" * count_seq_underscores()) + "seq"
+    if sniff_semtimedop():
+        d["SEMTIMEDOP_EXISTS"] = ""
+    d["UID_MAX"] = "INT_MAX"
+    d["GID_MAX"] = "INT_MAX"
+    d["KEY_MAX"] = "INT_MAX"
+    d["SEMAPHORE_VALUE_MAX"] = probe_semvmx()
+    d["PY_INT_MAX"] = sys.maxint
     
-    key_underscores = count_key_underscores()
-    seq_underscores = count_seq_underscores()
-    semtimedop_available = sniff_semtimedop()
+    #print d
+
+    msg = """/*
+This header file was generated when you ran setup. Once created, the setup
+process won't overwrite it, so you can adjust the values by hand and 
+recompile if you need to. 
+
+To recreate this file, just delete it and re-run setup.py.
+
+Note that UID_MAX, GID_MAX, KEY_MAX and SEMAPHORE_VALUE_MAX are stored
+internally in longs, so you should never #define them to anything 
+larger than LONG_MAX on your platform.
+*/
+
+"""
     
+    filename = "probe_results.h"
+    if not os.path.exists(filename):
+        lines = ["#define %s\t\t%s\n" % (key, d[key]) for key in d]
+        file(filename, "wb").write(msg + ''.join(lines))
+
 
 if __name__ == "__main__":
     probe()
-    
-    print "key underscores = %d " % key_underscores
-    print "seq underscores = %d " % seq_underscores
-    print "semtimedop_available = %d " % semtimedop_available
-
