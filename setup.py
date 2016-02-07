@@ -21,13 +21,18 @@ download_url = "http://semanchuk.com/philip/sysv_ipc/sysv_ipc-%s.tar.gz" % VERSI
 source_files = ["sysv_ipc_module.c", "common.c", "semaphore.c", "memory.c", 
                 "mq.c" ]
 # http://pypi.python.org/pypi?:action=list_classifiers
-classifiers = [ "Development Status :: 4 - Beta",
+classifiers = [ "Development Status :: 4 - Beta", 
                 "Intended Audience :: Developers", 
-                'License :: OSI Approved :: BSD License',
+                "License :: OSI Approved :: BSD License",
                 "Operating System :: MacOS :: MacOS X",
+                "Operating System :: POSIX :: BSD :: FreeBSD",
+                "Operating System :: POSIX :: Linux",
+                "Operating System :: POSIX :: SunOS/Solaris",
                 "Operating System :: POSIX", 
                 "Operating System :: Unix", 
                 "Programming Language :: Python", 
+                "Programming Language :: Python :: 2",
+                "Programming Language :: Python :: 3",
                 "Topic :: Utilities" ]
 license = "http://creativecommons.org/licenses/BSD/"
 keywords = "ipc inter-process communication semaphore shared memory shm message queue"
