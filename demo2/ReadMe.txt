@@ -30,7 +30,7 @@ Mrs. Premise and Mrs. Conclusion won't ever find their messages corrupted
 no matter how many messages they exchange. You can experiment with this by 
 setting ITERATIONS in params.txt to a very large value.
 
-These programs are not meant as a demostration on how to make best use of a 
+These programs are not meant as a demonstration on how to make best use of a 
 message queue. In fact, they're very badly behaved because they poll the
 queue as fast as possible -- they'll send your CPU usage right up to 100%.
 Remember, they're trying as hard as they can to step one another so as to 

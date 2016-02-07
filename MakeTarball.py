@@ -29,7 +29,7 @@ filenames = (
     "demo/conclusion.py",
     "demo/md5.c",
     "demo/md5.h",
-    "demo/mk.sh",
+    "demo/make_all.sh",
     "demo/params.txt",
     "demo/premise.c",
     "demo/premise.py",
