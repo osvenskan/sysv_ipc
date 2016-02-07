@@ -31,26 +31,13 @@
 #include <string.h>
 
 // For sysconf/getpagesize
-#include <sys/mman.h>
-#include <sys/stat.h>
+// #include <sys/mman.h>
+// #include <sys/stat.h>
 
 // For the math surrounding timeouts for semtimedop()
 #include <math.h>
 
-
 #include "probe_results.h"
-
-// Code for determining page size swiped from Python's mmapmodule.c
-#if defined(HAVE_SYSCONF) && defined(_SC_PAGESIZE)
-static int
-my_getpagesize(void)
-{
-	return sysconf(_SC_PAGESIZE);
-}
-#else
-#define my_getpagesize getpagesize
-#endif
-
 
 #include <sys/ipc.h>		/* for system's IPC_xxx definitions */
 #include <sys/shm.h>		/* for shmget, shmat, shmdt, shmctl */
@@ -82,6 +69,8 @@ enum SEMOP_TYPE {
     SEMOP_Z
 };
 
+// Shorthand for the lazy
+#define IPC_CREX  (IPC_CREAT | IPC_EXCL)
 
 /*
 
@@ -969,7 +958,7 @@ static int
 SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords) {
     long key;
     int mode = 0600;
-    unsigned long size = my_getpagesize();
+    unsigned long size = 0;
     int shmget_flags = 0;
     int shmat_flags = 0;
     char init_character = ' ';
@@ -987,8 +976,12 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
 
     mode &= 0777;
     shmget_flags &= ~0777;
-        
-    DPRINTF("Calling shmget, key=%ld, size=%ld, mode=%o, flags=%x\n", key, size, mode, shmget_flags);
+    
+    // When creating a new segment, the default size is PAGE_SIZE.
+    if (((shmget_flags & IPC_CREX) == IPC_CREX) && (!size))
+        size = PAGE_SIZE;
+
+    DPRINTF("Calling shmget, key=%ld, size=%ld, mode=%o, flags=0x%x\n", key, size, mode, shmget_flags);
     self->id = shmget((key_t)key, size, mode | shmget_flags);
         
     DPRINTF("id == %d\n", self->id);
@@ -1028,7 +1021,7 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
 
     // If no write permissions requested, attach read-only
     shmat_flags = (mode & 0200) ? 0 : SHM_RDONLY;
-    DPRINTF("attaching memory with id %d using flags %x\n", self->id, shmat_flags);
+    DPRINTF("attaching memory with id %d using flags 0x%x\n", self->id, shmat_flags);
     self->address = shmat(self->id, NULL, shmat_flags);
     
     if ( (void *)-1 == self->address) {
@@ -1058,8 +1051,7 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
         goto error_return;
     }
     
-    if ((shmget_flags & (IPC_CREAT | IPC_EXCL)) && \
-        (!(shmat_flags & SHM_RDONLY))) {
+    if ( ((shmget_flags & IPC_CREX) == IPC_CREX) && (!(shmat_flags & SHM_RDONLY)) ) {
         // Initialize the memory.
         pSize = shm_get_value(self->id, SHM_SIZE);
     
@@ -1668,6 +1660,7 @@ static PyMethodDef module_methods[ ] = {
 PyMODINIT_FUNC 
 initsysv_ipc(void) {
     PyObject *m;
+    PyObject *module_dict;
 
     if (PyType_Ready(&SysVSemaphoreType) < 0)
         goto error_return;
@@ -1680,12 +1673,12 @@ initsysv_ipc(void) {
     if (m == NULL) 
         goto error_return;
 
-    PyModule_AddIntConstant(m, "PAGE_SIZE", my_getpagesize());
+    PyModule_AddIntConstant(m, "PAGE_SIZE", PAGE_SIZE);
     PyModule_AddIntConstant(m, "KEY_MAX", KEY_MAX);    
     PyModule_AddIntConstant(m, "SEMAPHORE_VALUE_MAX", SEMAPHORE_VALUE_MAX);
     PyModule_AddIntConstant(m, "IPC_CREAT", IPC_CREAT);
     PyModule_AddIntConstant(m, "IPC_EXCL", IPC_EXCL);
-    PyModule_AddIntConstant(m, "IPC_CREX", (IPC_CREAT | IPC_EXCL));
+    PyModule_AddIntConstant(m, "IPC_CREX", IPC_CREX);
     PyModule_AddIntConstant(m, "IPC_PRIVATE", IPC_PRIVATE);
     PyModule_AddIntConstant(m, "SHM_RND", SHM_RND);
     PyModule_AddIntConstant(m, "SHM_RDONLY", SHM_RDONLY);
@@ -1716,25 +1709,40 @@ initsysv_ipc(void) {
     PyModule_AddObject(m, "SysVSharedMemory", (PyObject *)&SysVSharedMemoryType);
     
     
-    if (!(pSysVIpcException = PyErr_NewException("sysv_ipc.SystemVIpcError", NULL, NULL)))
+    // Exceptions
+    if (!(module_dict = PyModule_GetDict(m)))
         goto error_return;
-    
-    if (!(pSysVIpcInternalException = PyErr_NewException("sysv_ipc.SystemVIpcInternalError", NULL, NULL)))
+
+    if (!(pSysVIpcException = PyErr_NewException("sysv_ipc.SysVIpcError", NULL, NULL)))
         goto error_return;
-    
-    if (!(pSysVIpcPermissionsException = PyErr_NewException("sysv_ipc.SystemVIpcPermissionsError", pSysVIpcException, NULL)))
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcError", pSysVIpcException);
+
+    if (!(pSysVIpcInternalException = PyErr_NewException("sysv_ipc.SysVIpcInternalError", NULL, NULL)))
         goto error_return;
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcInternalError", pSysVIpcInternalException);
     
-    if (!(pSysVIpcExistentialException = PyErr_NewException("sysv_ipc.SystemVIpcExistentialError", pSysVIpcException, NULL)))
+    if (!(pSysVIpcPermissionsException = PyErr_NewException("sysv_ipc.SysVIpcPermissionsError", pSysVIpcException, NULL)))
         goto error_return;
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcPermissionsError", pSysVIpcPermissionsException);
     
-    if (!(pSysVIpcBusyException = PyErr_NewException("sysv_ipc.SystemVIpcBusyError", pSysVIpcException, NULL)))
+    if (!(pSysVIpcExistentialException = PyErr_NewException("sysv_ipc.SysVIpcExistentialError", pSysVIpcException, NULL)))
         goto error_return;
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcExistentialError", pSysVIpcExistentialException);
     
-    if (!(pSysVIpcNotAttachedException = PyErr_NewException("sysv_ipc.SystemVIpcNotAttachedError", pSysVIpcException, NULL)))
+    if (!(pSysVIpcBusyException = PyErr_NewException("sysv_ipc.SysVIpcBusyError", pSysVIpcException, NULL)))
         goto error_return;
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcBusyError", pSysVIpcBusyException);
     
-    
+    if (!(pSysVIpcNotAttachedException = PyErr_NewException("sysv_ipc.SysVIpcNotAttachedError", pSysVIpcException, NULL)))
+        goto error_return;
+    else
+        PyDict_SetItemString(module_dict, "SysVIpcNotAttachedError", pSysVIpcNotAttachedException);
+
 
     return;
 

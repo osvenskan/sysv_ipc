@@ -60,16 +60,18 @@ That includes most (all?) *nix flavors but not Windows. At present, IPC
 message queues are not supported.
 </p>
 
-<p>Users of this module might be interested in a similar module
-(which I also wrote). <a href="/philip/posix_ipc/"><tt>Posix_ipc</tt>
-provides Python access to IPC using POSIX semaphores and shared memory</a>.
-POSIX IPC has slightly less broad OS support but is a little easier to use.
+<p>If you're interested in this module, there are 
+<a href="http://semanchuk.com/philip/PythonIpc/">other low-level IPC extensions
+for Python</a> that you might find useful. 
 </p>
 
-<p>You can <strong>download <a href="sysv_ipc-0.2.tar.gz">sysv_ipc version 0.2</a></strong>
-which 
-contains the source code, setup.py, installation 
-instructions and
+
+<p>You can <strong>download 
+<a href="sysv_ipc-0.2.1.tar.gz">sysv_ipc version 0.2.1</a>
+</strong>
+<a href="sysv_ipc-0.2.1.md5.txt">[md5 sum]</a>
+
+which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You might also want to read
 about some <a href="#bugs">known bugs</a>. Currently, this module
 only works with Python 2.5. If you need to access SysV IPC objects with
@@ -159,7 +161,7 @@ situations specific to IPC.
 </p>
 
 <dl>
-    <dt>SystemVIpcError</dt>
+    <dt>SysVIpcError</dt>
     <dd>The base error class for all the custom errors in this module. This
         error is occasionally raised on its own but you'll almost 
         always see a more specific error.
@@ -219,7 +221,7 @@ situations specific to IPC.
             <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
                 opens the semaphore identified by <span class="param">key</span> or creates a new
                 one if no such semaphore exists. Using <tt>IPC_CREAT</tt> by itself
-                is not recommended. (See <a href="#init">Semaphore Initialization</a>.)
+                is not recommended. (See <a href="#sem_init">Semaphore Initialization</a>.)
             </li>
             
             <li>With <span class="param">flags</span> set to 
@@ -432,11 +434,11 @@ situations specific to IPC.
 <h4>Methods</h4>
 
 <dl>
-    <dt>SysVSharedMemory(key, [flags = 0, [mode = 0600, [size = 0, [init_character = ' ']]]])</dt>
+    <dt>SysVSharedMemory(key, [flags = 0, [mode = 0600, [size = 0 or PAGE_SIZE, [init_character = ' ']]]])</dt>
     <dd>Creates a new shared memory segment or opens an existing one. 
         The memory is automatically attached.
         
-        <p>
+        <p>The 
         <span class="param">key</span> must be either the value IPC_PRIVATE or 
         an integer &gt; 0 and &le; KEY_MAX. 
         </p>
@@ -446,40 +448,56 @@ situations specific to IPC.
         </p> 
             
         <ul>
-                
-        <li>With <span class="param">flags</span> set to the default of <tt>0</tt>,
-            the module attempts
-            to open an existing shared memory segment identified by 
-            <span class="param">key</span> and raises 
-            a <tt>SysVIpcExistentialError</tt> if it doesn't exist.
-        </li>
+            <li>With <span class="param">flags</span> set to the 
+                <strong>default</strong> of <tt>0</tt>, the module attempts
+                to <strong>open an existing</strong> shared memory segment identified by 
+                <span class="param">key</span> and raises 
+                a <tt>SysVIpcExistentialError</tt> if it doesn't exist.
+            </li>
             
-        <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
-            opens the shared memory segment identified by <span class="param">key</span> or 
-            creates a new one if no such segment exists.
-        </li>
+            <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module 
+                <strong>opens</strong> the shared memory segment identified 
+                by <span class="param">key</span> <strong>or 
+                creates</strong> a new one if no such segment exists.
+                Using <tt>IPC_CREAT</tt> by itself
+                is not recommended. (See <a href="#mem_init">Memory Initialization</a>.)
+            </li>
             
-        <li>With <span class="param">flags</span> set to 
-            <tt>IPC_CREX</tt> (<tt>IPC_CREAT | IPC_EXCL</tt>),
-            the module 
-            creates a new shared memory segment identified by 
-            <span class="param">key</span>. If 
-            a segment with that key already exists, the call raises 
-            a <tt>SysVIpcExistentialError</tt>.
+            <li>With <span class="param">flags</span> set to 
+                <strong><tt>IPC_CREX</tt></strong> (<tt>IPC_CREAT | IPC_EXCL</tt>),
+                the module 
+                <strong>creates</strong> a new shared memory segment identified by 
+                <span class="param">key</span>. If 
+                a segment with that key already exists, the call raises 
+                a <tt>SysVIpcExistentialError</tt>.
         
-        <p>When both <tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are specified
-            and the caller has write permission, each byte in the new memory segment will be 
-            initialized to the value of <span class="param">init_character</span>.
-        </p>
-        </li>
-</ul>
-        <p>It's not required, but you might want to make <span class="param">size</span> 
-            a multiple of the constant PAGE_SIZE.
-        </p>
+                <p>When both <tt>IPC_CREX</tt> is specified
+                    and the caller has write permission, each byte in the new memory segment will be 
+                    initialized to the value of <span class="param">init_character</span>.
+                </p>
+            </li>
+        </ul>
         
-        <p>When opening an existing shared memory segment, <span class="param">mode</span>,
-            <span class="param">size</span> and <span class="param">init_character</span>
-             are ignored.
+        <p>The value of <span class="param">size</span> depends on whether
+            one is opening an existing segment or creating a new one.
+        </p>
+        <ul>
+            <li>When opening an existing segment, <span class="param">size</span>
+                must be ≤ the existing segment's size. Zero is 
+                always valid.
+            </li>
+            
+            <li>When creating an new segment, 
+                many (most? all?) operating systems insist on a <span class="param">size</span>
+                &gt; <tt>0</tt>.
+                In addition, some round the size
+                up to the next multiple of PAGE_SIZE.
+            </li>
+        </ul>
+        
+        <p>This module supplies a default 
+            <span class="param">size</span> of <tt>PAGE_SIZE</tt> when 
+            <tt>IPC_CREX</tt> is specified and <tt>0</tt> otherwise. 
         </p>
     </dd>
 
@@ -493,7 +511,7 @@ situations specific to IPC.
         
         <p>The address parameter allows one to specify (as a Python long) a memory
             address at which to attach the segment. Passing None (the default)
-            is equivalent to passing C NULL to <tt>shmat()</tt>. See that
+            is equivalent to passing NULL to <tt>shmat()</tt>. See that
             function's man page for details.
         </p>
         
@@ -652,7 +670,7 @@ and exposure of <tt>sem_otime</tt>.
 
 <h3>Usage Tips</h3>
 
-<h4 id="init">Semaphore Initialization</h4>
+<h4 id="sem_init">Semaphore Initialization</h4>
 
 <p>When a System V sempahore is created at the C API level, the OS is not required
 to initialize the semaphore's value. (This per 
@@ -689,50 +707,56 @@ Consider the following sequence of events at the startup of P1 and P2 &ndash;
         now think they own the lock.</li>
 </ol>
 
-<p>The common wisdom on the Net for avoiding this race 
-refers to Stevens' <span class="title">Unix Network 
-Programming, Volume 2</span>. His advice is to check the value of <tt>sem_otime</tt>
-(an element in the <tt>semid_ds</tt> struct that's populated on call to 
-<tt>semctl(IPC_STAT)</tt>) which
-is initialized to zero when the semaphore is created and otherwise holds the time of the last 
-call to <tt>semop()</tt>. I haven't read Stevens' book so I don't know exactly what he 
-recommends one do with this value. But I suspect his advice is that one process 
-create and initialize the semaphore while others wait for <tt>sem_otime</tt> to 
-become non-zero before using the semaphore.</p>
-
-
-<p>This still requires that you either nominate one process to do the initialization
-or use the alternative described below. With a nominated creator process, there's
-no advantage to using <tt>semget(IPC_CREAT)</tt>, but there is a disadvantage 
-which is that you might be opening a semaphore created by an entirely
-unrelated application. Therefore, you should still use <tt>semget(IPC_CREAT | IPC_EXCL)</tt>.
+<p>The canonical solution for this race condition is to check the value of 
+<tt>sem_otime</tt> (an element in the <tt>semid_ds</tt> struct that's 
+populated on call to <tt>semctl(IPC_STAT)</tt> and which is exposed to 
+Python by this module) which
+is initialized to zero when the semaphore is created and otherwise holds 
+the time of the last 
+call to <tt>semop()</tt>. 
 </p>
 
-<p>An alternative to nominating a creator process is to impose no order and
-allow each process to
-attempt to create the semaphore via
-<tt>semget(IPC_CREAT | IPC_EXCL)</tt>. In this case, failure means that
-one of the peer processes created the semaphore first so the failing process should
-loop until <tt>sem_otime</tt> becomes non-zero at which point it can use the semaphore.
+<p>In Python, each process would run something like this:
+<pre>
+try:
+   sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.CREX)
+except sysv_ipc.SysVIpcExistentialError:
+   # One of my peers created the semaphore already
+   sem = sysv_ipc.SysVSemaphore(42)
+   
+while not sem.o_time:
+    time.sleep(.1)
+    
+# Now the semaphore is safe to use.
+</pre>
+
+
+<h4 id="mem_init">Shared Memory Initialization</h4>
+
+<p>With shared memory, 
+using the <tt>IPC_CREAT</tt> flag without <tt>IPC_EXCL</tt>
+is problematic <em>unless you know the size of the segment 
+you're potentially opening</em>.
 </p>
 
-<p>No matter which method you use, I see only trouble when using 
-<tt>IPC_CREAT</tt> without <tt>IPC_EXCL</tt>.
+<p>Why? Because when creating a new segment, 
+many (most? all?) operating systems demand a non-zero size. However,
+when opening an existing segment, zero is the only guaranteed safe value
+(again, assuming one doesn't know the size of the segment in advance). 
+Since <tt>IPC_CREAT</tt>
+can open or create a segment, there's no safe value for the size under
+this circumstance.
 </p>
 
-<p>Note that <tt>sem_otime</tt> is available on Python SysVSemaphore objects as
-the attribute <tt>o_time</tt>.
+<p>As a (sort of) side note, the 
+<a href="http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html">POSIX
+specification for <tt>shmget()</tt></a> says only that the size of a new 
+segment must not be less than "the system-imposed minimum". I 
+gather that at one time, some systems set the minimum at zero despite the 
+fact that it doesn't make much sense to create a zero-length shared memory
+segment. I think most modern systems do the sensible thing and insist on
+a minimum length of 1.
 </p>
-
-<h4>Shared Memory Initialization</h4>
-
-<p>As with semaphores, a caller passing only the <tt>IPC_CREAT</tt> flag 
-to <tt>shmget()</tt> can't tell whether
-he's created a new shared memory segment or gotten a handle to an existing one. 
-That's not a big deal with shared memory, because presumably you'll use something
-(like a semaphore!) to synchronize access to the shared memory anyway.
-</p>
-
 
 <h4>Nobody Likes a Mr. Messy</h4>
 
@@ -776,7 +800,8 @@ the latter allows you to remove them.
 <p>Bugs? My code never has bugs! There are, however, some suboptimal anomalies...</p>
 
 <ul>
-    <li>Compilation produces 3 warnings from <tt>pyport.h</tt>. They're caused by
+    <li>Compilation on OS X and perhaps elsewhere produces 3 warnings from 
+        <tt>pyport.h</tt>. They're caused by
         the <tt>#define _XOPEN_SOURCE 600</tt> line at the top of the .c module.
     </li>        
     <li>Maximum values for uids, gids, keys and semaphore values are 
@@ -786,20 +811,34 @@ the latter allows you to remove them.
         really difficult to determine the maximum value that a 
         typedef-ed variable can hold</a>.
     </li>
-    <li>This code hasn't been vetted for memory leaks. I'm sure there are some.</li>
-
 </ul>
 
 <h3>Version History</h3>
 
-<p>This module is a ground-up rewrite 
-of <a href="http://nikitathespider.com/python/shm/">the shm 
-module</a> which I adopted in February 2007.
-</p>
-
-
 <ul id="history">
-    <li><strong>Current &ndash; 0.2 (16 Dec 2008) &ndash;</strong>
+    <li><strong>Current &ndash; 0.2.1 (3 Jan 2009) &ndash;</strong>
+        <ul>
+            <li>Fixed a bug that prevented the module-specific
+                errors (<tt>SysVIpcExistentialError</tt>, etc.) from
+                being visible in the module.
+            </li>
+            <li>Fixed a bug that re-initialized shared memory with 
+                the init character when only <tt>IPC_CREAT</tt> was specified
+                and an existing segment was opened.
+            </li>
+            <li>Fixed a bug that always defaulted the size of a shared 
+                memory segment to <tt>PAGE_SIZE</tt>. Updated code and 
+                documentation to use intelligent defaults. <em>Tack</em> to 
+                Jesper for the bug report.
+            </li>
+            <li>Several cosmetic changes. (Added more metadata to setup.py,
+                added a newline to the end of probe_results.h to avoid
+                compiler complaints, etc.)
+            </li>
+        </ul>
+    </li>
+    
+    <li>0.2 (16 Dec 2008) &ndash;
         Lots of small fixes.
         
         <ul>

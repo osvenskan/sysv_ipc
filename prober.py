@@ -148,6 +148,33 @@ def probe_semvmx():
     return semvmx
     
 
+def probe_page_size():
+    DEFAULT_PAGE_SIZE = 4096
+    
+    page_size = DEFAULT_PAGE_SIZE
+    
+    cmd = "cc -Wall -o ./prober/foo ./prober/probe_page_size.c" 
+
+    p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
+    if p.wait(): 
+        print """
+*************************************************************************
+* Setup can't determine the value of PAGE_SIZE on your system, so 
+* it will be set to %d which may not be correct. An incorrect PAGE_SIZE 
+* can (very slightly) decrease performance.
+* 
+* Please report this message and your operating system info to the 
+* package maintainer listed in the README file.
+*************************************************************************
+""" % DEFAULT_PAGE_SIZE
+    else:
+        page_size = subprocess.Popen(["./prober/foo"], 
+                                     stdout=subprocess.PIPE).communicate()[0]
+        
+        page_size = int(page_size)
+
+    return page_size
+
 
 def probe():
     d = { }
@@ -162,6 +189,7 @@ def probe():
     if "darwin" in sys.platform:
         d["_SEM_SEMUN_UNDEFINED"] = ""
     
+    d["PAGE_SIZE"] = probe_page_size()
     d["IPC_PERM_KEY_NAME"] = ("_" * count_key_underscores()) + "key"
     d["IPC_PERM_SEQ_NAME"] = ("_" * count_seq_underscores()) + "seq"
     if sniff_semtimedop():
@@ -171,8 +199,6 @@ def probe():
     d["KEY_MAX"] = "INT_MAX"
     d["SEMAPHORE_VALUE_MAX"] = probe_semvmx()
     d["PY_INT_MAX"] = sys.maxint
-    
-    #print d
 
     msg = """/*
 This header file was generated when you ran setup. Once created, the setup
@@ -191,8 +217,10 @@ larger than LONG_MAX on your platform.
     filename = "probe_results.h"
     if not os.path.exists(filename):
         lines = ["#define %s\t\t%s\n" % (key, d[key]) for key in d]
-        file(filename, "wb").write(msg + ''.join(lines))
+        # A trailing '\n' keeps compilers happy...
+        file(filename, "wb").write(msg + ''.join(lines) + '\n')
 
+    return d
 
 if __name__ == "__main__":
-    probe()
+    print probe()
