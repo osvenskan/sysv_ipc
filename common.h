@@ -40,7 +40,7 @@ typedef struct {
 } NoneableKey;
 
 
-/* These identifiers are prefixed with SVIFP_ which stands for SysV Ipc 
+/* These identifiers are prefixed with SVIFP_ which stands for SysV Ipc
 For Python. It's really just a random string of letters to prevent clashes
 with other constants (as happens with SHM_SIZE on AIX).
 */
@@ -121,10 +121,11 @@ Freebsd - l_int (int)
 // key_t is guaranteed to be an arithmetic type. Some earlier versions
 // of the standard didn't guarantee that it was arithmetic; the standard was
 // changed to guarantee that it *is* arithmetic.
+// ref: http://pubs.opengroup.org/onlinepubs/009696899/functions/xsh_chap02_12.html
 // I assume it is a long; see comment above.
 // Some functions return (key_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/austin/interps/doc.tpl?gdid=6226
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define KEY_T_TO_PY(key)   PyLong_FromLong(key)
 #else
     #define KEY_T_TO_PY(key)   PyInt_FromLong(key)
@@ -133,7 +134,7 @@ Freebsd - l_int (int)
 // (uid_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
 // ref: http://www.opengroup.org/onlinepubs/9699919799/functions/chown.html
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define UID_T_TO_PY(uid)   PyLong_FromLong(uid)
 #else
     #define UID_T_TO_PY(uid)   PyInt_FromLong(uid)
@@ -142,7 +143,7 @@ Freebsd - l_int (int)
 // SUSv3 guarantees a gid_t to be an integer type. Some functions return
 // (gid_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define GID_T_TO_PY(gid)   PyLong_FromLong(gid)
 #else
     #define GID_T_TO_PY(gid)   PyInt_FromLong(gid)
@@ -152,7 +153,7 @@ Freebsd - l_int (int)
 // shmget() is an int that contains flags in addition to the mode, so
 // mode must be able to fit into an int.
 // ref: http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define MODE_T_TO_PY(mode)   PyLong_FromLong(mode)
 #else
     #define MODE_T_TO_PY(mode)   PyInt_FromLong(mode)
@@ -162,14 +163,14 @@ Freebsd - l_int (int)
 // I deal with here are all guaranteed to be after 1 Jan 1970 which means
 // they'll always be positive numbers. A ulong sounds appropriate to me,
 // and Python agrees in posixmodule.c.
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define TIME_T_TO_PY(time)   PyLong_FromUnsignedLong(time)
 #else
     #define TIME_T_TO_PY(time)   py_int_or_long_from_ulong(time)
 #endif
 
 // C89 guarantees a size_t to be unsigned and fit into a ulong or smaller.
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define SIZE_T_TO_PY(size)   PyLong_FromUnsignedLong(size)
 #else
     #define SIZE_T_TO_PY(size)   py_int_or_long_from_ulong(size)
@@ -178,7 +179,7 @@ Freebsd - l_int (int)
 // SUSv3 guarantees a pid_t to be a signed integer type. Some functions
 // return (pid_t)-1 so I guess this has to be signed.
 // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/types.h.html#tag_13_67
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define PID_T_TO_PY(pid)   PyLong_FromLong(pid)
 #else
     #define PID_T_TO_PY(pid)   PyInt_FromLong(pid)
@@ -187,7 +188,7 @@ Freebsd - l_int (int)
 // The SUS guarantees a msglen_t to be an unsigned integer type.
 // Ditto: msgqnum_t.
 // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/msg.h.html
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     #define MSGLEN_T_TO_PY(msglen)     PyLong_FromUnsignedLong(msglen)
     #define MSGQNUM_T_TO_PY(msgqnum)   PyLong_FromUnsignedLong(msgqnum)
 #else
@@ -198,7 +199,7 @@ Freebsd - l_int (int)
 /* Utility functions */
 key_t get_random_key(void);
 int convert_key_param(PyObject *, void *);
-#if PY_MAJOR_VERSION < 3 
+#if PY_MAJOR_VERSION < 3
 PyObject *py_int_or_long_from_ulong(unsigned long);
 #endif
 
