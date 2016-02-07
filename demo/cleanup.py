@@ -8,7 +8,7 @@ params = utils.read_params()
 
 
 try:
-    semaphore = sysv_ipc.SysVSemaphore(params["KEY"], 0)
+    semaphore = sysv_ipc.Semaphore(params["KEY"], 0)
 except:
     semaphore = None
     
@@ -19,7 +19,7 @@ print "The semaphore is cleaned up."
     
     
 try:
-    memory = sysv_ipc.SysVSharedMemory(params["KEY"], 0)
+    memory = sysv_ipc.SharedMemory(params["KEY"], 0)
 except:
     memory = None
 

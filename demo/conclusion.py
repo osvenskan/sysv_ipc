@@ -12,12 +12,12 @@ utils.say("Oooo 'ello, I'm Mrs. Conclusion!")
 
 params = utils.read_params()
 
-semaphore = sysv_ipc.SysVSemaphore(params["KEY"])
-memory = sysv_ipc.SysVSharedMemory(params["KEY"])
+semaphore = sysv_ipc.Semaphore(params["KEY"])
+memory = sysv_ipc.SharedMemory(params["KEY"])
 
 utils.say("memory attached at %d" % memory.address)
 
-WhatIWrote = ""
+what_i_wrote = ""
 s = ""
 
 for i in xrange(0, params["ITERATIONS"]):
@@ -29,7 +29,7 @@ for i in xrange(0, params["ITERATIONS"]):
 
     s = utils.read_from_memory(memory)
 
-    while s == WhatIWrote:
+    while s == what_i_wrote:
         if not params["LIVE_DANGEROUSLY"]:
             # Release the semaphore...
             utils.say("releasing the semaphore")
@@ -40,15 +40,15 @@ for i in xrange(0, params["ITERATIONS"]):
 
         s = utils.read_from_memory(memory)
 
-    if WhatIWrote:
+    if what_i_wrote:
         try:
-            assert(s == md5.new(WhatIWrote).hexdigest())
+            assert(s == md5.new(what_i_wrote).hexdigest())
         except:
             raise AssertionError, "Shared memory corruption after %d iterations." % i
 
-    WhatIWrote = md5.new(s).hexdigest()
+    what_i_wrote = md5.new(s).hexdigest()
 
-    utils.write_to_memory(memory, WhatIWrote)
+    utils.write_to_memory(memory, what_i_wrote)
 
     if not params["LIVE_DANGEROUSLY"]:
         utils.say("releasing the semaphore")
