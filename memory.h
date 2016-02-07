@@ -19,7 +19,7 @@ void SharedMemory_dealloc(SharedMemory *);
 PyObject *SharedMemory_attach(SharedMemory *, PyObject *);
 PyObject *SharedMemory_detach(SharedMemory *);
 PyObject *SharedMemory_read(SharedMemory *, PyObject *, PyObject *);
-PyObject *SharedMemory_write(SharedMemory *, PyObject *);
+PyObject *SharedMemory_write(SharedMemory *, PyObject *, PyObject *);
 PyObject *SharedMemory_remove(SharedMemory *);
 
 /* Object attributes (read-write & read-only) */
