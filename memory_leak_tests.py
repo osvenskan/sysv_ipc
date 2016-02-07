@@ -9,6 +9,12 @@ import re
 # My module
 import sysv_ipc as sysv_ipc
 
+
+SKIP_SEMAPHORE_TESTS = False
+SKIP_SHARED_MEMORY_TESTS = False
+SKIP_MESSAGE_QUEUE_TESTS = False
+
+
 #TEST_COUNT = 10
 TEST_COUNT = 1024 * 1024 
 
@@ -35,10 +41,6 @@ ps_output_regex = re.compile("""
 # the delta didn't change which makes me think it isn't an actual leak 
 # but just some memory consumed under normal circumstances.
 
-
-SKIP_SEMAPHORE_TESTS = True
-SKIP_SHARED_MEMORY_TESTS = True
-SKIP_MESSAGE_QUEUE_TESTS = False
 
 def random_string(length):
     return ''.join(random.sample("abcdefghijklmnopqrstuvwxyz", length))
@@ -85,8 +87,7 @@ else:
     print_mem_before()
 
     for i in xrange(1, TEST_COUNT):
-        key = random.randint(1, sysv_ipc.KEY_MAX)
-        sem = sysv_ipc.Semaphore(key, sysv_ipc.IPC_CREX)
+        sem = sysv_ipc.Semaphore(None, sysv_ipc.IPC_CREX)
         sem.remove()
 
     print_mem_after()
@@ -445,12 +446,11 @@ else:
 
     init_character_toggle = True
     for i in xrange(1, TEST_COUNT):
-        key = random.randint(1, sysv_ipc.KEY_MAX)
         # Test with and w/o init character
         if init_character_toggle:
-            mem = sysv_ipc.SharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE, init_character = 'z')
+            mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE, init_character = 'z')
         else:
-            mem = sysv_ipc.SharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
+            mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
             
         init_character_toggle = not init_character_toggle
         
@@ -762,8 +762,7 @@ else:
     print_mem_before()
 
     for i in xrange(1, TEST_COUNT):
-        key = random.randint(1, sysv_ipc.KEY_MAX)
-        mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREX)
+        mq = sysv_ipc.MessageQueue(None, sysv_ipc.IPC_CREX)
         mq.remove()
 
     print_mem_after()

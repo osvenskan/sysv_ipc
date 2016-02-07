@@ -115,7 +115,7 @@ set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
         goto error_return;
     }
     
-    /* Here I get the current values associated with the semaphore. It's 
+    /* Here I get the current values associated with the queue. It's 
        critical to populate sem_info with current values here (rather than 
        just using the struct filled with whatever garbage it acquired from
        being declared on the stack) because the call to msgctl(...IPC_SET...)
@@ -593,25 +593,7 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
     
-    // rc from msgrcv() is the # of bytes in the message.
-    // py_msg = PyString_FromStringAndSize(p_msg->message, rc);
-    // py_type = PyInt_FromLong(p_msg->type);
-    // 
-    // py_return_tuple = PyTuple_Pack(2, py_msg, py_type);
-    // 
-    // Py_DECREF(py_msg);
-    // Py_DECREF(py_type);
-    // 
-    // // py_return_tuple = PyTuple_Pack(2, 
-    // //                                PyString_FromStringAndSize(p_msg->message, rc), 
-    // //                                PyInt_FromLong(p_msg->type));
-    // 
-    // free(p_msg);
-    // 
-    // //Py_RETURN_NONE;
-    // 
-    
-    py_return_tuple = Py_BuildValue("NN", 
+   py_return_tuple = Py_BuildValue("NN", 
                                     PyString_FromStringAndSize(p_msg->message, rc), 
                                     PyInt_FromLong(p_msg->type)
                                    );

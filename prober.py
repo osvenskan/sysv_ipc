@@ -124,17 +124,20 @@ def probe_page_size():
 
 
 def probe():
-    d = { }
-    
-    conditionals = [ "UID_MAX", "GID_MAX", "_SEM_SEMUN_UNDEFINED" ]
+    d = { "KEY_MAX" : "LONG_MAX", 
+          "KEY_MIN" : "LONG_MIN" 
+        }
 
-    d["SYSV_IPC_VERSION"] = '"' + file("VERSION").read().strip() + '"'
+    conditionals = [ "_SEM_SEMUN_UNDEFINED" ]
+    
+    f = open("VERSION")
+    version = f.read().strip()
+    f.close()
+
+    d["SYSV_IPC_VERSION"] = '"%s"' % version
     d["PAGE_SIZE"] = probe_page_size()
     if sniff_semtimedop():
         d["SEMTIMEDOP_EXISTS"] = ""
-    d["UID_MAX"] = "INT_MAX"
-    d["GID_MAX"] = "INT_MAX"
-    d["KEY_MAX"] = "INT_MAX"
     d["SEMAPHORE_VALUE_MAX"] = probe_semvmx()
     # Some (all?) Linux platforms #define _SEM_SEMUN_UNDEFINED if it's up 
     # to my code to declare this union, so I use that flag as my standard.
@@ -150,9 +153,8 @@ recompile if you need to.
 
 To recreate this file, just delete it and re-run setup.py.
 
-Note that UID_MAX, GID_MAX, KEY_MAX and SEMAPHORE_VALUE_MAX are stored
-internally in longs, so you should never #define them to anything 
-larger than LONG_MAX.
+KEY_MIN, KEY_MAX and SEMAPHORE_VALUE_MAX are stored internally in longs, so 
+you should never #define them to anything larger than LONG_MAX.
 */
 
 """
@@ -171,7 +173,9 @@ larger than LONG_MAX.
                 lines.append("#endif")
 
         # A trailing '\n' keeps compilers happy...
-        file(filename, "wb").write(msg + '\n'.join(lines) + '\n')
+        f = open(filename, "w")
+        f.write(msg + '\n'.join(lines) + '\n')
+        f.close()
 
     return d
 

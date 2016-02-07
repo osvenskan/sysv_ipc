@@ -4,13 +4,13 @@ import distutils.core as duc
 # sysv_ipc installation helper module
 import prober
 
-f = open("VERSION", "rb")
+f = open("VERSION", "r")
 VERSION = f.read().strip()
 f.close()
 
 name = "sysv_ipc"
 description = "System V IPC primitives (semaphores, shared memory and message queues) for Python"
-f = open("README", "rb")
+f = open("README", "r")
 long_description = f.read()
 f.close()
 author = "Philip Semanchuk",
@@ -32,14 +32,17 @@ classifiers = [ "Development Status :: 4 - Beta",
 license = "http://creativecommons.org/licenses/BSD/"
 keywords = "ipc inter-process communication semaphore shared memory shm message queue"
 
-
 prober.probe()
 
-ext_modules = [duc.Extension("sysv_ipc", 
-                             source_files,
-#                            extra_compile_args=['-E']
-                            )
-              ]
+extension = duc.Extension("sysv_ipc", 
+                          source_files,
+#                         extra_compile_args=['-E']
+                          depends = [ "common.c", "common.h", "memory.c", 
+                                      "memory.h", "mq.c", "mq.h", 
+                                      "probe_results.h", "semaphore.c", 
+                                      "semaphore.h", "sysv_ipc_module.c", 
+                                    ],
+                         )
 
 duc.setup(name = name,
           version = VERSION,
@@ -53,6 +56,6 @@ duc.setup(name = name,
           classifiers = classifiers,
           license = license,
           keywords = keywords,
-          ext_modules = ext_modules
+          ext_modules = [ extension ]
          )
               

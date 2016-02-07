@@ -9,10 +9,25 @@ key_t
 get_random_key(void) {
     int key;
     
-    // I think IPC_PRIVATE is always #defined as 0, but in case it isn't...
+    /* ******************************************************************
+    The inability to know the range of a key_t requires careful code here.
+    Remember that KEY_MIN and KEY_MAX refer only to the limits inherent in the
+    variable type I use when turning a key into a Python object. They may
+    exceed the true limits of key_t.
+
+    For instance, if key_t is typedef-ed as uint, I should generate a key
+    where 0 <= key <= UINT_MAX.
+
+    Since I can't know what key_t is typedef-ed as, I take a 
+    conservative approach and generate only keys where
+    0 <= key <= SHRT_MAX.
+
+    Such values will work if key_t is typedef-ed as a short, int, uint, 
+    long or ulong.    
+    ****************************************************************** */
     do {
         // ref: http://www.c-faq.com/lib/randrange.html
-        key = ((int)((double)rand() / ((double)RAND_MAX + 1) * KEY_MAX)) + 1;
+        key = ((int)((double)rand() / ((double)RAND_MAX + 1) * SHRT_MAX)) + 1;
     } while (key == IPC_PRIVATE);
 
     return (key_t)key;
@@ -55,8 +70,8 @@ convert_key_param(PyObject *py_key, void *converted_key) {
             // This happens when the Python long is too big for a C long.
             rc = 0;
             PyErr_Format(PyExc_ValueError, 
-                         "Key must be between 0 and %ld (KEY_MAX)", 
-                         (long)KEY_MAX);
+                         "Key must be between %ld (KEY_MIN) and %ld (KEY_MAX)", 
+                         KEY_MIN, KEY_MAX);
         }
     }
     
@@ -64,13 +79,13 @@ convert_key_param(PyObject *py_key, void *converted_key) {
         // Param is OK
         if (! ((NoneableKey *)converted_key)->is_none) {
             // It's not None; ensure it is in range
-            if ((key >= 0) && (key <= KEY_MAX))
+            if ((key >= KEY_MIN) && (key <= KEY_MAX))
                 ((NoneableKey *)converted_key)->value = (key_t)key;
             else {
                 rc = 0;
                 PyErr_Format(PyExc_ValueError, 
-                             "Key must be between 0 and %ld (KEY_MAX)", 
-                             (long)KEY_MAX);
+                             "Key must be between %ld (KEY_MIN) and %ld (KEY_MAX)", 
+                             KEY_MIN, KEY_MAX);
             }
         }
     }
@@ -79,50 +94,3 @@ convert_key_param(PyObject *py_key, void *converted_key) {
 
     return rc;
 }
-
-
-
-// 
-// int 
-// convert_key_param(PyObject *py_key, void *converted_key) {
-//     // Converts a PyObject into a key if possible. Returns 0 on failure.
-//     // The converted_key param should point to a key_t type.
-//     int rc = 0;
-//     long key;
-//     
-//     // Convert from the Python type to a C long
-//     if (PyInt_Check(py_key)) {
-//         rc = 1;
-//         key = PyInt_AsLong(py_key);
-//     }
-//     else if (PyLong_Check(py_key)) {
-//         rc = 1;
-//         key = PyLong_AsLong(py_key);
-//         if (PyErr_Occurred()) {
-//             // This happens when the Python long is too big for a C long.
-//             rc = 0;
-//             PyErr_Format(PyExc_ValueError, 
-//                          "Key must be between 0 and %ld (KEY_MAX)", 
-//                          (long)KEY_MAX);
-//         }
-//     }
-//     
-//     if (rc) {
-//         // Ensure it is in range
-//         if ((key >= 0) && (key <= KEY_MAX))
-//             *((key_t *)converted_key) = (key_t)key;
-//         else {
-//             rc = 0;
-//             PyErr_Format(PyExc_ValueError, 
-//                          "Key must be between 0 and %ld (KEY_MAX)", 
-//                          (long)KEY_MAX);
-//         }
-//     }
-//     else
-//         PyErr_SetString(PyExc_TypeError, "Key must be an integer");
-// 
-//     return rc;
-// }
-// 
-
-
