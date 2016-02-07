@@ -31,6 +31,7 @@ filenames = (
     "prober/",
     "prober/semtimedop_test.c",
     "prober/probe_page_size.c",
+    "prober/sniff_union_semun_defined.c",
 )
 
 tarball_name = "sysv_ipc-%s.tar.gz" % VERSION

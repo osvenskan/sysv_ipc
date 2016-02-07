@@ -17,22 +17,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#if PY_MAJOR_VERSION >= 0x02050000
+#define PY_SSIZE_T_CLEAN
+#define PY_STRING_LENGTH_MAX  PY_SSIZE_T
+#else
+#define PY_STRING_LENGTH_MAX  INT_MAX
+#endif
 
-// _XOPEN_SOURCE is necessary for clean compiles under Ubuntu; also gives me
-// the newer definition of the ipc_perm struct under Darwin. Probably has
-// beneficial effects elsewhere too.
-#define _XOPEN_SOURCE 600
 
 #include "Python.h"
-
 #include "structmember.h"
 
 // for memset
 #include <string.h>
-
-// For sysconf/getpagesize
-// #include <sys/mman.h>
-// #include <sys/stat.h>
 
 // For the math surrounding timeouts for semtimedop()
 #include <math.h>
@@ -44,13 +41,11 @@
 #include <sys/sem.h>		/* for semget, semctl, semop */
 
 enum GET_SET_IDENTIFIERS {
-    IPC_PERM_KEY = 1,
-    IPC_PERM_UID,
+    IPC_PERM_UID = 1,
     IPC_PERM_GID,
     IPC_PERM_CUID,
     IPC_PERM_CGID,
     IPC_PERM_MODE,
-    IPC_PERM_SEQ,
     SEM_OTIME,
     SHM_SIZE,
     SHM_LAST_ATTACH_TIME,
@@ -69,35 +64,66 @@ enum SEMOP_TYPE {
     SEMOP_Z
 };
 
-// Shorthand for the lazy
+// Shorthand for lazy typists like me
 #define IPC_CREX  (IPC_CREAT | IPC_EXCL)
 
 /*
-
-      Exceptions for this module
-        
+      Exceptions for this module      
 */
 
-static PyObject *pSysVIpcException;
-static PyObject *pSysVIpcInternalException;
-static PyObject *pSysVIpcPermissionsException;
-static PyObject *pSysVIpcExistentialException;
-static PyObject *pSysVIpcBusyException;
-static PyObject *pSysVIpcNotAttachedException;
+static PyObject *pBaseException;
+static PyObject *pInternalException;
+static PyObject *pPermissionsException;
+static PyObject *pExistentialException;
+static PyObject *pBusyException;
+static PyObject *pNotAttachedException;
 
 
 typedef struct {
     PyObject_HEAD
+    key_t key;
     int id;
     void *address;
-} SysVSharedMemory;
+} SharedMemory;
 
 typedef struct {
     PyObject_HEAD
-    int id;
     key_t key;
+    int id;
     short op_flags;
-} SysVSemaphore;
+} Semaphore;
+
+
+// SUSv3 guarantees a uid_t to be an integer type. Some code returns 
+// (uid_t)-1, so I guess this has to be a signed type.
+// ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
+// ref: http://www.opengroup.org/onlinepubs/9699919799/functions/chown.html
+#define UID_T_TO_PY(uid)   PyInt_FromLong(uid)
+
+// SUSv3 guarantees a gid_t to be an integer type. Some code returns 
+// (gid_t)-1, so I guess this has to be a signed type.
+// ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
+#define GID_T_TO_PY(gid)   PyInt_FromLong(gid)
+
+// I'm not sure what guarantees SUSv3 makes about a mode_t, but param 3 of
+// shmget() is an int that contains flags in addition to the mode, so
+// mode must be able to fit into an int.
+// ref: http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html
+#define MODE_T_TO_PY(mode)   PyInt_FromLong(mode)
+
+// I'm not sure what guarantees SUSv3 makes about a time_t, but the times
+// I deal with here are all guaranteed to be after 1 Jan 1970 which means
+// they'll always be positive numbers. A ulong sounds appropriate to me,
+// and Python agrees in posixmodule.c.
+#define TIME_T_TO_PY(time)   py_int_or_long_from_ulong(time)
+
+// C89 guarantees a size_t to be unsigned and fit into a ulong or smaller.
+#define SIZE_T_TO_PY(size)   py_int_or_long_from_ulong(size)
+
+// SUSv3 guarantees a pid_t to be a signed integer type. Some code returns 
+// (pid_t)-1 so I guess this has to be signed.
+// ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/types.h.html#tag_13_67
+#define PID_T_TO_PY(pid)   PyInt_FromLong(pid)
 
 // It is recommended practice to define this union here in the .c module, but
 // it's been common practice for platforms to define it themselves in header 
@@ -111,6 +137,27 @@ union semun {
 };
 #endif
 
+/* Union for passing values to shm_set_ipc_perm_value() */
+union ipc_perm_value {
+    uid_t uid;
+    gid_t gid;
+    mode_t mode;
+};
+
+/* Struct to contain a timeout which can be None */
+typedef struct {
+    int is_none;
+    int is_zero;
+    struct timespec timestamp;
+} NoneableTimeout;
+
+/* Struct to contain a semop delta which can be None */
+typedef struct {
+    int is_none;
+    long value;
+} NoneableLong;
+
+
 #define ONE_BILLION 1000000000
 
 #ifdef SYSV_IPC_DEBUG
@@ -121,51 +168,104 @@ union semun {
 
 
 /* Utility functions */
+static int 
+convert_timeout(PyObject *py_timeout, void *converted_timeout) {
+    // Converts a PyObject into a timeout if possible. The PyObject should
+    // be None or some sort of numeric value (e.g. int, float, etc.)
+    // converted_timeout should point to a NoneableTimeout. When this function
+    // returns, if the NoneableTimeout's is_none is true, then the rest of the
+    // struct is undefined. Otherwise, the rest of the struct is populated.
+    int rc = 0;
+    double simple_timeout = 0;
+    NoneableTimeout *p_timeout = (NoneableTimeout *)converted_timeout;
+
+    // The timeout can be None or any Python numeric type (float, 
+    // int, long).
+    if (py_timeout == Py_None)
+        rc = 1;
+    else if (PyFloat_Check(py_timeout)) {
+        rc = 1;
+        simple_timeout = PyFloat_AsDouble(py_timeout);
+    }
+    else if (PyInt_Check(py_timeout)) {
+        rc = 1;
+        simple_timeout = (double)PyInt_AsLong(py_timeout);
+    }
+    else if (PyLong_Check(py_timeout)) {
+        rc = 1;
+        simple_timeout = (double)PyLong_AsLong(py_timeout);
+    }
+    
+    // The timeout may not be negative.
+    if ((rc) && (simple_timeout < 0))
+        rc = 0;
+
+    if (!rc)
+        PyErr_SetString(PyExc_TypeError, 
+                        "The timeout must be None or a non-negative number");
+    else {
+        if (py_timeout == Py_None)
+            p_timeout->is_none = 1;
+        else {
+            p_timeout->is_none = 0;
+            
+            p_timeout->is_zero = (!simple_timeout);
+
+            // Note the difference between this and POSIX timeouts. System V 
+            // timeouts expect tv_sec to represent a delta from the current 
+            // time whereas POSIX semaphores expect an absolute value.
+            p_timeout->timestamp.tv_sec = (time_t)floor(simple_timeout);
+            p_timeout->timestamp.tv_nsec = (long)((simple_timeout - floor(simple_timeout)) * ONE_BILLION);
+        }
+    }
+        
+    return rc;
+}
 
 static PyObject *
-py_int_or_long_from_long(long value) {
-    if (value > PY_INT_MAX)
-        return PyLong_FromLong(value);
+py_int_or_long_from_ulong(unsigned long value) {
+    // Python ints are guaranteed to accept up to LONG_MAX. Anything 
+    // larger needs to be a Python long.
+    if (value > LONG_MAX)
+        return PyLong_FromUnsignedLong(value);
     else
         return PyInt_FromLong(value);
 }
 
 
-void sem_set_error(PyObject *timeout) {
+void 
+sem_set_error(void) {
     switch (errno) {
         case ENOENT:
         case EINVAL:
-            //PyErr_Format(pSysVIpcExistentialException, "No semaphore exists with the specified key (%ld)", (long)key);
-            PyErr_Format(pSysVIpcExistentialException, "No semaphore exists with the specified key");
+            PyErr_Format(pExistentialException, 
+                         "No semaphore exists with the specified key");
         break;
 
         case EEXIST:
-            //PyErr_Format(pSysVIpcExistentialException, "A semaphore with the specified key (%ld) already exists", (long)key);
-            PyErr_Format(pSysVIpcExistentialException, "A semaphore with the specified key already exists");
+            PyErr_Format(pExistentialException, "A semaphore with the specified key already exists");
         break;
 
         case EACCES:
-            PyErr_SetString(pSysVIpcPermissionsException, "No permission to access this semaphore");
+            PyErr_SetString(pPermissionsException, "No permission to access this semaphore");
         break;
         
         case ERANGE:
-            PyErr_Format(PyExc_ValueError, "The semaphore's value must remain between 0 and SEMAPHORE_VALUE_MAX (%ld)", (long)SEMAPHORE_VALUE_MAX);
+            PyErr_Format(PyExc_ValueError, 
+                "The semaphore's value must remain between 0 and %ld (SEMAPHORE_VALUE_MAX)", 
+                (long)SEMAPHORE_VALUE_MAX);
         break;
         
         case EAGAIN:
-            PyErr_SetString(pSysVIpcBusyException, "Semaphore is busy");
-            // if ((NULL == timeout) || (Py_None == timeout))
-            //     PyErr_SetString(pSysVIpcBusyException, "Semaphore is busy");
-            // else
-            //     PyErr_SetString(pSysVIpcTimeoutException, "Timeout expired");
+            PyErr_SetString(pBusyException, "Semaphore is busy");
         break;
 
         case EIDRM:
-            PyErr_SetString(pSysVIpcExistentialException, "The semaphore was removed");
+            PyErr_SetString(pExistentialException, "The semaphore was removed");
         break;
         
         case EINTR:
-            PyErr_SetString(pSysVIpcException, "Signaled while waiting");
+            PyErr_SetString(pBaseException, "Signaled while waiting");
         break;
         
         case ENOMEM:
@@ -186,49 +286,68 @@ void sem_set_error(PyObject *timeout) {
 
 
 static PyObject *
-sem_perform_semop(enum SEMOP_TYPE op_type, SysVSemaphore *self, PyObject *args, PyObject *keywords) {
-    struct sembuf op[1];
-    double simple_timeout = 0.0;
-    PyObject *pTimeout = Py_None;
-    int delta = 0;
-    int arg_is_ok = 0;
+sem_perform_semop(enum SEMOP_TYPE op_type, Semaphore *self, PyObject *args, PyObject *keywords) {
     int rc = 0;
+    NoneableTimeout timeout;
+    struct sembuf op[1];
+    /* delta (a.k.a. struct sembuf.sem_op) is a short
+       ref: http://www.opengroup.org/onlinepubs/000095399/functions/semop.html
+    */
+    short int delta;
     static char *keyword_list[3][3] = {
                     {"timeout", "delta", NULL},     // P
                     {"delta", NULL},                // V
                     {"timeout", NULL}               // Z
                 };
+                
+                
+    /* Initialize this to the default value. If the user doesn't pass a
+       timeout, Python won't call convert_timeout() and so the timeout
+       will be otherwise uninitialized.
+    */
+    timeout.is_none = 1;
 
-    // op_type is P, V or Z corresponding to the 3 SysVSemaphore methods 
-    // that call that call semop(). 
-    
+    /* op_type is P, V or Z corresponding to the 3 Semaphore methods 
+       that call that call semop(). */
     switch (op_type) {
         case SEMOP_P:
             delta = -1;
-            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|Oi",
+            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|O&h",
                                              keyword_list[SEMOP_P], 
-                                             &pTimeout, &delta);
-            if (delta > 0)
+                                             convert_timeout, &timeout,
+                                             &delta);
+
+            if (rc && !delta) {
+                rc = 0;
+                PyErr_SetString(PyExc_ValueError, "The delta must be non-zero");
+            }
+            else
                 delta = -abs(delta);
         break;
             
         case SEMOP_V:
             delta = 1;
-            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|i", 
-                                             keyword_list[SEMOP_V], &delta);
-            if (delta < 0)
+            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|h", 
+                                             keyword_list[SEMOP_V], 
+                                             &delta);
+
+            if (rc && !delta) {
+                rc = 0;
+                PyErr_SetString(PyExc_ValueError, "The delta must be non-zero");
+            }
+            else
                 delta = abs(delta);
         break;
         
         case SEMOP_Z:
             delta = 0;
-            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|O",
-                                             keyword_list[SEMOP_Z], 
-                                             &pTimeout);
+            rc = PyArg_ParseTupleAndKeywords(args, keywords, "|O&",
+                                             keyword_list[SEMOP_Z],
+                                             convert_timeout, &timeout);
         break;
         
         default:
-            PyErr_Format(pSysVIpcInternalException, "Bad op_type (%d)", op_type);
+            PyErr_Format(pInternalException, "Bad op_type (%d)", op_type);
             rc = 0;
         break;
     }
@@ -242,78 +361,31 @@ sem_perform_semop(enum SEMOP_TYPE op_type, SysVSemaphore *self, PyObject *args, 
     op[0].sem_op = delta;
     op[0].sem_flg = self->op_flags;
 
-    // The timeout can be None or any Python numeric type (float, int, long).
-    if (pTimeout == Py_None) {
-        arg_is_ok = 1;
-    }
-    else if (PyFloat_Check(pTimeout)) {
-        arg_is_ok = 1;
-        simple_timeout = PyFloat_AsDouble(pTimeout);
-    }
-    else if (PyInt_Check(pTimeout)) {
-        arg_is_ok = 1;
-        simple_timeout = (double)PyInt_AsLong(pTimeout);
-    }
-    else if (PyLong_Check(pTimeout)) {
-        arg_is_ok = 1;
-        simple_timeout = (double)PyLong_AsLong(pTimeout);
-    }
-
-    if (!arg_is_ok) {
-        PyErr_SetString(PyExc_TypeError, "timeout must be numeric or None");
-        goto error_return;
-    }
-
-    // The arg is verified to be OK at this point; now let's figure out 
-    // what it means.
-    if (pTimeout != Py_None) {
-        // simple_timeout contains the numeric argument passed by the caller.
-        if (simple_timeout) {
-            // The caller wants a timed wait so blocking mode must be ON.
-            op[0].sem_flg &= ~IPC_NOWAIT;
-        }
-        else {
-            // The caller wants an instant timeout, i.e. non-blocking mode.
-            op[0].sem_flg |= IPC_NOWAIT;
-        }
-    }
-    // else 
-        // Timeout == None implies deference to the block attribute, so 
-        // I don't need to alter op[0].sem_flg.
-
-
     Py_BEGIN_ALLOW_THREADS    
 #ifdef SEMTIMEDOP_EXISTS
     // Call semtimedop() if appropriate, otherwise call semop()
-    if (simple_timeout) {
-        struct timespec complex_timeout;
-        
-        // Note the difference between this and POSIX semaphores. System V 
-        // sempahores expect tv_sec to represent a delta from the current 
-        // time whereas POSIX semaphores expect an absolute value.
-        complex_timeout.tv_sec = (time_t)floor(simple_timeout);
-        complex_timeout.tv_nsec = (long)((simple_timeout - floor(simple_timeout)) * ONE_BILLION);
-    
-        DPRINTF("calling semtimedop on id %d, op.sem_op = %d, op.flags=%x\n", \
+    if (!timeout.is_none) {
+        DPRINTF("calling semtimedop on id %d, op.sem_op = %d, op.flags=%x\n",
                 self->id, op[0].sem_op, op[0].sem_flg);
-        DPRINTF("timeout.tv_sec = %ld; timeout.tv_nsec = %ld\n", \
-                complex_timeout.tv_sec, complex_timeout.tv_nsec);
-        rc = semtimedop(self->id, op, (size_t)1, &complex_timeout);
+        DPRINTF("timeout tv_sec = %ld; timeout tv_nsec = %ld\n", 
+                timeout.timestamp.tv_sec, timeout.timestamp.tv_nsec);
+        rc = semtimedop(self->id, op, 1, &timeout.timestamp);
     }
     else {
-        DPRINTF("calling semop on id %d, op.sem_op = %d, op.flags=%x\n", \
+        DPRINTF("calling semop on id %d, op.sem_op = %d, op.flags=%x\n",
                 self->id, op[0].sem_op, op[0].sem_flg);
-        rc = semop(self->id, op, (size_t)1);
+        rc = semop(self->id, op, 1);
     }
 #else 
     // no support for semtimedop(), always call semop() instead.
-    DPRINTF("calling semop on id %d, op.sem_op = %d, op.flags=%x\n", \
+    DPRINTF("calling semop on id %d, op.sem_op = %d, op.flags=%x\n",
             self->id, op[0].sem_op, op[0].sem_flg);
-    rc = semop(self->id, op, (size_t)1);
+    rc = semop(self->id, op, 1);
 #endif
     Py_END_ALLOW_THREADS
+
     if (rc == -1) {
-        sem_set_error(pTimeout);
+        sem_set_error();
         goto error_return;
     }
 
@@ -332,7 +404,7 @@ sem_get_semctl_value(int semaphore_id, int cmd) {
     rc = semctl(semaphore_id, 0, cmd);
     
     if (-1 == rc) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }
 
@@ -347,58 +419,49 @@ static PyObject *
 sem_get_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field) {
     struct semid_ds sem_info;
     union semun arg;
-    PyObject *pReturn = NULL;
+    PyObject *pValue = NULL;
     
     arg.buf = &sem_info;
     
     // Here I get the values currently associated with the semaphore. 
     if (-1 == semctl(id, 0, IPC_STAT, arg)) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }
     
-    // Some of these values could theoretically overflow a Python int while others
-    // (such as mode) are guaranteed to be int-safe.
     switch (field) {
-        case IPC_PERM_KEY:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_perm.IPC_PERM_KEY_NAME);
-        break;
-
         case IPC_PERM_UID:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_perm.uid);
+            pValue = UID_T_TO_PY(sem_info.sem_perm.uid);
         break;
 
         case IPC_PERM_GID:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_perm.gid);
+            pValue = GID_T_TO_PY(sem_info.sem_perm.gid);
         break;
         
         case IPC_PERM_CUID:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_perm.cuid);
+            pValue = UID_T_TO_PY(sem_info.sem_perm.cuid);
         break;
         
         case IPC_PERM_CGID:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_perm.cgid);
+            pValue = GID_T_TO_PY(sem_info.sem_perm.cgid);
         break;
         
         case IPC_PERM_MODE:
-            pReturn = PyInt_FromLong((long)sem_info.sem_perm.mode);
-        break;
-        
-        case IPC_PERM_SEQ:
-            pReturn = PyInt_FromLong((long)sem_info.sem_perm.IPC_PERM_SEQ_NAME);
+            pValue = MODE_T_TO_PY(sem_info.sem_perm.mode);
         break;
         
         // This isn't an ipc_perm value but it fits here anyway.
         case SEM_OTIME:
-            pReturn = py_int_or_long_from_long((long)sem_info.sem_otime);
+            pValue = TIME_T_TO_PY(sem_info.sem_otime);
         break;
         
         default:
-            PyErr_Format(pSysVIpcInternalException, "Bad field %d passed to sem_get_ipc_perm_value", field);
+            PyErr_Format(pInternalException, "Bad field %d passed to sem_get_ipc_perm_value", field);
+            goto error_return;
         break;
     }
     
-    return pReturn;
+    return pValue;
 
     error_return:
     return NULL;    
@@ -406,14 +469,14 @@ sem_get_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field) {
 
 
 static int
-sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *value) {
+sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
     struct semid_ds sem_info;
     union semun arg;
     
     arg.buf = &sem_info;
 
-    if (!PyInt_Check(value)) {
-        PyErr_Format(PyExc_TypeError, "attribute must be an integer");
+    if (!PyInt_Check(py_value)) {
+        PyErr_Format(PyExc_TypeError, "The attribute must be an integer");
         goto error_return;
     }
     
@@ -426,30 +489,31 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *value) 
        below will copy uid, gid and mode to the kernel's data structure. 
     */
     if (-1 == semctl(id, 0, IPC_STAT, arg)) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }
     
     switch (field) {
         case IPC_PERM_UID:
-            sem_info.sem_perm.uid = (uid_t)PyInt_AsLong(value);
+            sem_info.sem_perm.uid = PyInt_AsLong(py_value);
         break;
         
         case IPC_PERM_GID:
-            sem_info.sem_perm.gid = (gid_t)PyInt_AsLong(value);
+            sem_info.sem_perm.gid = PyInt_AsLong(py_value);
         break;
         
         case IPC_PERM_MODE:
-            sem_info.sem_perm.mode = (unsigned short)PyInt_AsLong(value);
+            sem_info.sem_perm.mode = PyInt_AsLong(py_value);
         break;
 
         default:
-            PyErr_Format(pSysVIpcInternalException, "Bad field %d passed to sem_set_ipc_perm_value", field);
+            PyErr_Format(pInternalException, "Bad field %d passed to sem_set_ipc_perm_value", field);
+            goto error_return;
         break;
     }
     
     if (-1 == semctl(id, 0, IPC_SET, arg)) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }
     
@@ -460,41 +524,41 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *value) 
 }
 
 static void 
-SysVSemaphore_dealloc(SysVSemaphore *self) {
+Semaphore_dealloc(Semaphore *self) {
     self->ob_type->tp_free((PyObject*)self); 
 }
 
 static PyObject *
-SysVSemaphore_new(PyTypeObject *type, PyObject *args, PyObject *keywords) {
-    SysVSemaphore *self;
+Semaphore_new(PyTypeObject *type, PyObject *args, PyObject *keywords) {
+    Semaphore *self;
     
-    self = (SysVSemaphore *)type->tp_alloc(type, 0);
+    self = (Semaphore *)type->tp_alloc(type, 0);
 
     return (PyObject *)self; 
 }
 
 
 static int 
-SysVSemaphore_init(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
+Semaphore_init(Semaphore *self, PyObject *args, PyObject *keywords) {
     long key;
     int mode = 0600;
-    unsigned int initial_value = 0;
+    int initial_value = 0;
     int flags = 0;
     union semun arg;
     static char *keyword_list[ ] = {"key", "flags", "mode", "initial_value", NULL};
     
-    //SysVSemaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])
+    //Semaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])
     
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "l|iiI", keyword_list, 
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "l|iii", keyword_list, 
                                         &key, &flags, &mode, &initial_value))
         goto error_return;
     
     if ((key < 0) || (key > KEY_MAX)) {
-        PyErr_Format(PyExc_ValueError, "Key must be between 0 and KEY_MAX (%ld)", (long)KEY_MAX);
+        PyErr_Format(PyExc_ValueError, "Key must be between 0 and %ld (KEY_MAX)", (long)KEY_MAX);
         goto error_return;
     }
         
-    self->key = (key_t)key;
+    self->key = key;
     self->op_flags = 0;
         
     // I mask the caller's flags against the two IPC_* flags to ensure that 
@@ -511,7 +575,7 @@ SysVSemaphore_init(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
     DPRINTF("id == %d\n", self->id);
     
     if (self->id == -1) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }
 
@@ -522,7 +586,7 @@ SysVSemaphore_init(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
         arg.val = initial_value;
 
         if (-1 == semctl(self->id, 0, SETVAL, arg)) {
-            sem_set_error(NULL);
+            sem_set_error();
             goto error_return;
         }
     }
@@ -535,37 +599,37 @@ SysVSemaphore_init(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
 
 
 static PyObject *
-SysVSemaphore_P(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
+Semaphore_P(Semaphore *self, PyObject *args, PyObject *keywords) {
     return sem_perform_semop(SEMOP_P, self, args, keywords);
 }
 
 
 static PyObject *
-SysVSemaphore_acquire(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
-    return SysVSemaphore_P(self, args, keywords);
+Semaphore_acquire(Semaphore *self, PyObject *args, PyObject *keywords) {
+    return Semaphore_P(self, args, keywords);
 }
 
 
 static PyObject *
-SysVSemaphore_V(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
+Semaphore_V(Semaphore *self, PyObject *args, PyObject *keywords) {
     return sem_perform_semop(SEMOP_V, self, args, keywords);
 }
 
 
 static PyObject *
-SysVSemaphore_release(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
-    return SysVSemaphore_V(self, args, keywords);
+Semaphore_release(Semaphore *self, PyObject *args, PyObject *keywords) {
+    return Semaphore_V(self, args, keywords);
 }
 
 
 static PyObject *
-SysVSemaphore_Z(SysVSemaphore *self, PyObject *args, PyObject *keywords) {
+Semaphore_Z(Semaphore *self, PyObject *args, PyObject *keywords) {
     return sem_perform_semop(SEMOP_Z, self, args, keywords);
 }
 
 
 static PyObject *
-SysVSemaphore_remove(SysVSemaphore *self) {
+Semaphore_remove(Semaphore *self) {
     if (NULL == sem_get_semctl_value(self->id, IPC_RMID))
         goto error_return;
     
@@ -577,28 +641,23 @@ SysVSemaphore_remove(SysVSemaphore *self) {
 
 
 static PyObject *
-sem_get_key(SysVSemaphore *self) {
-    return sem_get_ipc_perm_value(self->id, IPC_PERM_KEY);
-}
-
-static PyObject *
-sem_get_value(SysVSemaphore *self) {
+sem_get_value(Semaphore *self) {
     return sem_get_semctl_value(self->id, GETVAL);
 }
 
 
 static int
-sem_set_value(SysVSemaphore *self, PyObject *pValue)
+sem_set_value(Semaphore *self, PyObject *py_value)
 {
     union semun arg;
     long value;
 
-    if (!PyInt_Check(pValue)) {
+    if (!PyInt_Check(py_value)) {
 		PyErr_Format(PyExc_TypeError, "Attribute 'value' must be an integer");
         goto error_return;
     }
     
-    value = PyInt_AsLong(pValue);
+    value = PyInt_AsLong(py_value);
     
     DPRINTF("C value is %ld\n", value);
     
@@ -608,16 +667,16 @@ sem_set_value(SysVSemaphore *self, PyObject *pValue)
     }
     
     if ((value < 0) || (value > SEMAPHORE_VALUE_MAX)) {
-		PyErr_Format(PyExc_ValueError, "Attribute 'value' must be between 0 and SEMAPHORE_VALUE_MAX (%ld)", (long)SEMAPHORE_VALUE_MAX);
+		PyErr_Format(PyExc_ValueError, 
+		             "Attribute 'value' must be between 0 and %ld (SEMAPHORE_VALUE_MAX)", 
+		             (long)SEMAPHORE_VALUE_MAX);
         goto error_return;
     }
     
-    // FIXME -- how can I cast this when I can't be sure of the type of 
-    // union semun.val?
     arg.val = value;
     
     if (-1 == semctl(self->id, 0, SETVAL, arg)) {
-        sem_set_error(NULL);
+        sem_set_error();
         goto error_return;
     }    
     
@@ -629,18 +688,18 @@ sem_set_value(SysVSemaphore *self, PyObject *pValue)
 
 
 static PyObject *
-sem_get_block(SysVSemaphore *self) {
+sem_get_block(Semaphore *self) {
     DPRINTF("op_flags: %x\n", self->op_flags);
     return PyBool_FromLong( (self->op_flags & IPC_NOWAIT) ? 0 : 1);
 }
 
 
 static int
-sem_set_block(SysVSemaphore *self, PyObject *value)
+sem_set_block(Semaphore *self, PyObject *py_value)
 {
     DPRINTF("op_flags before: %x\n", self->op_flags);
     
-    if (PyObject_IsTrue(value))
+    if (PyObject_IsTrue(py_value))
         self->op_flags &= ~IPC_NOWAIT;
     else
         self->op_flags |= IPC_NOWAIT;
@@ -652,29 +711,29 @@ sem_set_block(SysVSemaphore *self, PyObject *value)
 
 
 static PyObject *
-sem_get_mode(SysVSemaphore *self) {
+sem_get_mode(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, IPC_PERM_MODE);
 }
 
 
 static int
-sem_set_mode(SysVSemaphore *self, PyObject *value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_MODE, value);
+sem_set_mode(Semaphore *self, PyObject *py_value) {
+    return sem_set_ipc_perm_value(self->id, IPC_PERM_MODE, py_value);
 }
 
 
 static PyObject *
-sem_get_undo(SysVSemaphore *self) {
+sem_get_undo(Semaphore *self) {
     return PyBool_FromLong( (self->op_flags & SEM_UNDO) ? 1 : 0 );
 }
 
 
 static int
-sem_set_undo(SysVSemaphore *self, PyObject *value)
+sem_set_undo(Semaphore *self, PyObject *py_value)
 {
     DPRINTF("op_flags before: %x\n", self->op_flags);
     
-    if (PyObject_IsTrue(value))
+    if (PyObject_IsTrue(py_value))
         self->op_flags |= SEM_UNDO;
     else
         self->op_flags &= ~SEM_UNDO;
@@ -686,55 +745,55 @@ sem_set_undo(SysVSemaphore *self, PyObject *value)
 
 
 static PyObject *
-sem_get_uid(SysVSemaphore *self) {
+sem_get_uid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, IPC_PERM_UID);
 }
 
 
 static int
-sem_set_uid(SysVSemaphore *self, PyObject *value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_UID, value);
+sem_set_uid(Semaphore *self, PyObject *py_value) {
+    return sem_set_ipc_perm_value(self->id, IPC_PERM_UID, py_value);
 }
 
 
 static PyObject *
-sem_get_gid(SysVSemaphore *self) {
+sem_get_gid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, IPC_PERM_GID);
 }
 
 
 static int
-sem_set_gid(SysVSemaphore *self, PyObject *value) {
-    return sem_set_ipc_perm_value(self->id, IPC_PERM_GID, value);
+sem_set_gid(Semaphore *self, PyObject *py_value) {
+    return sem_set_ipc_perm_value(self->id, IPC_PERM_GID, py_value);
 }
 
 static PyObject *
-sem_get_c_uid(SysVSemaphore *self) {
+sem_get_c_uid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, IPC_PERM_CUID);
 }
 
 static PyObject *
-sem_get_c_gid(SysVSemaphore *self) {
+sem_get_c_gid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, IPC_PERM_CGID);
 }
 
 static PyObject *
-sem_get_last_pid(SysVSemaphore *self) {
+sem_get_last_pid(Semaphore *self) {
     return sem_get_semctl_value(self->id, GETPID);
 }
 
 static PyObject *
-sem_get_waiting_for_nonzero(SysVSemaphore *self) {
+sem_get_waiting_for_nonzero(Semaphore *self) {
     return sem_get_semctl_value(self->id, GETNCNT);
 }
 
 static PyObject *
-sem_get_waiting_for_zero(SysVSemaphore *self) {
+sem_get_waiting_for_zero(Semaphore *self) {
     return sem_get_semctl_value(self->id, GETZCNT);
 }
 
 static PyObject *
-sem_get_o_time(SysVSemaphore *self) {
+sem_get_o_time(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, SEM_OTIME);
 }
 
@@ -756,11 +815,14 @@ shm_remove(int shared_memory_id) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pSysVIpcExistentialException, "No shared memory with id %d exists", shared_memory_id);
+                PyErr_Format(pExistentialException, 
+                             "No shared memory with id %d exists", 
+                             shared_memory_id);
             break;
         
             case EPERM:
-                PyErr_SetString(pSysVIpcPermissionsException, "You do not have permission to remove the shared memory");
+                PyErr_SetString(pPermissionsException, 
+                                "You do not have permission to remove the shared memory");
             break;
 
             default:
@@ -787,11 +849,14 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pSysVIpcExistentialException, "No shared memory with id %d exists", shared_memory_id);
+                PyErr_Format(pExistentialException, 
+                             "No shared memory with id %d exists", 
+                             shared_memory_id);
             break;
         
             case EACCES:
-                PyErr_SetString(pSysVIpcPermissionsException, "You do not have permission to read the shared memory attribute");
+                PyErr_SetString(pPermissionsException, 
+                                "You do not have permission to read the shared memory attribute");
             break;
 
             default:
@@ -804,88 +869,83 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
 
     switch (field) {
         case SHM_SIZE:
-            pReturn = py_int_or_long_from_long((unsigned long)shm_info.shm_segsz);
+            pReturn = SIZE_T_TO_PY(shm_info.shm_segsz);
         break;
 
         case SHM_LAST_ATTACH_TIME:
-            pReturn = py_int_or_long_from_long((unsigned long)shm_info.shm_atime);
+            pReturn = TIME_T_TO_PY(shm_info.shm_atime);
         break;
         
         case SHM_LAST_DETACH_TIME:
-            pReturn = py_int_or_long_from_long((unsigned long)shm_info.shm_dtime);
+            pReturn = TIME_T_TO_PY(shm_info.shm_dtime);
         break;
         
         case SHM_LAST_CHANGE_TIME:
-            pReturn = py_int_or_long_from_long((unsigned long)shm_info.shm_ctime);
+            pReturn = TIME_T_TO_PY(shm_info.shm_ctime);
         break;
 
         case SHM_CREATOR_PID:
-            pReturn = PyInt_FromLong((long)shm_info.shm_cpid);
+            pReturn = PID_T_TO_PY(shm_info.shm_cpid);
         break;
 
         case SHM_LAST_AT_DT_PID:
-            pReturn = PyInt_FromLong((long)shm_info.shm_lpid);
+            pReturn = PID_T_TO_PY(shm_info.shm_lpid);
         break;
 
         case SHM_NUMBER_ATTACHED:
-            pReturn = PyInt_FromLong((long)shm_info.shm_nattch);
+            // shm_nattch is unsigned
+            // ref: http://www.opengroup.org/onlinepubs/007908799/xsh/sysshm.h.html
+            pReturn = py_int_or_long_from_ulong(shm_info.shm_nattch);
         break;
 
-        case IPC_PERM_KEY:
-            pReturn = py_int_or_long_from_long((long)shm_info.shm_perm.IPC_PERM_KEY_NAME);
-        break;
-
-        case IPC_PERM_UID:
-            pReturn = py_int_or_long_from_long((long)shm_info.shm_perm.uid);
+        case IPC_PERM_UID:            
+            pReturn = UID_T_TO_PY(shm_info.shm_perm.uid);
         break;
 
         case IPC_PERM_GID:
-            pReturn = py_int_or_long_from_long((long)shm_info.shm_perm.gid);
+            pReturn = GID_T_TO_PY(shm_info.shm_perm.gid);
         break;
 
         case IPC_PERM_CUID:
-            pReturn = py_int_or_long_from_long((long)shm_info.shm_perm.cuid);
+            pReturn = UID_T_TO_PY(shm_info.shm_perm.cuid);
         break;
 
         case IPC_PERM_CGID:
-            pReturn = py_int_or_long_from_long((long)shm_info.shm_perm.cgid);
+            pReturn = GID_T_TO_PY(shm_info.shm_perm.cgid);
         break;
 
         case IPC_PERM_MODE:
-            pReturn = PyInt_FromLong((long)shm_info.shm_perm.mode);
-        break;
-
-        case IPC_PERM_SEQ:
-            pReturn = PyInt_FromLong((long)shm_info.shm_perm.IPC_PERM_SEQ_NAME);
+            pReturn = MODE_T_TO_PY(shm_info.shm_perm.mode);
         break;
 
         default:
-            PyErr_Format(pSysVIpcInternalException, "Bad field %d passed to shm_get_value", field);
+            PyErr_Format(pInternalException, "Bad field %d passed to shm_get_value", field);
+            goto error_return;
         break;
     }
     
     return pReturn;
 
     error_return:
-    return NULL;    
+    return NULL;
 }
 
 
 static int
-shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, int value) {
-    // Should value param be a union of uid_t/gid_t/unsigned short?
-    
+shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_value value) {
     struct shmid_ds shm_info;
     
     if (-1 == shmctl(id, IPC_STAT, &shm_info)) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pSysVIpcExistentialException, "No shared memory with id %d exists", id);
+                PyErr_Format(pExistentialException, 
+                             "No shared memory with id %d exists", id);
             break;
         
             case EACCES:
-                PyErr_SetString(pSysVIpcPermissionsException, "You do not have permission to read the shared memory attribute");
+                PyErr_SetString(pPermissionsException, 
+                                "You do not have permission to read the shared memory attribute");
             break;
 
             default:
@@ -897,19 +957,22 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, int value) {
     
     switch (field) {
         case IPC_PERM_UID:
-            shm_info.shm_perm.uid = (uid_t)value;
+            shm_info.shm_perm.uid = value.uid;
         break;
         
         case IPC_PERM_GID:
-            shm_info.shm_perm.gid = (gid_t)value;
+            shm_info.shm_perm.gid = value.gid;
         break;
         
         case IPC_PERM_MODE:
-            shm_info.shm_perm.mode = (unsigned short)value;
+            shm_info.shm_perm.mode = value.mode;
         break;
 
         default:
-            PyErr_Format(pSysVIpcInternalException, "Bad field %d passed to shm_set_ipc_perm_value", field);
+            PyErr_Format(pInternalException, 
+                         "Bad field %d passed to shm_set_ipc_perm_value", 
+                         field);
+            goto error_return;
         break;
     }
     
@@ -917,11 +980,13 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, int value) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pSysVIpcExistentialException, "No shared memory with id %d exists", id);
+                PyErr_Format(pExistentialException, 
+                             "No shared memory with id %d exists", id);
             break;
         
             case EPERM:
-                PyErr_SetString(pSysVIpcPermissionsException, "You do not have permission to change the shared memory's attributes");
+                PyErr_SetString(pPermissionsException, 
+                                "You do not have permission to change the shared memory's attributes");
             break;
 
             default:
@@ -940,22 +1005,22 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, int value) {
 
 
 static void 
-SysVSharedMemory_dealloc(SysVSharedMemory *self) {
+SharedMemory_dealloc(SharedMemory *self) {
     self->ob_type->tp_free((PyObject*)self); 
 }
 
 static PyObject *
-SysVSharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
-    SysVSharedMemory *self;
+SharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
+    SharedMemory *self;
     
-    self = (SysVSharedMemory *)type->tp_alloc(type, 0);
+    self = (SharedMemory *)type->tp_alloc(type, 0);
 
     return (PyObject *)self; 
 }
 
 
 static int 
-SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords) {
+SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     long key;
     int mode = 0600;
     unsigned long size = 0;
@@ -963,14 +1028,17 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
     int shmat_flags = 0;
     char init_character = ' ';
     static char *keyword_list[ ] = {"key", "flags", "mode", "size", "init_character", NULL};
-    PyObject *pSize = NULL;
+    PyObject *py_size = NULL;
     
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "l|iilc", keyword_list, 
-                                        &key, &shmget_flags, &mode, &size, &init_character))
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "l|iikc", keyword_list, 
+                                     &key, &shmget_flags, &mode, &size, 
+                                     &init_character))
         goto error_return;
     
     if ((key < 0) || (key > KEY_MAX)) {
-        PyErr_Format(PyExc_ValueError, "Key must be between 0 and KEY_MAX (%ld)", (long)KEY_MAX);
+        PyErr_Format(PyExc_ValueError, 
+                     "Key must be between 0 and %ld (KEY_MAX)", 
+                     (long)KEY_MAX);
         goto error_return;
     }
 
@@ -981,23 +1049,29 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
     if (((shmget_flags & IPC_CREX) == IPC_CREX) && (!size))
         size = PAGE_SIZE;
 
-    DPRINTF("Calling shmget, key=%ld, size=%ld, mode=%o, flags=0x%x\n", key, size, mode, shmget_flags);
-    self->id = shmget((key_t)key, size, mode | shmget_flags);
+    DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
+            key, size, mode, shmget_flags);
+    self->id = shmget(key, size, mode | shmget_flags);
         
     DPRINTF("id == %d\n", self->id);
     
     if (self->id == -1) {
         switch (errno) {
             case EACCES:
-                PyErr_Format(pSysVIpcPermissionsException, "Permission %o cannot be granted on the existing segment", mode);
+                PyErr_Format(pPermissionsException, 
+                             "Permission %o cannot be granted on the existing segment", 
+                             mode);
             break;
 
             case EEXIST:
-                PyErr_Format(pSysVIpcExistentialException, "Shared memory with the key %ld already exists", key);
+                PyErr_Format(pExistentialException, 
+                             "Shared memory with the key %ld already exists", 
+                             key);
             break;
 
             case ENOENT:
-                PyErr_Format(pSysVIpcExistentialException, "No shared memory exists with the key (%ld)", key);
+                PyErr_Format(pExistentialException, 
+                             "No shared memory exists with the key %ld", key);
             break;
 
             case EINVAL:
@@ -1009,7 +1083,8 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
             break;
 
             case ENOSPC:
-                PyErr_SetString(PyExc_OSError, "Not enough shared memory identifiers available (ENOSPC)");
+                PyErr_SetString(PyExc_OSError, 
+                                "Not enough shared memory identifiers available (ENOSPC)");
             break;
 
             default:
@@ -1028,21 +1103,18 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
         self->address = NULL;
         switch (errno) {
             case EACCES:
-                PyErr_SetString(pSysVIpcPermissionsException, "No permission to attach");
-            break;
-
-            case EINVAL:
-                // EINVAL from shmat() means id or address was invalid. 
-                // Since my code (and not the caller) supplies both here,
-                // I can't see a realistic way for it to occur. Even if 
-                // it does, the error will get caught by the default case.
-                ;
+                PyErr_SetString(pPermissionsException, "No permission to attach");
             break;
 
             case ENOMEM:
                 PyErr_SetString(PyExc_MemoryError, "Not enough memory");
             break;
 
+            case EINVAL:
+                // EINVAL from shmat() means id or address was invalid. 
+                // Since my code (and not the caller) supplied both here,
+                // I can't see a realistic way for it to occur so I'm not
+                // going to bother handling it with a custom message.
             default:
                 PyErr_SetFromErrno(PyExc_OSError);
             break;
@@ -1053,22 +1125,20 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
     
     if ( ((shmget_flags & IPC_CREX) == IPC_CREX) && (!(shmat_flags & SHM_RDONLY)) ) {
         // Initialize the memory.
-        pSize = shm_get_value(self->id, SHM_SIZE);
+        
+        py_size = shm_get_value(self->id, SHM_SIZE);
     
-        if (!pSize)
+        if (!py_size)
             goto error_return;
         else {
-            if (PyInt_Check(pSize)) 
-                size = PyInt_AsLong(pSize);
-            else
-                size = PyLong_AsLong(pSize);
+            size = PyInt_AsUnsignedLongMask(py_size);
 
-            DPRINTF("memsetting address %p to %ld bytes of ASCII 0x%x (%c)\n", \
+            DPRINTF("memsetting address %p to %lu bytes of ASCII 0x%x (%c)\n", \
                     self->address, size, (int)init_character, init_character);
             memset(self->address, init_character, size);
-    
-            Py_DECREF(pSize);
         }
+
+        Py_DECREF(py_size);
     }
     
     return 0;
@@ -1079,21 +1149,23 @@ SysVSharedMemory_init(SysVSharedMemory *self, PyObject *args, PyObject *keywords
 
 
 static PyObject *
-SysVSharedMemory_attach(SysVSharedMemory *self, PyObject *args) {
-    PyObject *long_address = NULL;
+SharedMemory_attach(SharedMemory *self, PyObject *args) {
+    PyObject *py_address = NULL;
     void *address = NULL;
     int flags = 0;
     
-    if (!PyArg_ParseTuple(args, "|Oi", &long_address, &flags))
+    if (!PyArg_ParseTuple(args, "|Oi", &py_address, &flags))
         goto error_return;
 
-    if ((!long_address) || (long_address == Py_None))
+    if ((!py_address) || (py_address == Py_None))
         address = NULL;
     else {
-        if (PyLong_Check(long_address))
-            address = PyLong_AsVoidPtr(long_address);
-        else
+        if (PyLong_Check(py_address))
+            address = PyLong_AsVoidPtr(py_address);
+        else {
             PyErr_SetString(PyExc_TypeError, "address must be a long");
+            goto error_return;
+        }
     }
     
     self->address = shmat(self->id, address, flags);
@@ -1102,7 +1174,7 @@ SysVSharedMemory_attach(SysVSharedMemory *self, PyObject *args) {
         self->address = NULL;
         switch (errno) {
             case EACCES:
-                PyErr_SetString(pSysVIpcPermissionsException, "No permission to attach");
+                PyErr_SetString(pPermissionsException, "No permission to attach");
             break;
 
             case EINVAL:
@@ -1128,12 +1200,12 @@ SysVSharedMemory_attach(SysVSharedMemory *self, PyObject *args) {
 
 
 static PyObject *
-SysVSharedMemory_detach(SysVSharedMemory *self) {
+SharedMemory_detach(SharedMemory *self) {
     if (-1 == shmdt(self->address)) {
         self->address = NULL;
         switch (errno) {
             case EINVAL:
-                PyErr_SetNone(pSysVIpcNotAttachedException);
+                PyErr_SetNone(pNotAttachedException);
             break;
 
             default:
@@ -1153,45 +1225,72 @@ SysVSharedMemory_detach(SysVSharedMemory *self) {
 
 
 static PyObject *
-SysVSharedMemory_read(SysVSharedMemory *self, PyObject *args, PyObject *keywords) {
-    Py_ssize_t byte_count = 0;
-    Py_ssize_t offset = 0;
-    PyObject *pSize;
-    size_t size;
+SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
+    /* Tricky business here. A memory segment's size is a size_t which is 
+       ulong or smaller. However, the largest string that Python can 
+       construct is of ssize_t which is long or smaller. Therefore, the
+       size and offset variables must be ulongs while the byte_count 
+       must be a long (and must not exceed LONG_MAX).
+       Mind your math!
+    */
+    long byte_count = 0;
+    unsigned long offset = 0;
+    unsigned long size;
+    PyObject *py_size;
     static char *keyword_list[ ] = {"byte_count", "offset", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "|nn", keyword_list, 
+    
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "|lk", keyword_list, 
                                      &byte_count, &offset))
         goto error_return;
         
     if (self->address == NULL) {
-        PyErr_SetString(pSysVIpcNotAttachedException, "Read attempt on unattached memory segment");
-        goto error_return;
-    }
-
-    pSize = shm_get_value(self->id, SHM_SIZE);
-    if (!pSize) 
-        goto error_return;
-    else {
-        size = (size_t)PyInt_AsLong(pSize);
-        Py_DECREF(pSize);
-    }
-
-    DPRINTF("offset = %ld, byte_count = %ld, size = %ld\n", \
-            (long)offset, (long)byte_count, (long)size);
-    
-    if ((offset < 0) || (offset >= size)) {
-        PyErr_SetString(PyExc_ValueError, "Offset must be between zero and the segment size");
+        PyErr_SetString(pNotAttachedException, 
+                        "Read attempt on unattached memory segment");
         goto error_return;
     }
     
-    // If the caller didn't specify a byte count or specified one that would
-    // read past the end of the segment, return everything from the offset to
-    // the end of the segment.
-    if ((!byte_count) || (offset + byte_count > size))
-        byte_count = size - offset;
+    if ( (py_size = shm_get_value(self->id, SHM_SIZE)) ) {
+        size = PyInt_AsUnsignedLongMask(py_size);
+        Py_DECREF(py_size);
+    }
+    else
+        goto error_return;
 
-    return PyString_FromStringAndSize((const char *)(self->address + offset), byte_count);
+    DPRINTF("offset = %lu, byte_count = %ld, size = %lu\n",
+            offset, byte_count, size);
+    
+    if (offset >= size) {
+        PyErr_SetString(PyExc_ValueError, "The offset must be less than the segment size");
+        goto error_return;
+    }
+    
+    if (byte_count < 0) {
+        PyErr_SetString(PyExc_ValueError, "The byte_count cannot be negative");
+        goto error_return;
+    }
+    
+    /* If the caller didn't specify a byte count or specified one that would
+       read past the end of the segment, return everything from the offset to
+       the end of the segment.
+       Be careful here not to express the second if condition w/addition, e.g.
+            (byte_count + offset > size)
+       It might be more intuitive but since byte_count is a long and offset 
+       is a ulong, their sum could cause an arithmetic overflow. */
+    if ((!byte_count) || ((unsigned long)byte_count > size - offset)) {
+        // byte_count needs to be calculated
+        if (size - offset <= (unsigned long)PY_STRING_LENGTH_MAX)
+            byte_count = size - offset;
+        else {
+            // Caller is asking for more bytes than I can stuff into 
+            // a Python string.
+            PyErr_Format(PyExc_ValueError,
+                         "The byte_count cannot exceed Python's max string length %ld", 
+                         (long)PY_STRING_LENGTH_MAX);
+            goto error_return;
+        }
+    }
+        
+    return PyString_FromStringAndSize(self->address + offset, byte_count);
     
     error_return:
     return NULL;
@@ -1199,30 +1298,34 @@ SysVSharedMemory_read(SysVSharedMemory *self, PyObject *args, PyObject *keywords
 
 
 static PyObject *
-SysVSharedMemory_write(SysVSharedMemory *self, PyObject *args) {
+SharedMemory_write(SharedMemory *self, PyObject *args) {
+    /* See comments for read() regarding "size issues". Note that here
+       Python provides the byte_count so it can't be negative. 
+       
+       In Python >= 2.5, the Python argument specifier 's#' expects a 
+       py_ssize_t for its second parameter. A long is long enough. */
     const char *buffer;
-    Py_ssize_t byte_count;
-    Py_ssize_t offset = 0;
-    PyObject *pSize;
-    size_t size;
+    long byte_count;
+    unsigned long offset = 0;
+    unsigned long size;
+    PyObject *py_size;
 
-    if (!PyArg_ParseTuple(args, "s#|n", &buffer, &byte_count, &offset))
+    if (!PyArg_ParseTuple(args, "s#|k", &buffer, &byte_count, &offset))
         goto error_return;
 	    
     if (self->address == NULL) {
-        PyErr_SetString(pSysVIpcNotAttachedException, "Write attempt on unattached memory segment");
+        PyErr_SetString(pNotAttachedException, "Write attempt on unattached memory segment");
         goto error_return;
     }
     
-    pSize = shm_get_value(self->id, SHM_SIZE);
-    if (!pSize) 
-        goto error_return;
-    else {
-        size = (size_t)PyInt_AsLong(pSize);
-        Py_DECREF(pSize);
+    if ( (py_size = shm_get_value(self->id, SHM_SIZE)) ) {
+        size = PyInt_AsUnsignedLongMask(py_size);
+        Py_DECREF(py_size);
     }
+    else
+        goto error_return;
 
-    if ( ((size_t) (offset + byte_count)) > size) {
+    if ((unsigned long)byte_count > size - offset) {
         PyErr_SetString(PyExc_ValueError, "Attempt to write past end of memory segment");
         goto error_return;
     }
@@ -1237,23 +1340,23 @@ SysVSharedMemory_write(SysVSharedMemory *self, PyObject *args) {
 
 
 static PyObject *
-SysVSharedMemory_remove(SysVSharedMemory *self) {
+SharedMemory_remove(SharedMemory *self) {
     return shm_remove(self->id);
 }
 
 
 static PyObject *
-shm_get_size(SysVSharedMemory *self) {
+shm_get_size(SharedMemory *self) {
     return shm_get_value(self->id, SHM_SIZE);
 }
 
 static PyObject *
-shm_get_address(SysVSharedMemory *self) {
+shm_get_address(SharedMemory *self) {
     return PyLong_FromVoidPtr(self->address);
 }
 
 static PyObject *
-shm_get_attached(SysVSharedMemory *self) {
+shm_get_attached(SharedMemory *self) {
     if (self->address) 
         Py_RETURN_TRUE;
     else
@@ -1261,77 +1364,72 @@ shm_get_attached(SysVSharedMemory *self) {
 }
 
 static PyObject *
-shm_get_last_attach_time(SysVSharedMemory *self) {
+shm_get_last_attach_time(SharedMemory *self) {
     return shm_get_value(self->id, SHM_LAST_ATTACH_TIME);
 }
 
 static PyObject *
-shm_get_last_detach_time(SysVSharedMemory *self) {
+shm_get_last_detach_time(SharedMemory *self) {
     return shm_get_value(self->id, SHM_LAST_DETACH_TIME);
 }
 
 static PyObject *
-shm_get_last_change_time(SysVSharedMemory *self) {
+shm_get_last_change_time(SharedMemory *self) {
     return shm_get_value(self->id, SHM_LAST_CHANGE_TIME);
 }
 
 static PyObject *
-shm_get_creator_pid(SysVSharedMemory *self) {
+shm_get_creator_pid(SharedMemory *self) {
     return shm_get_value(self->id, SHM_CREATOR_PID);
 }
 
 static PyObject *
-shm_get_last_pid(SysVSharedMemory *self) {
+shm_get_last_pid(SharedMemory *self) {
     return shm_get_value(self->id, SHM_LAST_AT_DT_PID);
 }
 
 static PyObject *
-shm_get_number_attached(SysVSharedMemory *self) {
+shm_get_number_attached(SharedMemory *self) {
     return shm_get_value(self->id, SHM_NUMBER_ATTACHED);
 }
 
 static PyObject *
-shm_get_key(SysVSharedMemory *self) {
-    return shm_get_value(self->id, IPC_PERM_KEY);
-}
-
-static PyObject *
-shm_get_uid(SysVSharedMemory *self) {
+shm_get_uid(SharedMemory *self) {
     return shm_get_value(self->id, IPC_PERM_UID);
 }
 
 static PyObject *
-shm_get_cuid(SysVSharedMemory *self) {
+shm_get_cuid(SharedMemory *self) {
     return shm_get_value(self->id, IPC_PERM_CUID);
 }
 
 static PyObject *
-shm_get_cgid(SysVSharedMemory *self) {
+shm_get_cgid(SharedMemory *self) {
     return shm_get_value(self->id, IPC_PERM_CGID);
 }
 
 static PyObject *
-shm_get_mode(SysVSharedMemory *self) {
+shm_get_mode(SharedMemory *self) {
     return shm_get_value(self->id, IPC_PERM_MODE);
 }
 
 static int
-shm_set_uid(SysVSharedMemory *self, PyObject *value) {
-    uid_t new_uid;
+shm_set_uid(SharedMemory *self, PyObject *py_value) {
+    union ipc_perm_value new_value;
     
-    if (!PyInt_Check(value)) {
-		PyErr_Format(PyExc_TypeError, "attribute 'uid' must be an integer");
+    if (!PyInt_Check(py_value)) {
+		PyErr_SetString(PyExc_TypeError, "Attribute 'uid' must be an integer");
         goto error_return;
     }
     
-    new_uid = (uid_t)PyInt_AsLong(value);
+    new_value.uid = PyInt_AsLong(py_value);
     
-    if ((-1 == new_uid) && PyErr_Occurred()) {
+    if (((uid_t)-1 == new_value.uid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
     
-    return shm_set_ipc_perm_value(self->id, IPC_PERM_UID, new_uid);
+    return shm_set_ipc_perm_value(self->id, IPC_PERM_UID, new_value);
 
     error_return:
     return -1;
@@ -1339,49 +1437,49 @@ shm_set_uid(SysVSharedMemory *self, PyObject *value) {
 
 
 static PyObject *
-shm_get_gid(SysVSharedMemory *self) {
+shm_get_gid(SharedMemory *self) {
     return shm_get_value(self->id, IPC_PERM_GID);
 }
 
 static int
-shm_set_gid(SysVSharedMemory *self, PyObject *value) {
-    gid_t new_gid;
+shm_set_gid(SharedMemory *self, PyObject *py_value) {
+    union ipc_perm_value new_value;
     
-    if (!PyInt_Check(value)) {
+    if (!PyInt_Check(py_value)) {
 		PyErr_Format(PyExc_TypeError, "attribute 'gid' must be an integer");
         goto error_return;
     }
     
-    new_gid = (gid_t)PyInt_AsLong(value);
+    new_value.gid = PyInt_AsLong(py_value);
     
-    if ((-1 == new_gid) && PyErr_Occurred()) {
+    if (((gid_t)-1 == new_value.gid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
     
-    return shm_set_ipc_perm_value(self->id, IPC_PERM_GID, new_gid);
+    return shm_set_ipc_perm_value(self->id, IPC_PERM_GID, new_value);
 
     error_return:
     return -1;
 }
 
 static int
-shm_set_mode(SysVSharedMemory *self, PyObject *value) {
-    unsigned short new_mode;
+shm_set_mode(SharedMemory *self, PyObject *py_value) {
+    union ipc_perm_value new_value;
     
-    if (!PyInt_Check(value)) {
+    if (!PyInt_Check(py_value)) {
 		PyErr_Format(PyExc_TypeError, "attribute 'mode' must be an integer");
         goto error_return;
     }
     
-    new_mode = (unsigned short)PyInt_AsLong(value);
+    new_value.mode = PyInt_AsLong(py_value);
     
-    if (((unsigned short)-1 == new_mode) && PyErr_Occurred()) {
+    if (((mode_t)-1 == new_value.mode) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
     
-    return shm_set_ipc_perm_value(self->id, IPC_PERM_MODE, new_mode);
+    return shm_set_ipc_perm_value(self->id, IPC_PERM_MODE, new_value);
 
     error_return:
     return -1;
@@ -1426,40 +1524,41 @@ sysv_ipc_remove_shared_memory(PyObject *self, PyObject *args) {
 }
 
 
-static PyMemberDef SysVSemaphore_members[] = {
-    {"id", T_INT, offsetof(SysVSemaphore, id), READONLY, "semaphore id"}, 
+static PyMemberDef Semaphore_members[] = {
+    {"id", T_INT, offsetof(Semaphore, id), READONLY, "semaphore id"}, 
+    {"key", T_INT, offsetof(Semaphore, key), READONLY, "semaphore key"}, 
     {NULL} /* Sentinel */ 
 };
 
 
-static PyMethodDef SysVSemaphore_methods[] = { 
+static PyMethodDef Semaphore_methods[] = { 
     {   "P", 
-        (PyCFunction)SysVSemaphore_P, 
+        (PyCFunction)Semaphore_P, 
         METH_KEYWORDS, 
         "Acquire (decrement) the semaphore, waiting if necessary"
     },
     {   "acquire", 
-        (PyCFunction)SysVSemaphore_acquire, 
+        (PyCFunction)Semaphore_acquire, 
         METH_KEYWORDS, 
         "Acquire (decrement) the semaphore, waiting if necessary"
     },
     {   "V",
-        (PyCFunction)SysVSemaphore_V, 
+        (PyCFunction)Semaphore_V, 
         METH_KEYWORDS, 
         "Release (increment) the semaphore"
     }, 
     {   "release", 
-        (PyCFunction)SysVSemaphore_release, 
+        (PyCFunction)Semaphore_release, 
         METH_KEYWORDS, 
         "Release (increment) the semaphore"
     },
     {   "Z",
-        (PyCFunction)SysVSemaphore_Z, 
+        (PyCFunction)Semaphore_Z, 
         METH_KEYWORDS, 
         "Waits until zee zemaphore is zero"
     }, 
     {   "remove",
-        (PyCFunction)SysVSemaphore_remove, 
+        (PyCFunction)Semaphore_remove, 
         METH_NOARGS, 
         "Removes (deletes) the semaphore from the system"
     }, 
@@ -1468,8 +1567,7 @@ static PyMethodDef SysVSemaphore_methods[] = {
 
 
 
-static PyGetSetDef SysVSemaphore_gets_and_sets[] = { 
-    {"key", (getter)sem_get_key, (setter)NULL, "key", NULL}, 
+static PyGetSetDef Semaphore_gets_and_sets[] = { 
     {"value", (getter)sem_get_value, (setter)sem_set_value, "value", NULL}, 
     {"undo", (getter)sem_get_undo, (setter)sem_set_undo, "undo", NULL}, 
     {"block", (getter)sem_get_block, (setter)sem_set_block, "block", NULL}, 
@@ -1488,13 +1586,13 @@ static PyGetSetDef SysVSemaphore_gets_and_sets[] = {
 
 
 
-static PyTypeObject SysVSemaphoreType = {
+static PyTypeObject SemaphoreType = {
     PyObject_HEAD_INIT(NULL)
     0, /*ob_size*/
-    "sysv_ipc.SysVSemaphore", /*tp_name*/
-    sizeof(SysVSemaphore), /*tp_basicsize*/
+    "sysv_ipc.Semaphore", /*tp_name*/
+    sizeof(Semaphore), /*tp_basicsize*/
     0, /*tp_itemsize*/
-    (destructor)SysVSemaphore_dealloc, /*tp_dealloc*/
+    (destructor)Semaphore_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
     0, /*tp_getattr*/
     0, /*tp_setattr*/
@@ -1517,50 +1615,51 @@ static PyTypeObject SysVSemaphoreType = {
     0, /* tp_weaklistoffset */ 
     0, /* tp_iter */ 
     0, /* tp_iternext */ 
-    SysVSemaphore_methods, /* tp_methods */ 
-    SysVSemaphore_members, /* tp_members */ 
-    SysVSemaphore_gets_and_sets, /* tp_getset */ 
+    Semaphore_methods, /* tp_methods */ 
+    Semaphore_members, /* tp_members */ 
+    Semaphore_gets_and_sets, /* tp_getset */ 
     0, /* tp_base */ 
     0, /* tp_dict */ 
     0, /* tp_descr_get */ 
     0, /* tp_descr_set */ 
     0, /* tp_dictoffset */ 
-    (initproc)SysVSemaphore_init, /* tp_init */ 
+    (initproc)Semaphore_init, /* tp_init */ 
     0, /* tp_alloc */ 
-    SysVSemaphore_new, /* tp_new */ 
+    Semaphore_new, /* tp_new */ 
 };
 
 
 
-static PyMemberDef SysVSharedMemory_members[] = {
-    {"id", T_INT, offsetof(SysVSharedMemory, id), READONLY, "semaphore id"}, 
+static PyMemberDef SharedMemory_members[] = {
+    {"id", T_INT, offsetof(SharedMemory, id), READONLY, "semaphore id"}, 
+    {"key", T_INT, offsetof(SharedMemory, key), READONLY, "semaphore key"}, 
     {NULL} /* Sentinel */ 
 };
 
 
-static PyMethodDef SysVSharedMemory_methods[] = { 
+static PyMethodDef SharedMemory_methods[] = { 
     {   "read",
-        (PyCFunction)SysVSharedMemory_read, 
+        (PyCFunction)SharedMemory_read, 
         METH_KEYWORDS, 
         "Read n bytes from the shared memory at the given offset into a Python string"
     },
     {   "write",
-        (PyCFunction)SysVSharedMemory_write, 
+        (PyCFunction)SharedMemory_write, 
         METH_KEYWORDS, 
         "Write the string to the shared memory at the offset given"
     }, 
     {   "remove",
-        (PyCFunction)SysVSharedMemory_remove, 
+        (PyCFunction)SharedMemory_remove, 
         METH_NOARGS, 
         "Removes (deletes) the shared memory from the system"
     }, 
     {   "attach",
-        (PyCFunction)SysVSharedMemory_attach, 
+        (PyCFunction)SharedMemory_attach, 
         METH_VARARGS, 
         "Attaches the shared memory"
     }, 
     {   "detach",
-        (PyCFunction)SysVSharedMemory_detach, 
+        (PyCFunction)SharedMemory_detach, 
         METH_NOARGS, 
         "Detaches the shared memory"
     }, 
@@ -1569,7 +1668,7 @@ static PyMethodDef SysVSharedMemory_methods[] = {
 
 
 
-static PyGetSetDef SysVSharedMemory_gets_and_sets[] = { 
+static PyGetSetDef SharedMemory_gets_and_sets[] = { 
     {"size", (getter)shm_get_size, (setter)NULL, "size", NULL}, 
     {"address", (getter)shm_get_address, (setter)NULL, "address", NULL}, 
     {"attached", (getter)shm_get_attached, (setter)NULL, "attached", NULL}, 
@@ -1579,7 +1678,6 @@ static PyGetSetDef SysVSharedMemory_gets_and_sets[] = {
     {"creator_pid", (getter)shm_get_creator_pid, (setter)NULL, "creator_pid", NULL}, 
     {"last_pid", (getter)shm_get_last_pid, (setter)NULL, "last_pid", NULL}, 
     {"number_attached", (getter)shm_get_number_attached, (setter)NULL, "number_attached", NULL}, 
-    {"key", (getter)shm_get_key, (setter)NULL, "key", NULL}, 
     {"uid", (getter)shm_get_uid, (setter)shm_set_uid, "uid", NULL}, 
     {"gid", (getter)shm_get_gid, (setter)shm_set_gid, "gid", NULL}, 
     {"cuid", (getter)shm_get_cuid, (setter)NULL, "cuid", NULL}, 
@@ -1590,13 +1688,13 @@ static PyGetSetDef SysVSharedMemory_gets_and_sets[] = {
 
 
 
-static PyTypeObject SysVSharedMemoryType = {
+static PyTypeObject SharedMemoryType = {
     PyObject_HEAD_INIT(NULL)
     0, /*ob_size*/
-    "sysv_ipc.SysVSharedMemory", /*tp_name*/
-    sizeof(SysVSharedMemory), /*tp_basicsize*/
+    "sysv_ipc.SharedMemory", /*tp_name*/
+    sizeof(SharedMemory), /*tp_basicsize*/
     0, /*tp_itemsize*/
-    (destructor)SysVSharedMemory_dealloc, /*tp_dealloc*/
+    (destructor)SharedMemory_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
     0, /*tp_getattr*/
     0, /*tp_setattr*/
@@ -1619,17 +1717,17 @@ static PyTypeObject SysVSharedMemoryType = {
     0, /* tp_weaklistoffset */ 
     0, /* tp_iter */ 
     0, /* tp_iternext */ 
-    SysVSharedMemory_methods, /* tp_methods */ 
-    SysVSharedMemory_members, /* tp_members */ 
-    SysVSharedMemory_gets_and_sets, /* tp_getset */ 
+    SharedMemory_methods, /* tp_methods */ 
+    SharedMemory_members, /* tp_members */ 
+    SharedMemory_gets_and_sets, /* tp_getset */ 
     0, /* tp_base */ 
     0, /* tp_dict */ 
     0, /* tp_descr_get */ 
     0, /* tp_descr_set */ 
     0, /* tp_dictoffset */ 
-    (initproc)SysVSharedMemory_init, /* tp_init */ 
+    (initproc)SharedMemory_init, /* tp_init */ 
     0, /* tp_alloc */ 
-    SysVSharedMemory_new, /* tp_new */ 
+    SharedMemory_new, /* tp_new */ 
 };
 
 
@@ -1662,10 +1760,10 @@ initsysv_ipc(void) {
     PyObject *m;
     PyObject *module_dict;
 
-    if (PyType_Ready(&SysVSemaphoreType) < 0)
+    if (PyType_Ready(&SemaphoreType) < 0)
         goto error_return;
  
-    if (PyType_Ready(&SysVSharedMemoryType) < 0)
+    if (PyType_Ready(&SharedMemoryType) < 0)
         goto error_return;
  
     m = Py_InitModule3("sysv_ipc", module_methods, "System V IPC module");
@@ -1702,46 +1800,46 @@ initsysv_ipc(void) {
     PyModule_AddIntConstant(m, "SHM_REMAP", SHM_REMAP);
 #endif    
 
-    Py_INCREF(&SysVSemaphoreType);
-    PyModule_AddObject(m, "SysVSemaphore", (PyObject *)&SysVSemaphoreType);
+    Py_INCREF(&SemaphoreType);
+    PyModule_AddObject(m, "Semaphore", (PyObject *)&SemaphoreType);
 
-    Py_INCREF(&SysVSharedMemoryType);
-    PyModule_AddObject(m, "SysVSharedMemory", (PyObject *)&SysVSharedMemoryType);
+    Py_INCREF(&SharedMemoryType);
+    PyModule_AddObject(m, "SharedMemory", (PyObject *)&SharedMemoryType);
     
     
     // Exceptions
     if (!(module_dict = PyModule_GetDict(m)))
         goto error_return;
 
-    if (!(pSysVIpcException = PyErr_NewException("sysv_ipc.SysVIpcError", NULL, NULL)))
+    if (!(pBaseException = PyErr_NewException("sysv_ipc.Error", NULL, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcError", pSysVIpcException);
+        PyDict_SetItemString(module_dict, "Error", pBaseException);
 
-    if (!(pSysVIpcInternalException = PyErr_NewException("sysv_ipc.SysVIpcInternalError", NULL, NULL)))
+    if (!(pInternalException = PyErr_NewException("sysv_ipc.InternalError", NULL, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcInternalError", pSysVIpcInternalException);
+        PyDict_SetItemString(module_dict, "InternalError", pInternalException);
     
-    if (!(pSysVIpcPermissionsException = PyErr_NewException("sysv_ipc.SysVIpcPermissionsError", pSysVIpcException, NULL)))
+    if (!(pPermissionsException = PyErr_NewException("sysv_ipc.PermissionsError", pBaseException, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcPermissionsError", pSysVIpcPermissionsException);
+        PyDict_SetItemString(module_dict, "PermissionsError", pPermissionsException);
     
-    if (!(pSysVIpcExistentialException = PyErr_NewException("sysv_ipc.SysVIpcExistentialError", pSysVIpcException, NULL)))
+    if (!(pExistentialException = PyErr_NewException("sysv_ipc.ExistentialError", pBaseException, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcExistentialError", pSysVIpcExistentialException);
+        PyDict_SetItemString(module_dict, "ExistentialError", pExistentialException);
     
-    if (!(pSysVIpcBusyException = PyErr_NewException("sysv_ipc.SysVIpcBusyError", pSysVIpcException, NULL)))
+    if (!(pBusyException = PyErr_NewException("sysv_ipc.BusyError", pBaseException, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcBusyError", pSysVIpcBusyException);
+        PyDict_SetItemString(module_dict, "BusyError", pBusyException);
     
-    if (!(pSysVIpcNotAttachedException = PyErr_NewException("sysv_ipc.SysVIpcNotAttachedError", pSysVIpcException, NULL)))
+    if (!(pNotAttachedException = PyErr_NewException("sysv_ipc.NotAttachedError", pBaseException, NULL)))
         goto error_return;
     else
-        PyDict_SetItemString(module_dict, "SysVIpcNotAttachedError", pSysVIpcNotAttachedException);
+        PyDict_SetItemString(module_dict, "NotAttachedError", pNotAttachedException);
 
 
     return;

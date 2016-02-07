@@ -8,7 +8,7 @@
 	<meta name="copyright" content="All contents &copy; 2008 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
 	
-    <title>System V IPC for Python</title>
+    <title>System V IPC for Python - Semaphores and Shared Memory</title>
 
     <style type="text/css">
         dt {
@@ -32,6 +32,7 @@
             margin: 1em;
             font-weight: bold;
             clear: both;
+            text-align: center;
         }
         
         li { margin-top: 1em; margin-bottom: 1em; }
@@ -65,20 +66,22 @@ message queues are not supported.
 for Python</a> that you might find useful. 
 </p>
 
-
 <p>You can <strong>download 
-<a href="sysv_ipc-0.2.1.tar.gz">sysv_ipc version 0.2.1</a>
+<a href="sysv_ipc-0.3.tar.gz">sysv_ipc version 0.3</a>
 </strong>
-<a href="sysv_ipc-0.2.1.md5.txt">[md5 sum]</a>
+<a href="sysv_ipc-0.3.md5.txt">[md5 sum]</a>
 
 which contains the source code, setup.py, installation instructions and
-<a href="#samples">sample code</a>. You might also want to read
-about some <a href="#bugs">known bugs</a>. Currently, this module
-only works with Python 2.5. If you need to access SysV IPC objects with
-older versions of Python, have a look at 
-<a href="http://nikitathespider.com/python/shm/">the shm module</a>.
+<a href="#samples">sample code</a>. The class and error names changed
+between versions 0.2.1 and 0.3. Sorry about that. You can read about
+<a href="#current">all of the changes in this version</a>.
+</p>
+
+<p>
+You might also want to read
+about some <a href="#bugs">known bugs</a>. 
 I've tested <tt>sysv_ipc</tt> on 
-OS X 10.5 and Ubuntu 8. It doesn't compile on OpenSolaris 2008.05.
+OS X 10.5, Ubuntu 8, OpenSolaris 2008.05 and FreeBSD 6 and 7.
 </p>
 
 <p class="dangerdanger">Please note: This module is new and has not been
@@ -146,7 +149,7 @@ rigorously tested.
     
     <dt>SHM_HUGETLB, SHM_NORESERVE and SHM_REMAP</dt>
     <dd>You probably don't need these. They're Linux-specific flags that can 
-        be passed to the SysVSharedMemory
+        be passed to the SharedMemory
         constructor, or to the <tt>.attach()</tt> function in the case of 
         SHM_REMAP. See your system's man page for <tt>shmget()</tt>
         and <tt>shmat()</tt> for more information.
@@ -161,47 +164,47 @@ situations specific to IPC.
 </p>
 
 <dl>
-    <dt>SysVIpcError</dt>
+    <dt>Error</dt>
     <dd>The base error class for all the custom errors in this module. This
         error is occasionally raised on its own but you'll almost 
         always see a more specific error.
     </dd>
     
-    <dt>SysVIpcInternalError</dt>
+    <dt>InternalError</dt>
     <dd>Indicates that something has gone very wrong in the module code. Please
         report this to the maintainer.
     </dd>
     
-    <dt>SysVIpcPermissionsError</dt>
+    <dt>PermissionsError</dt>
     <dd>Indicates that you've attempted something that the permissions on the
         IPC object don't allow.
     </dd>
     
-    <dt>SysVIpcExistentialError</dt>
+    <dt>ExistentialError</dt>
     <dd>Indicates an error related to the existence or non-existence of 
         an IPC object. 
     </dd>
     
-    <dt>SysVIpcBusyError</dt>
+    <dt>BusyError</dt>
     <dd>Raised when a semaphore call to <tt>.P()</tt> or <tt>.Z()</tt> either times out 
         or would be forced to wait when its <tt>block</tt> attribute is False.
     </dd>
     
-    <dt>SysVIpcNotAttachedError</dt>
+    <dt>NotAttachedError</dt>
     <dd>Raised when a process attempts to read from or write to a shared memory
         segment to which it is not attached.
     </dd>
 </dl>
 
 
-<h3>The SysVSemaphore Class</h3>
+<h3>The Semaphore Class</h3>
 
 <p>This is a handle to a semaphore.</p>
 
 <h4>Methods</h4>
 
 <dl>
-    <dt>SysVSemaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])</dt>
+    <dt>Semaphore(key, [flags = 0, [mode = 0600, [initial_value = 0]]])</dt>
     <dd>Creates a new semaphore or opens an existing one.
         
         <p><span class="param">key</span> must be either the value IPC_PRIVATE or 
@@ -213,13 +216,14 @@ situations specific to IPC.
         </p> 
             
         <ul>
-            <li>With <span class="param">flags</span> set to the default of <tt>0</tt>, the module attempts
-                to open an existing semaphore identified by <span class="param">key</span> and raises 
-                a <tt>SysVIpcExistentialError</tt> if that semaphore doesn't exist.
+            <li>With <span class="param">flags</span> set to the <strong>default</strong> of <tt>0</tt>, the module attempts
+                to <strong>open an existing</strong> semaphore identified by <span class="param">key</span> and raises 
+                a <tt>ExistentialError</tt> if that semaphore doesn't exist.
             </li>
             
             <li>With <span class="param">flags</span> set to <tt>IPC_CREAT</tt>, the module 
-                opens the semaphore identified by <span class="param">key</span> or creates a new
+                <strong>opens</strong> the semaphore identified by 
+                <span class="param">key</span> <strong>or creates</strong> a new
                 one if no such semaphore exists. Using <tt>IPC_CREAT</tt> by itself
                 is not recommended. (See <a href="#sem_init">Semaphore Initialization</a>.)
             </li>
@@ -227,9 +231,9 @@ situations specific to IPC.
             <li>With <span class="param">flags</span> set to 
                 <tt>IPC_CREX</tt> (<tt>IPC_CREAT | IPC_EXCL</tt>),
                 the module 
-                creates a new semaphore identified by <span class="param">key</span>. If a 
-                semaphore with that key already exists, the call raises a
-                <tt>SysVIpcExistentialError</tt>. 
+                <strong>creates a new semaphore</strong> identified by <span class="param">key</span>. If a 
+                semaphore with that key already exists, the call raises an
+                <tt>ExistentialError</tt>. 
                 <strong>The <span class="param">initial_value</span> is ignored unless
                     both of these flags are specified</strong> or 
                     if the semaphore is read-only.
@@ -246,23 +250,19 @@ situations specific to IPC.
         
         <p>The <span class="param">timeout</span> (which can be a float) specifies how
             many seconds this call should wait, if at all.
+        </p> 
+        <p>The semantics of the timeout <a href="#v0_3">changed a little in 
+            version 0.3</a>.
         </p>
             
         <ul>
             <li>A <span class="param">timeout</span> of None (the default)
                 implies no time limit. The call will not return until its wait 
                 condition is satisfied. 
-
-                <p>This behavior can be overriden by the semaphore object's 
-                    <tt>.block</tt> flag. When that flag is True (the default), the
-                    call waits. When that flag is False, the call 
-                    raises a <tt>SysVIpcBusyError</tt> if it can't immediately
-                    acquire the semaphore.
-                </p>
             </li>
 
             <li>When <span class="param">timeout</span> is 0, the call 
-                raises a <tt>SysVIpcBusyError</tt> if it can't immediately
+                raises a <tt>BusyError</tt> if it can't immediately
                 acquire the semaphore. Since it will 
                 return immediately if <em>not</em> asked to wait, this can be 
                 thought of as "non-blocking" mode.
@@ -271,20 +271,17 @@ situations specific to IPC.
             <li>When the <span class="param">timeout</span> is &gt; 0, the call
                 will wait no longer than <span class="param">timeout</span> 
                 seconds before either returning (having acquired the semaphore)
-                or raising a <tt>SysVIpcBusyError</tt>.
-
-                <p>On platforms that don't support the <tt>semtimedop()</tt> API
-                  (OS X doesn't support it), 
-                   a <span class="param">timeout</span> &gt; 0 is treated as 
-                   a timeout of infinity; i.e. 
-                   the call should wait indefinitely regardless of the
-                   value of the semaphore's <tt>.block</tt> flag.
-                </p>
-                
-                <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
-                    is True on platforms that support <tt>semtimedop()</tt>.
-                </p>
+                or raising a <tt>BusyError</tt>.
             </li>        
+
+            <p>On platforms that don't support the <tt>semtimedop()</tt> API
+                (OS X doesn't support it), the <span class="param">timeout</span>
+                is ignored (treated as <tt>None</tt>).
+            </p>
+
+            <p>The module's Boolean constant <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
+                is True on platforms that support <tt>semtimedop()</tt>.
+            </p>
         </ul>
 
         <p>When the call returns, the semaphore's value decreases by <span class="param">delta</span> 
@@ -355,8 +352,7 @@ situations specific to IPC.
     <dd>The integer value of the semaphore.</dd>
     
     <dt>undo</dt>
-    <dd>
-        Defaults to False.
+    <dd>Defaults to False.
         
         <p>When True, operations that change the
         semaphore's value will be undone (reversed) when 
@@ -370,17 +366,14 @@ situations specific to IPC.
     
     <dt>block</dt>
     <dd>
-        Defaults to True, which means that calls to <tt>P()</tt> and 
-        <tt>Z()</tt> that specify a <span class="param">timeout</span>
-        of None will not return
+        Defaults to True, which means that calls to <tt>acquire()</tt> and 
+        <tt>release()</tt> will not return 
         until their wait conditions are satisfied. 
         
         <p>When False, these calls
         will not block but will instead raise an error if they are unable
         to return immediately.
         </p>
-        
-        
     </dd>
     
     <dt>mode</dt>
@@ -388,7 +381,7 @@ situations specific to IPC.
         
         <p>Tip: the following Python code will display
         the mode in octal:<br>
-        <tt>print int(str(mysem.mode), 8)</tt>
+        <tt>print int(str(my_sem.mode), 8)</tt>
         </p>
     </dd>
     
@@ -425,7 +418,7 @@ situations specific to IPC.
     </dd>
 </dl>
 
-<h3>The SysVSharedMemory Class</h3>
+<h3>The SharedMemory Class</h3>
 
 <p>This is a handle to a shared memory segment. 
 </p>
@@ -434,7 +427,7 @@ situations specific to IPC.
 <h4>Methods</h4>
 
 <dl>
-    <dt>SysVSharedMemory(key, [flags = 0, [mode = 0600, [size = 0 or PAGE_SIZE, [init_character = ' ']]]])</dt>
+    <dt>SharedMemory(key, [flags = 0, [mode = 0600, [size = 0 or PAGE_SIZE, [init_character = ' ']]]])</dt>
     <dd>Creates a new shared memory segment or opens an existing one. 
         The memory is automatically attached.
         
@@ -452,7 +445,7 @@ situations specific to IPC.
                 <strong>default</strong> of <tt>0</tt>, the module attempts
                 to <strong>open an existing</strong> shared memory segment identified by 
                 <span class="param">key</span> and raises 
-                a <tt>SysVIpcExistentialError</tt> if it doesn't exist.
+                a <tt>ExistentialError</tt> if it doesn't exist.
             </li>
             
             <li>With <span class="param">flags</span> set to <strong><tt>IPC_CREAT</tt></strong>, the module 
@@ -469,7 +462,7 @@ situations specific to IPC.
                 <strong>creates</strong> a new shared memory segment identified by 
                 <span class="param">key</span>. If 
                 a segment with that key already exists, the call raises 
-                a <tt>SysVIpcExistentialError</tt>.
+                a <tt>ExistentialError</tt>.
         
                 <p>When both <tt>IPC_CREX</tt> is specified
                     and the caller has write permission, each byte in the new memory segment will be 
@@ -615,7 +608,7 @@ situations specific to IPC.
 
         <p>Tip: the following Python code will display
         the mode in octal:<br>
-        <tt>print int(str(sem.mode), 8)</tt>
+        <tt>print int(str(my_mem.mode), 8)</tt>
         </p>
     </dd>
     
@@ -626,12 +619,6 @@ situations specific to IPC.
     <dd>The segment creator's group id.</dd>
 </dl>
 
-<p>Due to <a href="http://bugs.python.org/issue1687163">Python bug 1687163</a>, 
-assigning to a SysVSharedMemory object's <tt>id</tt> attribute 
-will give a TypeError 
-while assigning to any other read-only attributes will give an AttributeError. 
-This inconsistency is corrected in Python 3.
-</p>
 
 <h3>Supported Features and Differences from SHM</h3>
 
@@ -675,7 +662,7 @@ and exposure of <tt>sem_otime</tt>.
 <p>When a System V sempahore is created at the C API level, the OS is not required
 to initialize the semaphore's value. (This per 
 <a href="http://www.opengroup.org/onlinepubs/009695399/functions/semget.html">the 
-POSIX standard for <tt>semget()</tt></a>.) 
+SUSv3 standard for <tt>semget()</tt></a>.) 
 Some (most?) operating systems initialize it to zero, but this behavior
 is non-standard and therefore can't be relied upon. 
 </p>
@@ -719,10 +706,10 @@ call to <tt>semop()</tt>.
 <p>In Python, each process would run something like this:
 <pre>
 try:
-   sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.CREX)
-except sysv_ipc.SysVIpcExistentialError:
+   sem = sysv_ipc.Semaphore(42, sysv_ipc.CREX)
+except sysv_ipc.ExistentialError:
    # One of my peers created the semaphore already
-   sem = sysv_ipc.SysVSemaphore(42)
+   sem = sysv_ipc.Semaphore(42)
    
 while not sem.o_time:
     time.sleep(.1)
@@ -749,7 +736,7 @@ this circumstance.
 </p>
 
 <p>As a (sort of) side note, the 
-<a href="http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html">POSIX
+<a href="http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html">SUSv3
 specification for <tt>shmget()</tt></a> says only that the size of a new 
 segment must not be less than "the system-imposed minimum". I 
 gather that at one time, some systems set the minimum at zero despite the 
@@ -800,9 +787,10 @@ the latter allows you to remove them.
 <p>Bugs? My code never has bugs! There are, however, some suboptimal anomalies...</p>
 
 <ul>
-    <li>Compilation on OS X and perhaps elsewhere produces 3 warnings from 
-        <tt>pyport.h</tt>. They're caused by
-        the <tt>#define _XOPEN_SOURCE 600</tt> line at the top of the .c module.
+    <li>Under OS X, <tt>sys/ipc.h</tt> defines two versions of the 
+        <tt>ipc_perm</tt> struct. This module picks up the old, deprecated
+        one which stores uid and gid values in 16 bit types. In order to 
+        solve this problem, I need to do battle with the C preprocessor.
     </li>        
     <li>Maximum values for uids, gids, keys and semaphore values are 
         hardcoded to "safe" values rather than being platform dependent.
@@ -816,10 +804,82 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li><strong>Current &ndash; 0.2.1 (3 Jan 2009) &ndash;</strong>
+    <li id="v0_3"><strong><span id="current">Current</span> &ndash; 0.3 (16 Jan 2009) &ndash;</strong>
+        <p>This version features a rename of classes and errors 
+            (sorry about breaking the names), some modifications to
+            semaphore timeouts, and many small fixes.
+        </p>
+        
+        <p>A semaphore's <tt>.block</tt> flag now consistently trumps the
+            timeout. When <tt>False</tt>, the timeout is irrelevant -- calls
+            will never block. In prior versions, the flag was ignored
+            when the timeout was non-zero.
+        </p>
+        
+        <p>Also, on platforms (such as OS X) where <tt>semtimedop()</tt> is
+            not supported, all timeouts are now treated as <tt>None</tt>.
+            In other words, when <tt>.block</tt> is True, all calls
+            wait as long as necessary.
+        </p>
+        
+        <p>Other fixes &ndash;</p>
+        
+        <ul>
+            <li>Fixed the poor choices I'd made for class and 
+                error names by removing the leading "SysV" and "SysVIpc".
+            </li>
+            <li>Removed dependencies on Python 2.5. The module now works
+                with Python 2.4.4 and perhaps earlier versions.
+            </li>
+            <li>Fixed a bug where I was not following SysV semaphore semantics 
+                for interaction between timeouts and the block flag.
+            </li>
+            <li>Fixed compile problems on OpenSolaris 2008.05.</li>
+            <li>Got rid of OS X compile warnings.</li>
+            <li>Fixed many instances where I was making potentially lossy 
+                conversions between Python values and Unix-specific 
+                types like <tt>key_t</tt>, <tt>pid_t</tt>, etc.
+            </li>
+            <li>Fixed a bug in the SharedMemory <tt>attach()</tt> function
+                 that would set an error string but not return an error 
+                 value if the passed address was not <tt>None</tt> or a long.
+            </li>
+            <li>Simplified the code a little.</li>
+            <li>Restricted the semaphore <tt>acquire()</tt> and 
+                <tt>release()</tt> delta to be between SHORT_MIN and 
+                SHORT_MAX since 
+                <a href="http://opengroup.org/onlinepubs/007908775/xsh/semop.html">it
+                    is a short in the SUSv2 spec</a>.
+            </li>
+            <li>Fixed a bug where calling <tt>acquire()</tt> or
+                <tt>release()</tt> with a delta of <tt>0</tt> would call
+                <tt>.Z()</tt> instead.
+            </li>
+            <li>Disallowed byte counts ≤ <tt>0</tt> in 
+                <tt>SharedMemory.read()</tt>
+            </li>
+            <li>Fixed a bug in the <tt>SharedMemory</tt> init code that 
+                could, under vanishingly rare circumstances, return failure 
+                without setting the error code.
+            </li>
+            <li>Removed some dead code relating to the <tt>.seq</tt> member 
+                of the <tt>sem_perm</tt> and <tt>shm_perm</tt> structs.
+            </li>
+            <li>Stopped accessing the non-standard <tt>key</tt> 
+                (a.k.a. <tt>_key</tt> and <tt>__key</tt>) element of the
+                <tt>ipc_perm</tt> struct.
+            </li>
+            <li>Added code to ensure the module doesn't try to create
+                a string that's larger than Python permits when reading
+                from shared memory.
+            </li>
+        </ul>
+    </li>
+
+    <li>0.2.1 (3 Jan 2009) &ndash;
         <ul>
             <li>Fixed a bug that prevented the module-specific
-                errors (<tt>SysVIpcExistentialError</tt>, etc.) from
+                errors (<tt>ExistentialError</tt>, etc.) from
                 being visible in the module.
             </li>
             <li>Fixed a bug that re-initialized shared memory with 
@@ -870,8 +930,8 @@ the latter allows you to remove them.
                 platform-specific definitions in it.
             </li>
 
-            <li>Replaced OSError in shared memory functions with more
-                specific <tt>SysVIpc</tt> errors.
+            <li>Replaced OSError in shared memory functions with custom
+                errors from this module.
             </li>
 
             <li>Added code to raise a ValueError when an attempt is made
@@ -900,10 +960,6 @@ difficulty, user interest and so forth.
 </p>
 
 <ul>
-    <li>Support for Python versions other than 2.5 and more operating systems.</li>
-    
-    <li>Fix compiler warnings.</li>
-
     <li>Support for message queues.</li>
 
     <li>Expose Linux-specific flags SHM_DEST and SHM_LOCKED.</li>

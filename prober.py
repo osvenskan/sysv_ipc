@@ -2,6 +2,7 @@ import os.path
 import os
 import subprocess
 import sys
+import distutils.sysconfig
 
 # Set these to None for debugging or subprocess.PIPE to silence compiler
 # warnings and errors.
@@ -10,123 +11,84 @@ STDERR = subprocess.PIPE
 # STDOUT = None
 # STDERR = None
 
+# This is the max length that I want a printed line to be.
+MAX_LINE_LENGTH = 78
 
-# This module makes use of the ipc_perm structure defined in <sys/ipc.h>. 
-# That structure includes an element called key, _key or __key depending on 
-# the OS. Here's the variations I've found:
-#     key: FreeBSD 6, AIX, Solaris, OS X 10.3, OS X 10.4+ (conditionally)
-#    _key: NetBSD, OS X 10.4+ (conditionally)
-#   __key: Debian 4 (Etch), Ubuntu 7, RH 3.3 & 3.4
+PYTHON_INCLUDE_DIR = distutils.sysconfig.get_config_h_filename()[:-len("/pyconfig.h")]
+#print PYTHON_INCLUDE_DIR
 
-# OS X side note: OS X >= 10.4's ipc.h (see 
-# /Developer/SDKs/MacOSX10.4u.sdk/usr/include/sys/ipc.h) defines structs 
-# called __ipc_perm_old (which uses key) and __ipc_perm_new (which uses _key). 
-# The latter is used if _XOPEN_SOURCE is #defined to 600.
+def line_wrap_paragraph(s):
+    # Format s with terminal-friendly line wraps.
+    done = False
+    beginning = 0
+    end = MAX_LINE_LENGTH - 1
+    lines = [ ]
+    while not done:
+        if end >= len(s):
+            done = True
+            lines.append(s[beginning:])
+        else:
+            last_space = s[beginning:end].rfind(' ') 
 
-# Trying to enumerate all of the variations on all platforms is a fool's 
-# errand so instead I figure it out on the fly using the function 
-# count_key_underscores() below.
+            lines.append(s[beginning:beginning + last_space])
+            beginning += (last_space + 1)
+            end = beginning + MAX_LINE_LENGTH - 1
 
-# Lots of systems use the unadorned "key" so that's the default when I'm 
-# forced to guess.
-COUNT_KEY_UNDERSCORES_DEFAULT = 0
+    return lines
 
-def count_key_underscores():
-    # Here I compile three mini-programs with key, _key and __key. Theoretically, 
-    # two should fail and one should succeed, and that will tell me how this platform names
-    # ipc_perm.key. If the number of successes != 1, something's gone wrong.
-    # I use subprocess in order to trap (and discard) stderr so that the user doesn't 
-    # see the compiler errors I'm deliberately generating here.
-    underscores_count = COUNT_KEY_UNDERSCORES_DEFAULT
+
+def print_bad_news(value_name, default):
+    s = "Setup can't determine %s on your system, so it will default to %s which may not be correct." \
+            % (value_name, default)
+    plea = "Please report this message and your operating system info to the package maintainer listed in the README file."
     
-    underscores = { }
+    lines = line_wrap_paragraph(s) + [''] + line_wrap_paragraph(plea)
 
-    src = """
-#define _XOPEN_SOURCE 600
-#include <sys/ipc.h>
-int main(void) { struct ipc_perm foo; foo.%skey = 42; }
-
-"""
-    for i in range(0, 3):
-        source_filename = "./prober/%d.c" % i
-        file(source_filename, "w").write(src % ('_' * i))
-        
-        cmd = "cc -o ./prober/foo " + source_filename
-        
-        p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
-        if not p.wait(): underscores[i] = True
-        
-    key_count = len(underscores.keys())
-
-    if key_count == 1:
-        underscores_count = underscores.keys()[0]
-    else:
-        print """
-*********************************************************************
-* I was unable to detect the structure of ipc_perm on your system.  *
-* I'll make my best guess, but compiling might fail anyway. Please  *
-* email this message, the error code of %d, and the name of your OS  *
-* to the contact at http://semanchuk.com/philip/sysv_ipc/.         *
-*********************************************************************
-""" % key_count
-        
-    return underscores_count
-
-
-
-COUNT_SEQ_UNDERSCORES_DEFAULT = 0
-
-def count_seq_underscores():
-    """ Uses trial-and-error with the system's C compiler to figure out the number of 
-        underscores preceding key in the ipc_perm structure. Returns 0, 1 or 2. In case of
-        error, it makes a guess and hopes for the best.
-    """
-    underscores_count = COUNT_SEQ_UNDERSCORES_DEFAULT
+    border = '*' * MAX_LINE_LENGTH
     
-    underscores = { }
+    print border + "\n* " + ('\n* '.join(lines)) + '\n' + border
 
-    src = """
-#define _XOPEN_SOURCE 600
-#include <sys/ipc.h>
-int main(void) { struct ipc_perm foo; foo.%sseq = 42; }
 
-"""
-    for i in range(0, 3):
-        source_filename = "./prober/%d.c" % i
-        file(source_filename, "w").write(src % ('_' * i))
-        
-        cmd = "cc -o ./prober/foo " + source_filename
-        
-        p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
-        if not p.wait(): underscores[i] = True
-        
-    key_count = len(underscores.keys())
+def does_build_succeed(filename):
+    # Utility function that returns True if the file compiles and links
+    # successfully, False otherwise.    
+    cmd = "cc -Wall -I%s -o ./prober/foo ./prober/%s" %  \
+                (PYTHON_INCLUDE_DIR, filename)
 
-    if key_count == 1:
-        underscores_count = underscores.keys()[0]
+    p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
+        
+    # p.wait() returns the process' return code, so 0 implies that 
+    # the compile & link succeeded.
+    return not bool(p.wait())
+
+def compile_and_run(filename, linker_options = ""):
+    # Utility function that returns the stdout output from running the 
+    # compiled source file; None if the compile fails.
+    cmd = "cc -Wall -I%s -o ./prober/foo %s ./prober/%s" %  \
+                (PYTHON_INCLUDE_DIR, linker_options, filename)
+
+    p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
+        
+    if p.wait(): 
+        # uh-oh, compile failed
+        return None
     else:
-        print """
-*********************************************************************
-* I was unable to detect the structure of ipc_perm on your system.  *
-* I'll make my best guess, but compiling might fail anyway. Please  *
-* email this message, the error code of %d, and the name of your OS  *
-* to the contact at http://semanchuk.com/philip/sysv_ipc/.          *
-*********************************************************************
-""" % key_count
-        
-    return underscores_count
+        s = subprocess.Popen(["./prober/foo"], 
+                             stdout=subprocess.PIPE).communicate()[0]
+        return s.strip()
 
- 
 
 def sniff_semtimedop():
-    rc = False
+    return does_build_succeed("semtimedop_test.c")
 
-    cmd = "cc -o ./prober/foo ./prober/semtimedop_test.c"
-    
-    p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
-    if not p.wait(): rc = True
 
-    return rc
+def sniff_union_semun_defined():
+    # AFAICT the semun union is supposed to be declared in one's code. 
+    # However, a lot of legacy code gets this wrong and some header files 
+    # define it, e.g.sys/sem.h on OS X where it's #ifdef-ed so that legacy 
+    # code won't break. On some systems, it appears and disappears based
+    # on the #define value of _XOPEN_SOURCE.
+    return does_build_succeed("sniff_union_semun_defined.c")
 
 
 def probe_semvmx():
@@ -148,57 +110,37 @@ def probe_semvmx():
     return semvmx
     
 
+
 def probe_page_size():
     DEFAULT_PAGE_SIZE = 4096
     
-    page_size = DEFAULT_PAGE_SIZE
+    page_size = compile_and_run("probe_page_size.c")
     
-    cmd = "cc -Wall -o ./prober/foo ./prober/probe_page_size.c" 
-
-    p = subprocess.Popen(cmd, shell=True, stdout=STDOUT, stderr=STDERR)
-    if p.wait(): 
-        print """
-*************************************************************************
-* Setup can't determine the value of PAGE_SIZE on your system, so 
-* it will be set to %d which may not be correct. An incorrect PAGE_SIZE 
-* can (very slightly) decrease performance.
-* 
-* Please report this message and your operating system info to the 
-* package maintainer listed in the README file.
-*************************************************************************
-""" % DEFAULT_PAGE_SIZE
-    else:
-        page_size = subprocess.Popen(["./prober/foo"], 
-                                     stdout=subprocess.PIPE).communicate()[0]
-        
-        page_size = int(page_size)
+    if page_size is None:
+        page_size = DEFAULT_PAGE_SIZE
+        print_bad_news("the value of PAGE_SIZE", page_size)
 
     return page_size
 
 
 def probe():
     d = { }
-
-    # AFAICT the semun union is supposed to be declared in one's code. 
-    # However, a lot of legacy code gets this wrong and some header files 
-    # define it, e.g.sem.h on OS X where it's #ifdef-ed so that legacy code 
-    # won't break. In fact it's my #define of _XOPEN_SOURCE that causes it 
-    # to not exist on darwin. Notably, some (all?) Linux platforms #define 
-    # _SEM_SEMUN_UNDEFINED if it's up to my code to declare this union, so 
-    # I use that flag as my standard.
-    if "darwin" in sys.platform:
-        d["_SEM_SEMUN_UNDEFINED"] = ""
     
+    conditionals = [ "UID_MAX", "GID_MAX", "_SEM_SEMUN_UNDEFINED" ]
+
     d["PAGE_SIZE"] = probe_page_size()
-    d["IPC_PERM_KEY_NAME"] = ("_" * count_key_underscores()) + "key"
-    d["IPC_PERM_SEQ_NAME"] = ("_" * count_seq_underscores()) + "seq"
     if sniff_semtimedop():
         d["SEMTIMEDOP_EXISTS"] = ""
     d["UID_MAX"] = "INT_MAX"
     d["GID_MAX"] = "INT_MAX"
     d["KEY_MAX"] = "INT_MAX"
     d["SEMAPHORE_VALUE_MAX"] = probe_semvmx()
-    d["PY_INT_MAX"] = sys.maxint
+    # Some (all?) Linux platforms #define _SEM_SEMUN_UNDEFINED if it's up 
+    # to my code to declare this union, so I use that flag as my standard.
+    if not sniff_union_semun_defined():
+        d["_SEM_SEMUN_UNDEFINED"] = ""
+    
+    
 
     msg = """/*
 This header file was generated when you ran setup. Once created, the setup
@@ -216,9 +158,19 @@ larger than LONG_MAX on your platform.
     
     filename = "probe_results.h"
     if not os.path.exists(filename):
-        lines = ["#define %s\t\t%s\n" % (key, d[key]) for key in d]
+        lines = [ ]
+        
+        for key in d:
+            if key in conditionals:
+                lines.append("#ifndef %s" % key)
+
+            lines.append("#define %s\t\t%s" % (key, d[key]))
+
+            if key in conditionals:
+                lines.append("#endif")
+
         # A trailing '\n' keeps compilers happy...
-        file(filename, "wb").write(msg + ''.join(lines) + '\n')
+        file(filename, "wb").write(msg + '\n'.join(lines) + '\n')
 
     return d
 

@@ -22,11 +22,8 @@ params = utils.read_params()
 # because one can never predict whether or not a given key will be available,
 # so your code must *always* be prepared for these functions to fail. 
 
-flags = sysv_ipc.IPC_CREAT | sysv_ipc.IPC_EXCL
-
-semaphore = sysv_ipc.SysVSemaphore(params["KEY"], flags)
-
-memory = sysv_ipc.SysVSharedMemory(params["KEY"], flags)
+semaphore = sysv_ipc.Semaphore(params["KEY"], sysv_ipc.IPC_CREX)
+memory = sysv_ipc.SharedMemory(params["KEY"], sysv_ipc.IPC_CREX)
 
 # I seed the shared memory with a random value which is the current time.
 what_i_wrote = time.asctime()
