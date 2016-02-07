@@ -21,7 +21,7 @@ download_url = "http://semanchuk.com/philip/sysv_ipc/sysv_ipc-%s.tar.gz" % VERSI
 source_files = ["sysv_ipc_module.c", "common.c", "semaphore.c", "memory.c", 
                 "mq.c" ]
 # http://pypi.python.org/pypi?:action=list_classifiers
-classifiers = [ "Development Status :: 4 - Beta", 
+classifiers = [ "Development Status :: 5 - Production/Stable", 
                 "Intended Audience :: Developers", 
                 "License :: OSI Approved :: BSD License",
                 "Operating System :: MacOS :: MacOS X",

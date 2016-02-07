@@ -5,6 +5,7 @@
 #include "memory.h"
 
 
+/******************    Internal use only     **********************/
 PyObject *
 shm_str(SharedMemory *self) {
 #if PY_MAJOR_VERSION > 2 
@@ -14,7 +15,6 @@ shm_str(SharedMemory *self) {
 #endif
 }
 
-
 PyObject *
 shm_repr(SharedMemory *self) {
 #if PY_MAJOR_VERSION > 2 
@@ -22,6 +22,42 @@ shm_repr(SharedMemory *self) {
 #else
     return PyString_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
 #endif
+}
+
+PyObject *
+shm_attach(SharedMemory *self, int shmat_flags) {
+    DPRINTF("attaching memory @ address %p with id %d using flags 0x%x\n", 
+    		 self->address, self->id, shmat_flags);
+
+    self->address = shmat(self->id, self->address, shmat_flags);
+    
+    if ( (void *)-1 == self->address) {
+        self->address = NULL;
+        switch (errno) {
+            case EACCES:
+                PyErr_SetString(pPermissionsException, "No permission to attach");
+            break;
+
+            case ENOMEM:
+                PyErr_SetString(PyExc_MemoryError, "Not enough memory");
+            break;
+
+            case EINVAL:
+                PyErr_SetString(PyExc_ValueError, "Invalid id or address");
+            break;
+
+            default:
+                PyErr_SetFromErrno(PyExc_OSError);
+            break;
+        }
+
+        goto error_return;
+    }
+    
+    Py_RETURN_NONE;
+    
+    error_return:
+    return NULL;    
 }
 
 
@@ -227,6 +263,11 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
 }
 
 
+
+/******************    Class methods     **********************/
+
+
+
 void 
 SharedMemory_dealloc(SharedMemory *self) {
     Py_TYPE(self)->tp_free((PyObject*)self);
@@ -237,6 +278,12 @@ SharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
     SharedMemory *self;
     
     self = (SharedMemory *)type->tp_alloc(type, 0);
+
+    if (NULL != self) {
+		self->key = (key_t)-1;
+		self->id  = 0;
+		self->address = NULL;
+    }
 
     return (PyObject *)self; 
 }
@@ -252,13 +299,15 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     char init_character = ' ';
     char *keyword_list[ ] = {"key", "flags", "mode", "size", "init_character", NULL};
     PyObject *py_size = NULL;
-    
+
+    DPRINTF("Inside SharedMemory_init()\n");
+
     if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iikc", keyword_list, 
                                      &convert_key_param, &key,
                                      &shmget_flags, &mode, &size, 
                                      &init_character))
         goto error_return;
-    
+
     mode &= 0777;
     shmget_flags &= ~0777;
     
@@ -341,33 +390,11 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
 
-    // If no write permissions requested, attach read-only
+    // Attach the memory. If no write permissions requested, attach read-only.
     shmat_flags = (mode & 0200) ? 0 : SHM_RDONLY;
-    DPRINTF("attaching memory with id %d using flags 0x%x\n", self->id, shmat_flags);
-    self->address = shmat(self->id, NULL, shmat_flags);
-    
-    if ( (void *)-1 == self->address) {
-        self->address = NULL;
-        switch (errno) {
-            case EACCES:
-                PyErr_SetString(pPermissionsException, "No permission to attach");
-            break;
-
-            case ENOMEM:
-                PyErr_SetString(PyExc_MemoryError, "Not enough memory");
-            break;
-
-            case EINVAL:
-                // EINVAL from shmat() means id or address was invalid. 
-                // Since my code (and not the caller) supplied both here,
-                // I can't see a realistic way for it to occur so I'm not
-                // going to bother handling it with a custom message.
-            default:
-                PyErr_SetFromErrno(PyExc_OSError);
-            break;
-        }
-
-        goto error_return;
+    if (NULL == shm_attach(self, shmat_flags)) {
+    	// Bad news, something went wrong. 
+    	goto error_return;
     }
     
     if ( ((shmget_flags & IPC_CREX) == IPC_CREX) && (!(shmat_flags & SHM_RDONLY)) ) {
