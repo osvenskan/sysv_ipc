@@ -66,16 +66,16 @@ It might also work under Windows with a library like
 <a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
-<p>It works with Python 2.4 &ndash; 3.x (but <em>not</em> 3.0).
+<p>It works with Python 2.4 &ndash; 3.x.
 It's released
 under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download
-<a href="sysv_ipc-0.6.7.tar.gz">sysv_ipc version 0.6.7</a>
+<a href="sysv_ipc-0.6.8.tar.gz">sysv_ipc version 0.6.8</a>
 </strong>
-(<a href="sysv_ipc-0.6.7.md5.txt">[md5 sum]</a>,
-<a href="sysv_ipc-0.6.7.sha1.txt">[sha1 sum]</a>)
+(<a href="sysv_ipc-0.6.8.md5.txt">[md5 sum]</a>,
+<a href="sysv_ipc-0.6.8.sha1.txt">[sha1 sum]</a>)
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -978,15 +978,16 @@ call to <tt>semop()</tt> (which is called by <tt>P()</tt>/<tt>acquire()</tt>,
 <p>In Python, each process would run something like this:
 <pre>
 try:
-   sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
-   sem.value = 1
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 except sysv_ipc.ExistentialError:
-   # One of my peers created the semaphore already
-   sem = sysv_ipc.Semaphore(42)
-
-while not sem.o_time:
-    time.sleep(.1)
-
+    # One of my peers created the semaphore already
+    sem = sysv_ipc.Semaphore(42)
+    # Waiting for that peer to do the first acquire or release
+    while not sem.o_time:
+        time.sleep(.1)
+else:
+    # Initializing sem.o_time to nonzero value
+    sem.release()
 # Now the semaphore is safe to use.
 </pre>
 
@@ -1128,7 +1129,7 @@ the latter allows you to remove them.
 
 <p>For Pythonistas &ndash;</p>
 <ul>
-    <li><a href="http://www.youtube.com/watch?v=13JK5kChbRw">A meditation on the inaccuracy
+    <li><a href="https://www.youtube.com/watch?v=Xe1a1wHxTyo">A meditation on the inaccuracy
         of shared memories</a>
     </li>
 </ul>
@@ -1155,7 +1156,23 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_7"><strong><span id="current">Current</span> &ndash; 0.6.7 (1 August 2014) &ndash;</strong>
+    <li id="v0_6_8"><strong><span id="current">Current</span> &ndash; 0.6.8 (12 Sept 2014) &ndash;</strong>
+        <ul>
+            <li>Fixed a bug in <tt>prober.py</tt> where prober would fail
+            	on systems where Python's include file was not named
+            	<tt>pyconfig.h</tt>. (RHEL 6 is one such system.) Thanks to
+            	Joshua Harlow for the bug report and patch.
+            </li>
+
+    		<li><i>Spasibo</i> again to Yuriy Taraday for pointing out that
+    			the semaphore initialization example I changed in the previous
+    			version was still not
+    			quite correct, and for suggesting something better.
+    		</li>
+        </ul>
+    </li>
+
+    <li id="v0_6_7">0.6.7 (1 August 2014) &ndash;
     	<p><i>Spasibo</i> to Yuriy Taraday for reporting some doc errors
     		corrected in this version.
     	</p>
