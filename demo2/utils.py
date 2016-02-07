@@ -5,7 +5,8 @@ def say(s):
     who = sys.argv[0]
     if who.endswith(".py"):
         who = who[:-3]
-    print "%s@%1.6f: %s" % (who, time.time(), s)
+    s = "%s@%1.6f: %s" % (who, time.time(), s)
+    print (s)
 
 
 def read_params():
