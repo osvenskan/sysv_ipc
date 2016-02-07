@@ -8,9 +8,7 @@ import hashlib
 
 RSS_TIMESTAMP_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
-f = open("VERSION")
-VERSION = f.read().strip()
-f.close()
+VERSION = open("VERSION").read().strip()
 
 filenames = (
 #    "memory_leak_tests.py",
@@ -57,6 +55,9 @@ filenames = (
     "demo2/utils_for_2.py",
     "demo2/utils_for_3.py",
     "demo2/SampleIpcConversation.png",
+    "demo4/ReadMe.txt",
+    "demo4/child.py",
+    "demo4/parent.py",
     "prober.py",
     "prober/",
     "prober/semtimedop_test.c",

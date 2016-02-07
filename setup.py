@@ -4,9 +4,7 @@ import distutils.core as duc
 # sysv_ipc installation helper module
 import prober
 
-f = open("VERSION", "r")
-VERSION = f.read().strip()
-f.close()
+VERSION = open("VERSION", "r").read().strip()
 
 name = "sysv_ipc"
 description = "System V IPC primitives (semaphores, shared memory and message queues) for Python"

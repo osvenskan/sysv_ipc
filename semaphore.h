@@ -10,6 +10,8 @@ typedef struct {
 PyObject *Semaphore_new(PyTypeObject *type, PyObject *, PyObject *);
 int Semaphore_init(Semaphore *, PyObject *, PyObject *);
 void Semaphore_dealloc(Semaphore *);
+PyObject *Semaphore_enter(Semaphore *);
+PyObject *Semaphore_exit(Semaphore *, PyObject *);
 PyObject *Semaphore_P(Semaphore *, PyObject *, PyObject *);
 PyObject *Semaphore_acquire(Semaphore *, PyObject *, PyObject *);
 PyObject *Semaphore_V(Semaphore *, PyObject *, PyObject *);

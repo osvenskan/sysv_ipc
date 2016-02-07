@@ -68,10 +68,10 @@ under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.6.5.tar.gz">sysv_ipc version 0.6.5</a>
+<a href="sysv_ipc-0.6.6.tar.gz">sysv_ipc version 0.6.6</a>
 </strong>
-(<a href="sysv_ipc-0.6.5.md5.txt">[md5 sum]</a>,
-<a href="sysv_ipc-0.6.5.sha1.txt">[sha1 sum]</a>)
+(<a href="sysv_ipc-0.6.6.md5.txt">[md5 sum]</a>,
+<a href="sysv_ipc-0.6.6.sha1.txt">[sha1 sum]</a>)
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -455,6 +455,22 @@ situations specific to IPC.
         <tt>.Z()</tt>) was called on this semaphore.
     </dd>
 </dl>
+
+<h4>Context Manager Support</h4>
+
+<p>These semaphores provide <tt>__enter__()</tt> and <tt>__exit__()</tt>
+methods so they can be used in context managers. For instance --
+</p>
+
+<pre>
+with sysv_ipc.Semaphore(name) as sem:
+    # Do something...
+</pre>
+
+<p>Entering the context acquires the semaphore, exiting the context releases 
+	the semaphore. See <tt>demo4/child.py</tt> for a complete example.
+</p>
+
 
 <h3 id="shared_memory">The SharedMemory Class</h3>
 
@@ -1031,6 +1047,9 @@ only put 2048 bytes of messages in it.
 
 <p>Here are the limits I've been able to find under my test operating
 systems, ordered from best (most generous) to worst (most stingy). 
+<strong>This information was current as of 2009</strong> when I wrote the 
+message queue code. It's getting pretty stale now. I hope the situation has
+improved over the 2009 numbers I describe below.
 </p>
 
 <p>Under <strong>OpenSolaris 2008.05</strong> each queue's maximum size defaults 
@@ -1126,13 +1145,17 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_5"><strong><span id="current">Current</span> &ndash; 0.6.5 (31 March 2013) &ndash;</strong>
-        <ul>
-            <li>Fixed a bug where SharedMemory.write() claimed to accept 
+    <li id="v0_6_6"><strong><span id="current">Current</span> &ndash; 0.6.6 (15 October 2013) &ndash;</strong>
+        <p>Added the ability to use Semaphores in context managers.
+        	Thanks to Matt Ruffalo for the suggestion and patch.
+        </p>
+    </li>
+
+    <li id="v0_6_5">0.6.5 (31 March 2013) &ndash;
+		<p>Fixed a bug where SharedMemory.write() claimed to accept 
             	keyword arguments but didn't actually do so. Thanks to 
             	Matt Ruffalo for the bug report and patch.
-            </li>
-        </ul>
+        </p>
     </li>
 
     <li id="v0_6_4">0.6.4 (19 Dec 2012) &ndash;
