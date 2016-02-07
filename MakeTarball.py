@@ -1,9 +1,16 @@
+#!/usr/bin/env python
+
+# Python imports
+import time
 import tarfile
 import os
-import os.path
 import hashlib
 
-VERSION = file("VERSION").read().strip()
+RSS_TIMESTAMP_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
+
+f = open("VERSION")
+VERSION = f.read().strip()
+f.close()
 
 filenames = (
 #    "memory_leak_tests.py",
@@ -71,24 +78,33 @@ for name in filenames:
     tarball.add(SourceName, BundledName, False)
 tarball.close()
 
-s = file("./" + tarball_name).read()
+# Generate the md5 hash of the tarball
+f = open("./" + tarball_name)
+s = f.read()
+f.close()
 
 s = hashlib.md5(s).hexdigest()
 
 print "md5 = " + s
 
-file(md5_name, "w").write(s)
+f = open(md5_name, "w")
+f.write(s)
+f.close()
 
 
+# Print an RSS item suitable for pasting into rss.xml
+timestamp = time.strftime(RSS_TIMESTAMP_FORMAT, time.gmtime())
 
-# # Check to see if I've left the DEBUG flag enabled.
-# s = file("sysv_ipc_module.c").read()
-# 
-# if not re.search("""\s*//\s*#define\s+SYSV_IPC_DEBUG""", s):
-#     print """
-# ******************************************************
-#   Are you sure that SYSV_IPC_DEBUG is commented out?
-# ******************************************************
-# """
+print """
 
+		<item>
+			<guid isPermaLink="false">%s</guid>
+			<title>sysv_ipc %s Released</title>
+			<pubDate>%s</pubDate>
+			<link>http://semanchuk.com/philip/sysv_ipc/</link>
+			<description>Version %s of sysv_ipc has been released.
+			</description>
+		</item>
+
+""" % (VERSION, VERSION, timestamp, VERSION)
 

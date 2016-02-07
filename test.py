@@ -1,6 +1,12 @@
 import sysv_ipc as svi
 import pdb
 
+# f = open("x.txt")
+# for line in f.readlines():
+#     i = int(line.strip())
+#     if (i < 0) or (i > 2147483647):
+#         print line
+
 
 
 #mq = svi.MessageQueue(99, svi.IPC_CREX)
