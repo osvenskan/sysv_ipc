@@ -3,7 +3,9 @@ import pdb
 
 
 
-sem = svi.Semaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
+mq = svi.MessageQueue(99, svi.IPC_CREX)
+
+#sem = svi.Semaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
 #sem = svi.Semaphore(99, svi.IPC_CREAT)
 
 #mem = svi.SysVSharedMemory(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, size=20)
@@ -25,8 +27,13 @@ sem = svi.Semaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
 
 #mem = mem
 
+#pdb.set_trace()
+
+mq.send("iahsdgl", type=42)
+
 pdb.set_trace()
 
+print mq.receive()
 
 #mem2 = svi.SysVSharedMemory(99)
 
@@ -38,4 +45,7 @@ pdb.set_trace()
 i = 42
 
 #sem = sem
-sem.remove()
+#sem.remove()
+
+mq.remove()
+
