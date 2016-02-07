@@ -1,0 +1,7 @@
+syntax: glob
+*.pyc
+.DS_Store
+releases/*
+build/*
+probe_results.h
+prober/foo
