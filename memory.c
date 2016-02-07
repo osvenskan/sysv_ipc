@@ -585,7 +585,7 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
 
 PyObject *
-SharedMemory_write(SharedMemory *self, PyObject *args) {
+SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     /* See comments for read() regarding "size issues". Note that here
        Python provides the byte_count so it can't be negative. 
        
@@ -598,6 +598,7 @@ SharedMemory_write(SharedMemory *self, PyObject *args) {
     unsigned long offset = 0;
     unsigned long size;
     PyObject *py_size;
+    char *keyword_list[ ] = {"s", "offset", NULL};
 #if PY_MAJOR_VERSION > 2
     static char args_format[] = "s*|l";
     Py_buffer data;
@@ -611,7 +612,7 @@ SharedMemory_write(SharedMemory *self, PyObject *args) {
     data.len = 0;
 #endif
 
-    if (!PyArg_ParseTuple(args, args_format, 
+    if (!PyArg_ParseTupleAndKeywords(args, kw, args_format, keyword_list,
 #if PY_MAJOR_VERSION > 2
                           &data, 
 #else

@@ -4,7 +4,7 @@
 
 <head>
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2012 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2013 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
 	
     <title>System V IPC for Python - Semaphores, Shared Memory and Message Queues</title>
@@ -68,10 +68,10 @@ under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
 
 <p>You can <strong>download 
-<a href="sysv_ipc-0.6.4.tar.gz">sysv_ipc version 0.6.4</a>
+<a href="sysv_ipc-0.6.5.tar.gz">sysv_ipc version 0.6.5</a>
 </strong>
-(<a href="sysv_ipc-0.6.4.md5.txt">[md5 sum]</a>,
-<a href="sysv_ipc-0.6.4.sha1.txt">[sha1 sum]</a>)
+(<a href="sysv_ipc-0.6.5.md5.txt">[md5 sum]</a>,
+<a href="sysv_ipc-0.6.5.sha1.txt">[sha1 sum]</a>)
 
 which contains the source code, setup.py, installation instructions and
 <a href="#samples">sample code</a>. You can read about
@@ -899,7 +899,7 @@ However, to emphasize its weakness, this version of <tt>ftok()</tt> raises a
 warning with every call unless you explicitly pass a flag to silence it.
 </p>
 
-<p>This package provides <tt>ftok_experiment.py</tt> so that you can observe
+<p>This package also provides <tt>ftok_experiment.py</tt> so that you can observe
 how often <tt>ftok()</tt> generates duplicate keys on your system.
 </p>
 
@@ -1126,7 +1126,16 @@ the latter allows you to remove them.
 <h3>Version History</h3>
 
 <ul id="history">
-    <li id="v0_6_4"><strong><span id="current">Current</span> &ndash; 0.6.4 (19 Dec 2012) &ndash;</strong>
+    <li id="v0_6_5"><strong><span id="current">Current</span> &ndash; 0.6.5 (31 March 2013) &ndash;</strong>
+        <ul>
+            <li>Fixed a bug where SharedMemory.write() claimed to accept 
+            	keyword arguments but didn't actually do so. Thanks to 
+            	Matt Ruffalo for the bug report and patch.
+            </li>
+        </ul>
+    </li>
+
+    <li id="v0_6_4">0.6.4 (19 Dec 2012) &ndash;
         <ul>
             <li>Added a module-level <tt>attach()</tt> method based on a 
             	suggestion by Vladimír Včelák. 
