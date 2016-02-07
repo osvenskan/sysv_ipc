@@ -71,6 +71,9 @@ PyObject *mq_get_current_messages(MessageQueue *);
 PyObject *mq_get_c_uid(MessageQueue *);
 PyObject *mq_get_c_gid(MessageQueue *);
 
+PyObject *mq_str(MessageQueue *);
+PyObject *mq_repr(MessageQueue *);
+
 /* Misc. */
 PyObject *mq_remove(int);
 

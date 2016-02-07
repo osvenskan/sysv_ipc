@@ -7,14 +7,15 @@ import prober
 VERSION = file("VERSION").read().strip()
 
 name = "sysv_ipc"
-description = "System V IPC primitives (semaphores and shared memory) for Python"
-long_description = """Sysv_ipc gives access to System V shared memory and 
-semaphores on *nix systems. These modules only work on platforms that 
-support System V shared objects. Most *nixes do (including OS X) but 
-Windows does not. Sample code is included.
+description = "System V IPC primitives (semaphores, shared memory and message queues) for Python"
+long_description = """
+Sysv_ipc gives access to System V semaphores, shared memory and message 
+queues. Most (all?) Unixes (including OS X) support System V IPC. 
+Windows+Cygwin 1.7 might also work. 
 
-Currently, this module only supports semaphores and shared memory. Support
-for message queues is planned for a future version.
+Sample code is included.
+
+This extension is released under the GPL. 
 
 You might also be interested in the similar POSIX IPC module at:
 http://semanchuk.com/philip/posix_ipc/
@@ -27,7 +28,7 @@ download_url = "http://semanchuk.com/philip/sysv_ipc/sysv_ipc-%s.tar.gz" % VERSI
 source_files = ["sysv_ipc_module.c", "common.c", "semaphore.c", "memory.c", 
                 "mq.c" ]
 # http://pypi.python.org/pypi?:action=list_classifiers
-classifiers = [ "Development Status :: 3 - Alpha",
+classifiers = [ "Development Status :: 4 - Beta",
                 "Intended Audience :: Developers", 
                 "License :: OSI Approved :: GNU General Public License (GPL)",
                 "Operating System :: MacOS :: MacOS X",

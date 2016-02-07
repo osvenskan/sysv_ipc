@@ -8,12 +8,27 @@
 #define PY_STRING_LENGTH_MAX  INT_MAX
 #endif
 
+/* In sys/ipc.h under OS X, I get stuck with the old, "do not use" version
+of the ipc_perm struct. This is unavoidable because Python.h #undefs 
+_POSIX_C_SOURCE and _XOPEN_SOURCE. This causes cdefs.h to #define 
+__DARWIN_UNIX03 to 0 (implying the "default" compilation environment, as 
+opposed to "strict") and therefore I get the crappy, old version of the
+struct. I don't think there's any way around this unless Python changes
+its headers.
+*/ 
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <sys/msg.h>
 
 #include "probe_results.h"
+
+/* Struct to contain a key which can be None */
+typedef struct {
+    int is_none;
+    key_t value;
+} NoneableKey;
+
 
 enum GET_SET_IDENTIFIERS {
     IPC_PERM_UID = 1,
@@ -41,7 +56,6 @@ enum GET_SET_IDENTIFIERS {
 // Shorthand for lazy typists like me
 #define IPC_CREX  (IPC_CREAT | IPC_EXCL)
 
-
 #ifdef SYSV_IPC_DEBUG
 #define DPRINTF(fmt, args...) fprintf(stderr, "+++ " fmt, ## args)
 #else
@@ -49,7 +63,10 @@ enum GET_SET_IDENTIFIERS {
 #endif
 
 
-//FIXME - add comment
+// key_t is not guaranteed to be an arithmetic type, but that guarantee
+// is proposed for standards track and is (I hope!) true in practice.
+// ref: http://www.opengroup.org/austin/mailarchives/ag/msg09208.html
+// ref: http://www.opengroup.org/austin/mailarchives/ag-review/msg01783.html
 #define KEY_T_TO_PY(key)   PyInt_FromLong(key)
 
 // SUSv3 guarantees a uid_t to be an integer type. Some code returns 
@@ -89,6 +106,7 @@ enum GET_SET_IDENTIFIERS {
 #define MSGQNUM_T_TO_PY(msgqnum)   py_int_or_long_from_ulong(msgqnum)
 
 /* Utility functions */
+key_t get_random_key(void);
 PyObject *py_int_or_long_from_ulong(unsigned long);
 int convert_key_param(PyObject *, void *);
 

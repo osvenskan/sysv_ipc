@@ -36,8 +36,12 @@ ps_output_regex = re.compile("""
 # but just some memory consumed under normal circumstances.
 
 
-SKIP_SEMAPHORE_TESTS = False
+SKIP_SEMAPHORE_TESTS = True
 SKIP_SHARED_MEMORY_TESTS = True
+SKIP_MESSAGE_QUEUE_TESTS = False
+
+def random_string(length):
+    return ''.join(random.sample("abcdefghijklmnopqrstuvwxyz", length))
 
 def print_mem_before():
     print "Memory usage before, RSS = %d, VSZ = %d" % get_memory_usage()
@@ -82,7 +86,7 @@ else:
 
     for i in xrange(1, TEST_COUNT):
         key = random.randint(1, sysv_ipc.KEY_MAX)
-        sem = sysv_ipc.SysVSemaphore(key, sysv_ipc.IPC_CREX)
+        sem = sysv_ipc.Semaphore(key, sysv_ipc.IPC_CREX)
         sem.remove()
 
     print_mem_after()
@@ -91,7 +95,7 @@ else:
     print "Running semaphore acquire/release test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         sem.release()
@@ -105,7 +109,7 @@ else:
     print "Running semaphore Z test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         sem.Z()
@@ -119,12 +123,12 @@ else:
         print "Running semaphore acquire timeout test..."
         print_mem_before()
 
-        sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+        sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
         for i in xrange(1, TEST_COUNT):
             try:
                 sem.acquire(.001)
-            except sysv_ipc.SysVIpcBusyError:
+            except sysv_ipc.BusyError:
                 pass
 
         sem.remove()
@@ -138,7 +142,7 @@ else:
         print "Running semaphore Z timeout test..."
         print_mem_before()
 
-        sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+        sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
         
         # Release the semaphore to make the value is non-zero so that .Z()
         # has to wait for the timeout.
@@ -147,7 +151,7 @@ else:
         for i in xrange(1, TEST_COUNT):
             try:
                 sem.Z(.001)
-            except sysv_ipc.SysVIpcBusyError:
+            except sysv_ipc.BusyError:
                 pass
 
         sem.remove()
@@ -161,7 +165,7 @@ else:
     print "Running semaphore key read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.key
@@ -174,7 +178,7 @@ else:
     print "Running semaphore id read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.id
@@ -187,7 +191,7 @@ else:
     print "Running semaphore value read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.value
@@ -200,7 +204,7 @@ else:
     print "Running semaphore value write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         value = random.randint(0, sysv_ipc.SEMAPHORE_VALUE_MAX)
@@ -215,7 +219,7 @@ else:
     print "Running semaphore undo read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.undo
@@ -228,7 +232,7 @@ else:
     print "Running semaphore undo write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         undo = random.randint(0, 1)
@@ -243,7 +247,7 @@ else:
     print "Running semaphore block read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.block
@@ -256,7 +260,7 @@ else:
     print "Running semaphore block write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         block = random.randint(0, 1)
@@ -271,7 +275,7 @@ else:
     print "Running semaphore mode read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.mode
@@ -284,7 +288,7 @@ else:
     print "Running semaphore mode write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         sem.mode = 0600
@@ -297,7 +301,7 @@ else:
     print "Running semaphore uid read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.uid
@@ -310,7 +314,7 @@ else:
     print "Running semaphore uid write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
     
     uid = sem.uid
 
@@ -325,7 +329,7 @@ else:
     print "Running semaphore gid read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.gid
@@ -338,7 +342,7 @@ else:
     print "Running semaphore gid write test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
     
     gid = sem.gid
 
@@ -353,7 +357,7 @@ else:
     print "Running semaphore cuid read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.cuid
@@ -366,7 +370,7 @@ else:
     print "Running semaphore cgid read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.cgid
@@ -379,7 +383,7 @@ else:
     print "Running semaphore last_pid read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.last_pid
@@ -392,7 +396,7 @@ else:
     print "Running semaphore waiting_for_nonzero read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.waiting_for_nonzero
@@ -405,7 +409,7 @@ else:
     print "Running semaphore waiting_for_zero read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.waiting_for_zero
@@ -418,7 +422,7 @@ else:
     print "Running semaphore o_time read test..."
     print_mem_before()
 
-    sem = sysv_ipc.SysVSemaphore(42, sysv_ipc.IPC_CREX)
+    sem = sysv_ipc.Semaphore(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = sem.o_time
@@ -444,9 +448,9 @@ else:
         key = random.randint(1, sysv_ipc.KEY_MAX)
         # Test with and w/o init character
         if init_character_toggle:
-            mem = sysv_ipc.SysVSharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE, init_character = 'z')
+            mem = sysv_ipc.SharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE, init_character = 'z')
         else:
-            mem = sysv_ipc.SysVSharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
+            mem = sysv_ipc.SharedMemory(key, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
             
         init_character_toggle = not init_character_toggle
         
@@ -460,7 +464,7 @@ else:
     print "Running memory read/write test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX, size = sysv_ipc.PAGE_SIZE)
     alphabet = "abcdefghijklmnopqrstuvwxyz"
 
     s = alphabet
@@ -481,7 +485,7 @@ else:
     print "Running memory key read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.key
@@ -495,7 +499,7 @@ else:
     print "Running memory id read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.id
@@ -509,7 +513,7 @@ else:
     print "Running memory size read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.size
@@ -523,7 +527,7 @@ else:
     print "Running memory address read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.address
@@ -537,7 +541,7 @@ else:
     print "Running memory attached read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.attached
@@ -551,7 +555,7 @@ else:
     print "Running memory last_attach_time test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.last_attach_time
@@ -565,7 +569,7 @@ else:
     print "Running memory last_detach_time test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.last_detach_time
@@ -579,7 +583,7 @@ else:
     print "Running memory last_change_time test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.last_change_time
@@ -593,7 +597,7 @@ else:
     print "Running memory creator_pid test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.creator_pid
@@ -607,7 +611,7 @@ else:
     print "Running memory last_pid test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.last_pid
@@ -621,7 +625,7 @@ else:
     print "Running memory number_attached test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.number_attached
@@ -635,7 +639,7 @@ else:
     print "Running memory mode read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.mode
@@ -649,7 +653,7 @@ else:
     print "Running memory mode write test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         mem.mode = 0600
@@ -663,7 +667,7 @@ else:
     print "Running memory uid read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.uid
@@ -677,7 +681,7 @@ else:
     print "Running memory uid write test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
     
     uid = mem.uid
 
@@ -693,7 +697,7 @@ else:
     print "Running memory gid read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.gid
@@ -707,7 +711,7 @@ else:
     print "Running memory gid write test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
     
     gid = mem.gid
 
@@ -723,7 +727,7 @@ else:
     print "Running memory cuid read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.cuid
@@ -737,7 +741,7 @@ else:
     print "Running memory cgid read test..."
     print_mem_before()
 
-    mem = sysv_ipc.SysVSharedMemory(42, sysv_ipc.IPC_CREX)
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
 
     for i in xrange(1, TEST_COUNT):
         foo = mem.cgid
@@ -746,4 +750,263 @@ else:
     mem.remove()
 
     print_mem_after()
+
+
+# ================ Message queue tests  ==============
+
+
+if SKIP_MESSAGE_QUEUE_TESTS:
+    print "Skipping Message queue tests"
+else:
+    print "Running Message queue create/destroy test..."
+    print_mem_before()
+
+    for i in xrange(1, TEST_COUNT):
+        key = random.randint(1, sysv_ipc.KEY_MAX)
+        mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREX)
+        mq.remove()
+
+    print_mem_after()
+    
+
+    print "Running message queue send/receive test..."
+    print_mem_before()
+    
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+    
+    for i in xrange(1, TEST_COUNT):
+        mq.send(random_string(15))
+        mq.receive()
+    
+    mq.remove()
+    
+    print_mem_after()
+
+
+    print "Running message queue key read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.key
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running  message queue id read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.id
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue max size read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.max_size
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue last_send_time read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.last_send_time
+
+    mq.remove()
+
+    print_mem_after()
+    
+    
+    print "Running message queue last_receive_time read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.last_receive_time
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue last_change_time read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.last_change_time
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue last_send_pid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.last_send_pid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue last_receive_pid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.last_receive_pid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue current_messages read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.current_messages
+
+    mq.remove()
+
+    print_mem_after()
+
+
+
+    print "Running message queue uid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.uid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue uid write test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+    
+    uid = mq.uid
+
+    for i in xrange(1, TEST_COUNT):
+        mq.uid = uid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue gid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.gid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue gid write test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+    
+    gid = mq.gid
+
+    for i in xrange(1, TEST_COUNT):
+        mq.gid = gid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue cuid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.cuid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue cgid read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.cgid
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue mode read test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        foo = mq.mode
+
+    mq.remove()
+
+    print_mem_after()
+
+
+    print "Running message queue mode write test..."
+    print_mem_before()
+
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+
+    for i in xrange(1, TEST_COUNT):
+        mq.mode = 0600
+
+    mq.remove()
+
+    print_mem_after()
+
+
 

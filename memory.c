@@ -4,6 +4,19 @@
 #include "common.h"
 #include "memory.h"
 
+
+PyObject *
+shm_str(SharedMemory *self) {
+    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
+}
+
+
+PyObject *
+shm_repr(SharedMemory *self) {
+    return PyString_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
+}
+
+
 PyObject *
 shm_remove(int shared_memory_id) {
     struct shmid_ds shm_info;
@@ -40,7 +53,7 @@ shm_remove(int shared_memory_id) {
 static PyObject *
 shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
     struct shmid_ds shm_info;
-    PyObject *pReturn = NULL;
+    PyObject *py_value = NULL;
 
     DPRINTF("Calling shmctl(...IPC_STAT...), field = %d\n", field);
     if (-1 == shmctl(shared_memory_id, IPC_STAT, &shm_info)) {
@@ -67,53 +80,53 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
 
     switch (field) {
         case SHM_SIZE:
-            pReturn = SIZE_T_TO_PY(shm_info.shm_segsz);
+            py_value = SIZE_T_TO_PY(shm_info.shm_segsz);
         break;
 
         case SHM_LAST_ATTACH_TIME:
-            pReturn = TIME_T_TO_PY(shm_info.shm_atime);
+            py_value = TIME_T_TO_PY(shm_info.shm_atime);
         break;
         
         case SHM_LAST_DETACH_TIME:
-            pReturn = TIME_T_TO_PY(shm_info.shm_dtime);
+            py_value = TIME_T_TO_PY(shm_info.shm_dtime);
         break;
         
         case SHM_LAST_CHANGE_TIME:
-            pReturn = TIME_T_TO_PY(shm_info.shm_ctime);
+            py_value = TIME_T_TO_PY(shm_info.shm_ctime);
         break;
 
         case SHM_CREATOR_PID:
-            pReturn = PID_T_TO_PY(shm_info.shm_cpid);
+            py_value = PID_T_TO_PY(shm_info.shm_cpid);
         break;
 
         case SHM_LAST_AT_DT_PID:
-            pReturn = PID_T_TO_PY(shm_info.shm_lpid);
+            py_value = PID_T_TO_PY(shm_info.shm_lpid);
         break;
 
         case SHM_NUMBER_ATTACHED:
             // shm_nattch is unsigned
             // ref: http://www.opengroup.org/onlinepubs/007908799/xsh/sysshm.h.html
-            pReturn = py_int_or_long_from_ulong(shm_info.shm_nattch);
+            py_value = py_int_or_long_from_ulong(shm_info.shm_nattch);
         break;
 
         case IPC_PERM_UID:            
-            pReturn = UID_T_TO_PY(shm_info.shm_perm.uid);
+            py_value = UID_T_TO_PY(shm_info.shm_perm.uid);
         break;
 
         case IPC_PERM_GID:
-            pReturn = GID_T_TO_PY(shm_info.shm_perm.gid);
+            py_value = GID_T_TO_PY(shm_info.shm_perm.gid);
         break;
 
         case IPC_PERM_CUID:
-            pReturn = UID_T_TO_PY(shm_info.shm_perm.cuid);
+            py_value = UID_T_TO_PY(shm_info.shm_perm.cuid);
         break;
 
         case IPC_PERM_CGID:
-            pReturn = GID_T_TO_PY(shm_info.shm_perm.cgid);
+            py_value = GID_T_TO_PY(shm_info.shm_perm.cgid);
         break;
 
         case IPC_PERM_MODE:
-            pReturn = MODE_T_TO_PY(shm_info.shm_perm.mode);
+            py_value = MODE_T_TO_PY(shm_info.shm_perm.mode);
         break;
 
         default:
@@ -122,7 +135,7 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         break;
     }
     
-    return pReturn;
+    return py_value;
 
     error_return:
     return NULL;
@@ -219,6 +232,7 @@ SharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
 
 int 
 SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
+    NoneableKey key;
     int mode = 0600;
     unsigned long size = 0;
     int shmget_flags = 0;
@@ -228,7 +242,7 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     PyObject *py_size = NULL;
     
     if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iikc", keyword_list, 
-                                     &convert_key_param, &(self->key), 
+                                     &convert_key_param, &key,
                                      &shmget_flags, &mode, &size, 
                                      &init_character))
         goto error_return;
@@ -236,13 +250,43 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     mode &= 0777;
     shmget_flags &= ~0777;
     
+    DPRINTF("key is none = %d, key value = %ld\n", key.is_none, (long)key.value);
+
+    if ( !(shmget_flags & IPC_CREAT) && (shmget_flags & IPC_EXCL) ) {
+		PyErr_SetString(PyExc_ValueError, 
+                "IPC_EXCL must be combined with IPC_CREAT");
+        goto error_return;
+    }
+
+    if (key.is_none && ((shmget_flags & IPC_EXCL) != IPC_EXCL)) {
+		PyErr_SetString(PyExc_ValueError, 
+                "Key can only be None if IPC_EXCL is set");
+        goto error_return;
+    }
+
     // When creating a new segment, the default size is PAGE_SIZE.
     if (((shmget_flags & IPC_CREX) == IPC_CREX) && (!size))
         size = PAGE_SIZE;
 
-    DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
-            (long)self->key, size, mode, shmget_flags);
-    self->id = shmget(self->key, size, mode | shmget_flags);
+    if (key.is_none) {
+        // (key == None) ==> generate a key for the caller
+        do {
+            errno = 0;
+            self->key = get_random_key();
+
+            DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
+                    (long)self->key, size, mode, shmget_flags);
+            self->id = shmget(self->key, size, mode | shmget_flags);
+        } while ( (-1 == self->id) && (EEXIST == errno) );
+    }
+    else {
+        // (key != None) ==> use key supplied by the caller
+        self->key = key.value;
+        
+        DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
+                (long)self->key, size, mode, shmget_flags);
+        self->id = shmget(self->key, size, mode | shmget_flags);
+    }
         
     DPRINTF("id == %d\n", self->id);
     
@@ -494,9 +538,13 @@ SharedMemory_write(SharedMemory *self, PyObject *args) {
        Python provides the byte_count so it can't be negative. 
        
        In Python >= 2.5, the Python argument specifier 's#' expects a 
-       py_ssize_t for its second parameter. A long is long enough. */
+       py_ssize_t for its second parameter. A long is long enough. It might
+       be too big, though, on platforms where a long is larger than
+       py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
+       Python doesn't write to is zeroed out.
+   */
     const char *buffer;
-    long byte_count;
+    long byte_count = 0;
     unsigned long offset = 0;
     unsigned long size;
     PyObject *py_size;
@@ -515,6 +563,9 @@ SharedMemory_write(SharedMemory *self, PyObject *args) {
     }
     else
         goto error_return;
+
+    DPRINTF("write size check; size=%lu, offset=%lu, byte_count=%ld, (ulong)byte_count=%lu\n",
+        size, offset, byte_count, (unsigned long)byte_count);
 
     if ((unsigned long)byte_count > size - offset) {
         PyErr_SetString(PyExc_ValueError, "Attempt to write past end of memory segment");

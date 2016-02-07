@@ -128,6 +128,7 @@ def probe():
     
     conditionals = [ "UID_MAX", "GID_MAX", "_SEM_SEMUN_UNDEFINED" ]
 
+    d["SYSV_IPC_VERSION"] = '"' + file("VERSION").read().strip() + '"'
     d["PAGE_SIZE"] = probe_page_size()
     if sniff_semtimedop():
         d["SEMTIMEDOP_EXISTS"] = ""
@@ -151,7 +152,7 @@ To recreate this file, just delete it and re-run setup.py.
 
 Note that UID_MAX, GID_MAX, KEY_MAX and SEMAPHORE_VALUE_MAX are stored
 internally in longs, so you should never #define them to anything 
-larger than LONG_MAX on your platform.
+larger than LONG_MAX.
 */
 
 """

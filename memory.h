@@ -46,5 +46,9 @@ PyObject *shm_get_number_attached(SharedMemory *);
 PyObject *shm_get_cuid(SharedMemory *);
 PyObject *shm_get_cgid(SharedMemory *);
 
+PyObject *shm_str(SharedMemory *);
+PyObject *shm_repr(SharedMemory *);
+
+
 /* Utility functions */
 PyObject *shm_remove(int);

@@ -44,5 +44,8 @@ PyObject *sem_get_waiting_for_nonzero(Semaphore *);
 PyObject *sem_get_waiting_for_zero(Semaphore *);
 PyObject *sem_get_o_time(Semaphore *);
 
+PyObject *sem_str(Semaphore *);
+PyObject *sem_repr(Semaphore *);
+
 /* Utility functions */
 PyObject *sem_remove(int);
