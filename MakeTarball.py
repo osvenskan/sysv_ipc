@@ -1,11 +1,12 @@
 import tarfile
 import os
 import os.path
-import re
+import hashlib
 
 VERSION = file("VERSION").read().strip()
 
 filenames = (
+#    "memory_leak_tests.py",
     "LICENSE",
     "INSTALL",
     "README",
@@ -28,10 +29,12 @@ filenames = (
     "demo/utils.py",
     "prober.py",
     "prober/",
-    "prober/semtimedop_test.c"
+    "prober/semtimedop_test.c",
+    "prober/probe_page_size.c",
 )
 
 tarball_name = "sysv_ipc-%s.tar.gz" % VERSION
+md5_name = "sysv_ipc-%s.md5.txt" % VERSION
 
 if os.path.exists(tarball_name):
     os.remove(tarball_name)
@@ -48,6 +51,16 @@ for name in filenames:
 
     tarball.add(SourceName, BundledName, False)
 tarball.close()
+
+s = file("./" + tarball_name).read()
+
+s = hashlib.md5(s).hexdigest()
+
+print "md5 = " + s
+
+file(md5_name, "w").write(s)
+
+
 
 # # Check to see if I've left the DEBUG flag enabled.
 # s = file("sysv_ipc_module.c").read()

@@ -1,0 +1,43 @@
+Newsgroups: comp.lang.c
+From: S M Ryan <wyrm...@tango-sierrra.com>
+Date: Tue, 16 Dec 2008 18:46:18 -0800
+Local: Tues, Dec 16 2008 9:46 pm
+Subject: Re: Max value of typedef-ed type?
+
+In article <f497f37f-d486-447f-92df-70ea04c96...@y1g2000pra.googlegroups.com>,
+ Nikita The Spider <NikitaTheSpi...@gmail.com> wrote:
+> Hi all,
+> I'm scraping many years of rust & barnacles off of my C skills, and
+> I'm stuck at my first knotty and interesting problem.
+> I'm writing some code that needs to be cross platform and it uses
+> several typdef-ed numeric types. For instance, a key_t could be typdef-
+> ed as an int, ulong, etc. I need to be able to figure out what the
+> maximum value is that can be stuffed into the key_t and other types.
+Perhaps something like
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+static long long maxsigned[] = {
+ [sizeof(char)] = SCHAR_MAX,
+ [sizeof(int)] = INT_MAX,
+ [sizeof(short int)] = SHRT_MAX,
+ [sizeof(long int)] = LONG_MAX,
+ [sizeof(long long int)] = LLONG_MAX,
+};
+int main(int argc,char **argv) {
+ typedef short int t1;
+ typedef long int t2;
+ printf("t1 max = %lld\nt2 max = %lld\n",
+ maxsigned[sizeof(t1)],
+ maxsigned[sizeof(t2)]);
+ return 0;
+}
+-- 
+I'm not even supposed to be here today.
+I ASSURE YOU WE'RE OPEN!
+
+
+
+------------------------------------------------------------------------------------
+
+basic idea is to compare the sizeof() the mystery type to the sizeof() known types and see which ones match.

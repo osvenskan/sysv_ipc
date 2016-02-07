@@ -2,12 +2,12 @@ import sysv_ipc as svi
 import pdb
 
 
-pdb.set_trace()
 
-sem = svi.SysVSemaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
+#sem = svi.SysVSemaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
 #sem = svi.SysVSemaphore(99, svi.IPC_CREAT)
 
-#shm = svi.SysVSharedMemory(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, svi.PAGE_SIZE)
+#mem = svi.SysVSharedMemory(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, size=20)
+mem = svi.SysVSharedMemory(99, svi.IPC_CREX, 0600)
 
 # 
 # value = sem.value
@@ -20,12 +20,20 @@ sem = svi.SysVSemaphore(99, svi.IPC_CREAT|svi.IPC_EXCL, 0600, 1)
 # 
 # 
 
-#shm.read(offset=-1)
+#mem.read(offset=-1)
 
 
-#shm = shm
+mem = mem
 
-#shm.remove()
+pdb.set_trace()
 
-sem = sem
-sem.remove()
+
+mem2 = svi.SysVSharedMemory(99)
+
+print mem2.size
+
+mem.detach()
+mem.remove()
+
+# sem = sem
+# sem.remove()
