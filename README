@@ -1,14 +1,21 @@
 sysv_ipc - Python access to System V shared memory and semaphores
 ----------------------------------------------------------------------------
 
-sysv_ipc is a Python module that gives access to System V shared memory and semaphores on *nix systems. Windows users, you're out of luck here; these modules only work on platforms that support System V shared objects. Most *nixes do (including OS X) but Windows does not.
+sysv_ipc is a Python module that gives access to System V shared memory and 
+semaphores on *nix systems. Windows users, you're out of luck here; these 
+modules only work on platforms that support System V shared objects. Most 
+*nixes do (including OS X) but Windows does not.
 
 The latest version, contact info, etc. are available here:
 http://semanchuk.com/philip/sysv_ipc/
 
-Installation is as simple as `sudo python setup.py install`. Usage, a version history, warnings, suggestions, etc. are covered in ReadMe.html.
+Installation is as simple as `sudo python setup.py install`. 
 
-sysv_ipc is free software (free as in freedom and free as in beer). Licensing information is available in the LICENSE file.
+Usage, a version history, warnings, suggestions, etc. are covered in 
+ReadMe.html.
+
+sysv_ipc is free software (free as in freedom and free as in beer). Licensing
+information is available in the LICENSE file.
 
 Enjoy,
 Philip Semanchuk

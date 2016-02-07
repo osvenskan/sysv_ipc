@@ -83,10 +83,8 @@ int main() {
                             // Nothing new; give Mrs. Premise another change to respond.
                             sprintf(s, "Read %zu characters '%s'", strlen((char *)address), (char *)address);
                             say(MY_NAME, s);
-                            say(MY_NAME, "Releasing the semaphore");
                             rc = release_semaphore(MY_NAME, sem_id, params.live_dangerously);
                             if (!rc) {
-                                say(MY_NAME, "Waiting to acquire the semaphore");
                                 rc = acquire_semaphore(MY_NAME, sem_id, params.live_dangerously);
                             }
                         }

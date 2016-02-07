@@ -3,7 +3,7 @@
 <html>
 
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1;">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8;">
 	<meta name="author" content="Philip Semanchuk">
 	<meta name="copyright" content="All contents &copy; 2008 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory">
@@ -66,18 +66,21 @@ provides Python access to IPC using POSIX semaphores and shared memory</a>.
 POSIX IPC has slightly less broad OS support but is a little easier to use.
 </p>
 
-<p>You can <strong>download <a href="sysv_ipc-0.1.tar.gz">sysv_ipc version 0.1</a></strong>
+<p>You can <strong>download <a href="sysv_ipc-0.2.tar.gz">sysv_ipc version 0.2</a></strong>
 which 
 contains the source code, setup.py, installation 
 instructions and
 <a href="#samples">sample code</a>. You might also want to read
 about some <a href="#bugs">known bugs</a>. Currently, this module
-only works with Python 2.5. I've tested it on 
+only works with Python 2.5. If you need to access SysV IPC objects with
+older versions of Python, have a look at 
+<a href="http://nikitathespider.com/python/shm/">the shm module</a>.
+I've tested <tt>sysv_ipc</tt> on 
 OS X 10.5 and Ubuntu 8. It doesn't compile on OpenSolaris 2008.05.
 </p>
 
 <p class="dangerdanger">Please note: This module is new and has not been
-rigorously tested. Also, the interface may change a little in the future. 
+rigorously tested.
 </p>
 
 
@@ -97,9 +100,11 @@ rigorously tested. Also, the interface may change a little in the future.
 <h3>Module Constants</h3>
 
 <dl>
-    <dt>IPC_CREAT and IPC_EXCL</dt>
-    <dd>These flags are used when creating IPC objects. They're
-        bitwise unique and can be ORed together.
+    <dt>IPC_CREAT, IPC_EXCL and IPC_CREX</dt>
+    <dd><tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are flags used when 
+        creating IPC objects. They're
+        bitwise unique and can be ORed together. <tt>IPC_CREX</tt> is 
+        shorthand for <tt>IPC_CREAT | IPC_EXCL</tt>.
         
         <p>When passed to an IPC object's constructor, <tt>IPC_CREAT</tt> indicates 
             that you want to create a new object or open an existing one. If you want
@@ -114,18 +119,12 @@ rigorously tested. Also, the interface may change a little in the future.
         child processes (e.g. those created with <tt>fork()</tt>).
     </dd>
     
-    <dt>MAX_KEY</dt>
-    <dd>Keys passed to IPC object constructors must not exceed MAX_KEY.
+    <dt>KEY_MAX</dt>
+    <dd>Keys passed to IPC object constructors must not exceed KEY_MAX.
     </dd>
 
-    <dt>MAX_SEMAPHORE_VALUE</dt>
-    <dd>The maximum value of a semaphore. 
-        
-        <p>This constant is only available on systems
-        where SEMVMX is hardcoded in a header file (e.g. Linux). On systems where
-        the value is tunable (e.g. FreeBSD, OS X), <tt>MAX_SEMAPHORE_VALUE</tt> isn't
-        part of this module. Sorry about that!
-        </p>
+    <dt>SEMAPHORE_VALUE_MAX</dt>
+    <dd>The maximum value of a semaphore.
     </dd>
     
     <dt>PAGE_SIZE</dt>
@@ -134,7 +133,7 @@ rigorously tested. Also, the interface may change a little in the future.
     </dd>
     
     <dt>SEMAPHORE_TIMEOUT_SUPPORTED</dt>
-    <dd>True if the platform supports timed semaphore waits.</dd>
+    <dd>True if the platform supports timed semaphore waits, False otherwise.</dd>
 
     <dt>SHM_RND</dt>
     <dd>You probably don't need this, but it can be used when attaching shared 
@@ -162,8 +161,8 @@ situations specific to IPC.
 <dl>
     <dt>SystemVIpcError</dt>
     <dd>The base error class for all the custom errors in this module. This
-        error is occasionally raised on its own but usually you'll see a
-        more specific error.
+        error is occasionally raised on its own but you'll almost 
+        always see a more specific error.
     </dd>
     
     <dt>SysVIpcInternalError</dt>
@@ -204,7 +203,7 @@ situations specific to IPC.
     <dd>Creates a new semaphore or opens an existing one.
         
         <p><span class="param">key</span> must be either the value IPC_PRIVATE or 
-        an integer &gt; 0 and &le; MAX_KEY.
+        an integer &gt; 0 and &le; KEY_MAX.
         </p>
         
         <p>The <span class="param">flags</span> specify whether you want to create a
@@ -223,12 +222,15 @@ situations specific to IPC.
                 is not recommended. (See <a href="#init">Semaphore Initialization</a>.)
             </li>
             
-            <li>With <span class="param">flags</span> set to <tt>IPC_CREAT | IPC_EXCL</tt>, the module 
+            <li>With <span class="param">flags</span> set to 
+                <tt>IPC_CREX</tt> (<tt>IPC_CREAT | IPC_EXCL</tt>),
+                the module 
                 creates a new semaphore identified by <span class="param">key</span>. If a 
                 semaphore with that key already exists, the call raises a
                 <tt>SysVIpcExistentialError</tt>. 
                 <strong>The <span class="param">initial_value</span> is ignored unless
-                    both of these flags are specified.</strong>
+                    both of these flags are specified</strong> or 
+                    if the semaphore is read-only.
             </li>
         </ul>
         
@@ -270,7 +272,7 @@ situations specific to IPC.
                 or raising a <tt>SysVIpcBusyError</tt>.
 
                 <p>On platforms that don't support the <tt>semtimedop()</tt> API
-                  (OS X falls in this category), 
+                  (OS X doesn't support it), 
                    a <span class="param">timeout</span> &gt; 0 is treated as 
                    a timeout of infinity; i.e. 
                    the call should wait indefinitely regardless of the
@@ -319,7 +321,7 @@ situations specific to IPC.
         </p>
     </dd>
     
-    <dt>Z([timeout = 0.0])</dt>
+    <dt>Z([timeout = None])</dt>
     <dd>Blocks until zee zemaphore is zero.
         
         <p><span class="param">Timeout</span> has
@@ -436,7 +438,7 @@ situations specific to IPC.
         
         <p>
         <span class="param">key</span> must be either the value IPC_PRIVATE or 
-        an integer &gt; 0 and &le; MAX_KEY. 
+        an integer &gt; 0 and &le; KEY_MAX. 
         </p>
 
         <p>The <span class="param">flags</span> specify whether you want to create a
@@ -457,14 +459,16 @@ situations specific to IPC.
             creates a new one if no such segment exists.
         </li>
             
-        <li>With <span class="param">flags</span> set to <tt>IPC_CREAT | IPC_EXCL</tt>, the module 
+        <li>With <span class="param">flags</span> set to 
+            <tt>IPC_CREX</tt> (<tt>IPC_CREAT | IPC_EXCL</tt>),
+            the module 
             creates a new shared memory segment identified by 
             <span class="param">key</span>. If 
             a segment with that key already exists, the call raises 
             a <tt>SysVIpcExistentialError</tt>.
         
-        <p>When both <tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are specified,
-            each byte in the new memory segment will be 
+        <p>When both <tt>IPC_CREAT</tt> and <tt>IPC_EXCL</tt> are specified
+            and the caller has write permission, each byte in the new memory segment will be 
             initialized to the value of <span class="param">init_character</span>.
         </p>
         </li>
@@ -775,10 +779,12 @@ the latter allows you to remove them.
     <li>Compilation produces 3 warnings from <tt>pyport.h</tt>. They're caused by
         the <tt>#define _XOPEN_SOURCE 600</tt> line at the top of the .c module.
     </li>        
-    <li>When setting the <span class="attribute">value</span> attribute directly,
-        one can set it to a negative number which wraps around to become 0xffff-ish.
-        Also, large values (e.g. 999999999) which overflow the maximum semaphore value 
-        are accepted with predictably odd results.
+    <li>Maximum values for uids, gids, keys and semaphore values are 
+        hardcoded to "safe" values rather than being platform dependent.
+        It turns out 
+        that <a href="http://groups.google.com/group/comp.lang.c/browse_thread/thread/14a1cdbfb111f4eb">it's
+        really difficult to determine the maximum value that a 
+        typedef-ed variable can hold</a>.
     </li>
     <li>This code hasn't been vetted for memory leaks. I'm sure there are some.</li>
 
@@ -788,13 +794,63 @@ the latter allows you to remove them.
 
 <p>This module is a ground-up rewrite 
 of <a href="http://nikitathespider.com/python/shm/">the shm 
-module</a> which I adopted in February 2007. The shm module was originally written by 
-Vladimir Marangozov.
+module</a> which I adopted in February 2007.
 </p>
 
 
 <ul id="history">
-    <li><strong>Current &ndash; 0.1 (4 Dec 2008) &ndash;</strong> Original (alpha) version.</li>
+    <li><strong>Current &ndash; 0.2 (16 Dec 2008) &ndash;</strong>
+        Lots of small fixes.
+        
+        <ul>
+            <li>Fixed a bug where calling <tt>shm.remove()</tt> on shared 
+               memory that was already removed would cause a SystemError. 
+               (I wasn't setting the Python error before returning.)
+            </li>
+               
+            <li>Fixed a couple of bugs that would cause the creation
+                of a new, read-only shared memory segment to fail.
+            </li>
+            
+            <li>Fixed a bug that would cause the creation
+                of a new, read-only semaphore to fail.
+            </li>
+            
+            <li>Added the constant <tt>IPC_CREX</tt>.</li>
+
+            <li>Renamed (sorry) <tt>MAX_KEY</tt> to <tt>KEY_MAX</tt> and
+                <tt>MAX_SEMAPHORE_VALUE</tt> to <tt>SEMAPHORE_VALUE_MAX</tt>
+                to be consistent with the C naming convention in limits.h.
+            </li>
+
+            <li>Hardcoded <tt>SEMAPHORE_VALUE_MAX</tt> to 32767 until I can 
+                find a reliable way to determine it at install time.
+            </li>
+
+            <li>Changed prober.py to write out a C header file with 
+                platform-specific definitions in it.
+            </li>
+
+            <li>Replaced OSError in shared memory functions with more
+                specific <tt>SysVIpc</tt> errors.
+            </li>
+
+            <li>Added code to raise a ValueError when an attempt is made
+                to assign an out-of-range value to a semaphore.
+            </li>
+
+            <li>Added code to raise a ValueError when an out-of-range key 
+                is passed to a constructor.
+            </li>
+
+            <li>Fixed a bug in the demo program conclusion.c that caused
+                some informational messages to be printed twice.
+            </li>
+
+            <li>Fixed some documentation bugs.</li>
+        </ul>
+    </li>
+    <li>0.1 (4 Dec 2008) &ndash; Original (alpha) version.</li>
 </ul>
 
 
@@ -818,17 +874,10 @@ difficulty, user interest and so forth.
     <li>Update this documentation with a list of platforms that support semtimedop().</li>
     
     <li>Add a way for callers to indicate "please generate a key for me" in
-        the objec constructors.
+        the object constructors.
     </li>
     
-    <li>Find a way to make <tt>MAX_SEMAPHORE_VALUE</tt> available on system where SEMVMX
-        is a tunable parameter.
-    </li>
-    
-    <li>Raise a ValueError if a key parameter exceeds KEY_MAX.</li>
-    
-    <li>Move the call to PyInt_GetMax() into setup.py and pass it to the .c 
-        code as a #define since it is a compile-time constant.
+    <li>Find a way to make <tt>SEMAPHORE_VALUE_MAX</tt> more accurate.
     </li>
     
     

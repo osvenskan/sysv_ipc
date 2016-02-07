@@ -1,6 +1,7 @@
 import tarfile
 import os
 import os.path
+import re
 
 VERSION = file("VERSION").read().strip()
 
@@ -11,7 +12,6 @@ filenames = (
     "VERSION",
     "ReadMe.html",
     "setup.py",
-    "prober.py",
     "sysv_ipc_module.c",
     "demo/",
     "demo/cleanup.py",
@@ -26,7 +26,9 @@ filenames = (
     "demo/utils.c",
     "demo/utils.h",
     "demo/utils.py",
-    "junk"
+    "prober.py",
+    "prober/",
+    "prober/semtimedop_test.c"
 )
 
 tarball_name = "sysv_ipc-%s.tar.gz" % VERSION
@@ -46,3 +48,15 @@ for name in filenames:
 
     tarball.add(SourceName, BundledName, False)
 tarball.close()
+
+# # Check to see if I've left the DEBUG flag enabled.
+# s = file("sysv_ipc_module.c").read()
+# 
+# if not re.search("""\s*//\s*#define\s+SYSV_IPC_DEBUG""", s):
+#     print """
+# ******************************************************
+#   Are you sure that SYSV_IPC_DEBUG is commented out?
+# ******************************************************
+# """
+
+
