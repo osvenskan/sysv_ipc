@@ -43,18 +43,12 @@ class SemaphoreTestBase(tests_base.Base):
         tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.sem, property_name, value)
 
     def assertDeltasCloseEnough(self, delta_a, delta_b):
-        # FIXME docstring
-        """Return the datetime.timedelta of two timedeltas. Always returns a positive timedelta.
+        """Compare two datetime.timedeltas and ensure they're within < 1 second of one another.
 
-        This is useful when comparing actual times to expected times in tests because the actual time
-        may have been a bit longer or a bit shorter than the expected. The goal of the test is to
-        ensure they
-            # to be careful to subtract the smaller delta from the larger so I don't end up with
-            # a negative delta.
-
-
-        This is conceptually like abs(delta_a - delta_b).
+        This is useful when comparing actual times to expected times in tests where the actual
+        time may have been a bit longer or a bit shorter than the expected.
         """
+        # This is conceptually like computing abs(delta_a - delta_b).
         if delta_a > delta_b:
             delta = delta_a - delta_b
         else:
