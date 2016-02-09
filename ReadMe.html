@@ -66,7 +66,7 @@ It might also work under Windows with a library like
 <a href="http://www.cygwin.com/">Cygwin</a>.
 </p>
 
-<p>It works with Python 2.4 &ndash; 3.x.
+<p>It works with Python 2.7 &ndash; 3.x.
 It's released
 under a <a href="http://creativecommons.org/licenses/BSD/">BSD license</a>.
 </p>
@@ -848,40 +848,6 @@ with sysv_ipc.Semaphore(name) as sem:
     <dt>cgid (read-only)</dt>
     <dd>The queue creator's group id.</dd>
 </dl>
-
-
-
-<h3>Supported Features and Differences from SHM</h3>
-
-<p>This module is almost, but not quite, a superset of
-<a href="http://nikitathespider.com/python/shm/"><tt>shm</tt></a>.
-Some of the additional features are the ability to override the <tt>block</tt>
-flag on a per-call basis, the ability to change the semaphore's value
-in increments &gt; 1 when calling <tt>.P()</tt> and <tt>.V()</tt>
-and exposure of <tt>sem_otime</tt>.
-</p>
-
-<p>Differences that might trip you up are listed below.</p>
-
-<ul>
-    <li><tt>Shm</tt> compiles under Python 2.3 and older; this module has
-        not been tested with Python older than 2.4
-    </li>
-    <li>Attribute names and method signatures are different.</li>
-    <li>This module offers neither the functions <tt>semaphore_haskey()</tt>
-        nor <tt>memory_haskey()</tt>.
-    </li>
-    <li>This module's default permission on objects is <tt>0600</tt> as opposed
-        to <tt>shm</tt>'s <tt>0666</tt>.
-    </li>
-    <li><tt>Shm</tt> maintained an internal dictionary of semaphores and shared memory
-        segments. The object keys served as the dictionary keys.
-        If you asked for the same object multiple times, <tt>shm</tt> would
-        return the same Python object. I'm not convinced this was safe,
-        particularly in the case where an object may have been destroyed
-        and another with the same key created in its place.
-    </li>
-</ul>
 
 <h3>Usage Tips</h3>
 
