@@ -254,8 +254,6 @@ class TestSharedMemoryReadWrite(SharedMemoryTestBase):
         with self.assertRaises(ValueError):
             self.mem.write('x' * (self.mem.size - 50), 100)
 
-    @unittest.skipIf(sys.platform.startswith('darwin'),
-                     'Test causes Bus Error (hard crash) under OS X')
     def test_write_bad_offset(self):
         """ensure ValueError is raised if I try to write using a bad offset"""
         with self.assertRaises(ValueError):
