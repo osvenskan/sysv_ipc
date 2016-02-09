@@ -17,6 +17,7 @@ import base as tests_base
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
 # - address param of attach()
+# - attempt to write to segment attached with SHM_RDONLY gives a segfault under OS X and Linux.
 
 class SharedMemoryTestBase(tests_base.Base):
     """base class for SharedMemory test classes"""
