@@ -13,7 +13,6 @@ semaphore.c
 semaphore.h
 memory.c
 memory.h
-ftok_experiment.py
 demo/ReadMe.txt
 demo/cleanup.py
 demo/conclusion.c
@@ -42,6 +41,9 @@ demo2/SampleIpcConversation.png
 demo4/ReadMe.txt
 demo4/child.py
 demo4/parent.py
+extras/ftok_experiment.py
+extras/memory_leak_tests.py
+extras/memory_limit_test.py
 prober.py
 prober/semtimedop_test.c
 prober/probe_page_size.c
