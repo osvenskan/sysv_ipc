@@ -1,31 +1,8 @@
 #include "Python.h"
 #include "structmember.h"
 
-#if PY_MAJOR_VERSION >= 0x02050000
-#define PY_SSIZE_T_CLEAN
 #define PY_STRING_LENGTH_MAX  PY_SSIZE_T
-#else
-#define PY_STRING_LENGTH_MAX  INT_MAX
-#endif
 
-// define Py_TYPE for versions before Python 2.6
-#ifndef Py_TYPE
-#define Py_TYPE(ob)             (((PyObject*)(ob))->ob_type)
-#endif
-
-// define PyVarObject_HEAD_INIT for versions before Python 2.6
-#ifndef PyVarObject_HEAD_INIT
-#define PyVarObject_HEAD_INIT(type, size) PyObject_HEAD_INIT(type) size,
-#endif
-
-/* In sys/ipc.h under OS X, I get stuck with the old, "do not use" version
-of the ipc_perm struct. This is unavoidable because Python.h #undefs
-_POSIX_C_SOURCE and _XOPEN_SOURCE. This causes cdefs.h to #define
-__DARWIN_UNIX03 to 0 (implying the "default" compilation environment, as
-opposed to "strict") and therefore I get the crappy, old version of the
-struct. I don't think there's any way around this unless Python changes
-its headers.
-*/
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
