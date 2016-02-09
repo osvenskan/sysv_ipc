@@ -1110,12 +1110,6 @@ the latter allows you to remove them.
 <p>Bugs? My code never has bugs! There are, however, some suboptimal anomalies...</p>
 
 <ul>
-    <li>Under OS X, <tt>sys/ipc.h</tt> defines two versions of the
-        <tt>ipc_perm</tt> struct. This module picks up the old, deprecated
-        one which stores uid and gid values in 16 bit types. It's definitions
-        in <tt>Python.h</tt> that cause this, though, so there's not much
-        I can do to change it.
-    </li>
     <li>This module can't report the exact min and max values for a key.
         It turns out
         that <a href="http://groups.google.com/group/comp.lang.c/browse_thread/thread/14a1cdbfb111f4eb">it's
