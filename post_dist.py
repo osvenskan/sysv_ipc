@@ -19,17 +19,16 @@ tarball_name = "releases/sysv_ipc-%s.tar.gz" % VERSION
 md5_name = "releases/sysv_ipc-%s.md5.txt" % VERSION
 sha1_name = "releases/sysv_ipc-%s.sha1.txt" % VERSION
 
-# Generate the md5 hash of the tarball
-s = open(tarball_name).read()
+# Generate hashes of the tarball
+tarball_content = open(tarball_name, 'rb').read()
+for hash_function_name in ('md5', 'sha1', 'sha256'):
+    hash_function = getattr(hashlib, hash_function_name)
+    hash_value = hash_function(tarball_content)
 
-md5 = hashlib.md5(s).hexdigest()
-sha1 = hashlib.sha1(s).hexdigest()
+    hash_filename = "releases/sysv_ipc-{}.{}.txt".format(VERSION, hash_function_name)
 
-open(md5_name, "wb").write(md5)
-open(sha1_name, "wb").write(sha1)
-
-print("md5 = " + md5)
-print("sha1 = " + sha1)
+    open(hash_filename, "wb").write(hash_value)
+    print(hash_function_name + " = " + hash_value)
 
 # Print an RSS item suitable for pasting into rss.xml
 timestamp = time.strftime(RSS_TIMESTAMP_FORMAT, time.gmtime())
