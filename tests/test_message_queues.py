@@ -2,21 +2,20 @@
 # Don't add any from __future__ imports here. This code should execute
 # against standard Python.
 import unittest
-from unittest import skipUnless
-import datetime
 import time
+import os
 
 # Project imports
 import sysv_ipc
 # Hack -- add tests directory to sys.path so Python 3 can find base.py.
 import sys
-import os
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
+sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
 import base as tests_base
 
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
 # - max_message_size of init
+
 
 class MessageQueueTestBase(tests_base.Base):
     """base class for MessageQueue test classes"""
@@ -31,6 +30,7 @@ class MessageQueueTestBase(tests_base.Base):
         """test that writing to a readonly property raises TypeError"""
         tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.mq,
                                                            property_name, value)
+
 
 class TestMessageQueueCreation(MessageQueueTestBase):
     """Exercise stuff related to creating MessageQueue"""
@@ -125,7 +125,8 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
     # The bug referenced below affects use of a negative type. Supposedly it's only on 32 binaries
     # running on 64 bit systems, but I see it using 64-bit Python under 64-bit Linux.
     # A less demanding version of this test follows so Linux doesn't go entirely untested.
-    @unittest.skipIf(sys.platform.startswith('linux'), 'msgrcv() buggy on Linux, see https://bugzilla.kernel.org/show_bug.cgi?id=94181')
+    @unittest.skipIf(sys.platform.startswith('linux'),
+                     'msgrcv() buggy on Linux: https://bugzilla.kernel.org/show_bug.cgi?id=94181')
     def test_message_type_receive_specific_order(self):
         # Place messsages in Q w/highest type first
         for i in range(4, 0, -1):
@@ -187,7 +188,7 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
         """ensure I can send & receive 0x00"""
         test_string = b'abc' + bytes(0) + b'def'
         self.mq.send(test_string)
-        self.assertEqual(self.mq.receive(), (test_string , 1))
+        self.assertEqual(self.mq.receive(), (test_string, 1))
 
     def test_utf8(self):
         """Test writing encoded Unicode"""
@@ -250,7 +251,8 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
     # Changing the mode uses IPC_SET, and that should change last_change_time (msg_ctime in C)
     # according to the docs that bother to explain what msg_ctime is at all. I don't think
     # OS X ever sets msg_ctime. (Setting mq.uid and mq.mode didn't do the trick.)
-    @unittest.skipIf(sys.platform.startswith('darwin'), 'last_change_time not implemented properly by OS X')
+    @unittest.skipIf(sys.platform.startswith('darwin'),
+                     'last_change_time not implemented properly by OS X')
     def test_property_last_change_time(self):
         """exercise MessageQueue.last_change_time"""
         # Note that last_change_time doesn't start out as 0 (unlike e.g. last_receive_time), so

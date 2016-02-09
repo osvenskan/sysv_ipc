@@ -5,16 +5,16 @@ import unittest
 import os
 import resource
 import warnings
-import platform
 
 # Project imports
 import sysv_ipc
 # Hack -- add tests directory to sys.path so Python 3 can find base.py.
 import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
+sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
 import base as tests_base
 
 ONE_MILLION = 1000000
+
 
 class TestModuleConstants(tests_base.Base):
     """Check that the sysv_ipc module-level constants are defined as expected"""
@@ -29,6 +29,7 @@ class TestModuleConstants(tests_base.Base):
 
         self.assertTrue(isinstance(sysv_ipc.VERSION, str))
 
+
 class TestModuleErrors(tests_base.Base):
     """Exercise the exceptions defined by the module"""
     def test_errors(self):
@@ -38,6 +39,7 @@ class TestModuleErrors(tests_base.Base):
         self.assertTrue(issubclass(sysv_ipc.ExistentialError, sysv_ipc.Error))
         self.assertTrue(issubclass(sysv_ipc.BusyError, sysv_ipc.Error))
         self.assertTrue(issubclass(sysv_ipc.NotAttachedError, sysv_ipc.Error))
+
 
 class TestModuleFunctions(tests_base.Base):
     """Exercise the sysv_ipc module-level functions"""
