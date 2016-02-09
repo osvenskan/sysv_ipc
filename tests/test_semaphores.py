@@ -29,25 +29,6 @@ import base as tests_base
 # N_RELEASES is the number of times release() is called in test_release()
 N_RELEASES = 1000000 # 1 million
 
-# def compute_delta_delta(delta_a, delta_b):
-#     """Return the datetime.timedelta of two timedeltas. Always returns a positive timedelta.
-
-#     This is useful when comparing actual times to expected times in tests because the actual time
-#     may have been a bit longer or a bit shorter than the expected. The goal of the test is to
-#     ensure they
-#         # to be careful to subtract the smaller delta from the larger so I don't end up with
-#         # a negative delta.
-
-
-#     This is conceptually like abs(delta_a - delta_b).
-#     """
-#     if actual_delta > expected_delta:
-#         delta = actual_delta - expected_delta
-#     else:
-#         delta = expected_delta - actual_delta
-
-#     return delta
-
 class SemaphoreTestBase(tests_base.Base):
     """base class for Semaphore test classes"""
     def setUp(self):
@@ -209,18 +190,6 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
-        # delta = compute_delta_delta(actual_delta, expected_delta)
-
-        # if actual_delta > expected_delta:
-        #     delta = actual_delta - expected_delta
-        # else:
-        #     delta = expected_delta - actual_delta
-
-        # self.assertEqual(delta.days, 0)
-        # self.assertEqual(delta.seconds, 0)
-        # # I don't want to test microseconds because that granularity
-        # # isn't under the control of this module.
-
     @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_acquisition_nonzero_float_timeout(self):
         """tests that acquisition w/timeout=a float is reasonably accurate"""
@@ -237,19 +206,6 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
         expected_delta = datetime.timedelta(seconds=wait_time)
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
-
-        # # The actual time may have been a bit longer or a bit shorter than the expected. I have
-        # # to be careful to subtract the smaller delta from the larger so I don't end up with
-        # # a negative delta.
-        # if actual_delta > expected_delta:
-        #     delta = actual_delta - expected_delta
-        # else:
-        #     delta = expected_delta - actual_delta
-
-        # self.assertEqual(delta.days, 0)
-        # self.assertEqual(delta.seconds, 0)
-        # # I don't want to test microseconds because that granularity
-        # # isn't under the control of this module.
 
 class TestSemaphoreRelease(SemaphoreTestBase):
     """Exercise releasing semaphores"""
@@ -309,13 +265,6 @@ class TestSemaphoreZ(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
-        # delta = actual_delta - expected_delta
-
-        # self.assertEqual(delta.days, 0)
-        # self.assertEqual(delta.seconds, 0)
-        # # I don't want to test microseconds because that granularity
-        # # isn't under the control of this module.
-
     @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_Z_nonzero_float_timeout(self):
         """tests that Z() w/timeout=a float is reasonably accurate"""
@@ -331,13 +280,6 @@ class TestSemaphoreZ(SemaphoreTestBase):
         expected_delta = datetime.timedelta(seconds=wait_time)
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
-
-        # delta = actual_delta - expected_delta
-
-        # self.assertEqual(delta.days, 0)
-        # self.assertEqual(delta.seconds, 0)
-        # # I don't want to test microseconds because that granularity
-        # # isn't under the control of this module.
 
 class TestSemaphoreRemove(SemaphoreTestBase):
     """Exercise sem.remove()"""
