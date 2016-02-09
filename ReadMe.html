@@ -611,7 +611,7 @@ with sysv_ipc.Semaphore(name) as sem:
         may work, but doing so is unsupported and may be explicitly deprecated
         in a future version.
 
-        <p>If the offset + data would write past the end of the segment,
+        <p>If the offset + data would write outside of the segment,
         	this function raises <tt>ValueError</tt>.
         </p>
 
