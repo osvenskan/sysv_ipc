@@ -600,10 +600,10 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     PyObject *py_size;
     char *keyword_list[ ] = {"s", "offset", NULL};
 #if PY_MAJOR_VERSION > 2
-    static char args_format[] = "s*|l";
+    static char args_format[] = "s*|k";
     Py_buffer data;
 #else
-    static char args_format[] = "s#|l";
+    static char args_format[] = "s#|k";
     typedef struct {
         const char *buf;
         long len;

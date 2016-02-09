@@ -522,8 +522,8 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
     p_msg->type = type;
 
     Py_BEGIN_ALLOW_THREADS
-    DPRINTF("Calling msgsnd(), id=%ld, p_msg=%p, length=%lu, flags=0x%x\n",
-            (long)self->id, p_msg, user_msg.len, flags);
+    DPRINTF("Calling msgsnd(), id=%ld, p_msg=%p, p_msg->type=%ld, length=%lu, flags=0x%x\n",
+            (long)self->id, p_msg, p_msg->type, user_msg.len, flags);
     rc = msgsnd(self->id, p_msg, (size_t)user_msg.len, flags);
     Py_END_ALLOW_THREADS
 

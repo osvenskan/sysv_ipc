@@ -6,15 +6,14 @@ import random
 import sys
 
 # Project imports
-import posix_ipc
+import sysv_ipc
 
 IS_PY3 = (sys.version_info[0] == 3)
 
 
-def make_name():
-    """Generate a random name suitable for an IPC object."""
-    alphabet = 'abcdefghijklmnopqrstuvwxyz'
-    return '/' + ''.join(random.sample(alphabet, random.randint(3, 12)))
+def make_key():
+    """Generate a random key suitable for an IPC object."""
+    return random.randint(sysv_ipc.KEY_MIN, sysv_ipc.KEY_MAX)
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
