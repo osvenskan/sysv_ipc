@@ -8,7 +8,7 @@
 /******************    Internal use only     **********************/
 PyObject *
 shm_str(SharedMemory *self) {
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
 #else
     return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
@@ -17,7 +17,7 @@ shm_str(SharedMemory *self) {
 
 PyObject *
 shm_repr(SharedMemory *self) {
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
 #else
     return PyString_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
@@ -26,11 +26,11 @@ shm_repr(SharedMemory *self) {
 
 PyObject *
 shm_attach(SharedMemory *self, int shmat_flags) {
-    DPRINTF("attaching memory @ address %p with id %d using flags 0x%x\n", 
-    		 self->address, self->id, shmat_flags);
+    DPRINTF("attaching memory @ address %p with id %d using flags 0x%x\n",
+             self->address, self->id, shmat_flags);
 
     self->address = shmat(self->id, self->address, shmat_flags);
-    
+
     if ( (void *)-1 == self->address) {
         self->address = NULL;
         switch (errno) {
@@ -53,11 +53,11 @@ shm_attach(SharedMemory *self, int shmat_flags) {
 
         goto error_return;
     }
-    
+
     Py_RETURN_NONE;
-    
+
     error_return:
-    return NULL;    
+    return NULL;
 }
 
 
@@ -70,27 +70,27 @@ shm_remove(int shared_memory_id) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pExistentialException, 
-                             "No shared memory with id %d exists", 
+                PyErr_Format(pExistentialException,
+                             "No shared memory with id %d exists",
                              shared_memory_id);
             break;
-        
+
             case EPERM:
-                PyErr_SetString(pPermissionsException, 
+                PyErr_SetString(pPermissionsException,
                                 "You do not have permission to remove the shared memory");
             break;
 
             default:
                 PyErr_SetFromErrno(PyExc_OSError);
             break;
-        }        
+        }
         goto error_return;
     }
-    
+
     Py_RETURN_NONE;
-    
+
     error_return:
-    return NULL;    
+    return NULL;
 }
 
 
@@ -104,20 +104,20 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pExistentialException, 
-                             "No shared memory with id %d exists", 
+                PyErr_Format(pExistentialException,
+                             "No shared memory with id %d exists",
                              shared_memory_id);
             break;
-        
+
             case EACCES:
-                PyErr_SetString(pPermissionsException, 
+                PyErr_SetString(pPermissionsException,
                                 "You do not have permission to read the shared memory attribute");
             break;
 
             default:
                 PyErr_SetFromErrno(PyExc_OSError);
             break;
-        }        
+        }
 
         goto error_return;
     }
@@ -130,11 +130,11 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         case SVIFP_SHM_LAST_ATTACH_TIME:
             py_value = TIME_T_TO_PY(shm_info.shm_atime);
         break;
-        
+
         case SVIFP_SHM_LAST_DETACH_TIME:
             py_value = TIME_T_TO_PY(shm_info.shm_dtime);
         break;
-        
+
         case SVIFP_SHM_LAST_CHANGE_TIME:
             py_value = TIME_T_TO_PY(shm_info.shm_ctime);
         break;
@@ -150,14 +150,14 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         case SVIFP_SHM_NUMBER_ATTACHED:
             // shm_nattch is unsigned
             // ref: http://www.opengroup.org/onlinepubs/007908799/xsh/sysshm.h.html
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
             py_value = PyLong_FromUnsignedLong(shm_info.shm_nattch);
 #else
             py_value = py_int_or_long_from_ulong(shm_info.shm_nattch);
 #endif
         break;
 
-        case SVIFP_IPC_PERM_UID:            
+        case SVIFP_IPC_PERM_UID:
             py_value = UID_T_TO_PY(shm_info.shm_perm.uid);
         break;
 
@@ -182,7 +182,7 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
             goto error_return;
         break;
     }
-    
+
     return py_value;
 
     error_return:
@@ -193,17 +193,17 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
 static int
 shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_value value) {
     struct shmid_ds shm_info;
-    
+
     if (-1 == shmctl(id, IPC_STAT, &shm_info)) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pExistentialException, 
+                PyErr_Format(pExistentialException,
                              "No shared memory with id %d exists", id);
             break;
-        
+
             case EACCES:
-                PyErr_SetString(pPermissionsException, 
+                PyErr_SetString(pPermissionsException,
                                 "You do not have permission to read the shared memory attribute");
             break;
 
@@ -213,49 +213,49 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
         }
         goto error_return;
     }
-    
+
     switch (field) {
         case SVIFP_IPC_PERM_UID:
             shm_info.shm_perm.uid = value.uid;
         break;
-        
+
         case SVIFP_IPC_PERM_GID:
             shm_info.shm_perm.gid = value.gid;
         break;
-        
+
         case SVIFP_IPC_PERM_MODE:
             shm_info.shm_perm.mode = value.mode;
         break;
 
         default:
-            PyErr_Format(pInternalException, 
-                         "Bad field %d passed to shm_set_ipc_perm_value", 
+            PyErr_Format(pInternalException,
+                         "Bad field %d passed to shm_set_ipc_perm_value",
                          field);
             goto error_return;
         break;
     }
-    
+
     if (-1 == shmctl(id, IPC_SET, &shm_info)) {
         switch (errno) {
             case EIDRM:
             case EINVAL:
-                PyErr_Format(pExistentialException, 
+                PyErr_Format(pExistentialException,
                              "No shared memory with id %d exists", id);
             break;
-        
+
             case EPERM:
-                PyErr_SetString(pPermissionsException, 
+                PyErr_SetString(pPermissionsException,
                                 "You do not have permission to change the shared memory's attributes");
             break;
 
             default:
                 PyErr_SetFromErrno(PyExc_OSError);
             break;
-        }        
+        }
 
         goto error_return;
     }
-    
+
     return 0;
 
     error_return:
@@ -268,7 +268,7 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
 
 
 
-void 
+void
 SharedMemory_dealloc(SharedMemory *self) {
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -276,20 +276,20 @@ SharedMemory_dealloc(SharedMemory *self) {
 PyObject *
 SharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
     SharedMemory *self;
-    
+
     self = (SharedMemory *)type->tp_alloc(type, 0);
 
     if (NULL != self) {
-		self->key = (key_t)-1;
-		self->id  = 0;
-		self->address = NULL;
+        self->key = (key_t)-1;
+        self->id  = 0;
+        self->address = NULL;
     }
 
-    return (PyObject *)self; 
+    return (PyObject *)self;
 }
 
 
-int 
+int
 SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     NoneableKey key;
     int mode = 0600;
@@ -302,25 +302,25 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
     DPRINTF("Inside SharedMemory_init()\n");
 
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iikc", keyword_list, 
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "O&|iikc", keyword_list,
                                      &convert_key_param, &key,
-                                     &shmget_flags, &mode, &size, 
+                                     &shmget_flags, &mode, &size,
                                      &init_character))
         goto error_return;
 
     mode &= 0777;
     shmget_flags &= ~0777;
-    
+
     DPRINTF("key is none = %d, key value = %ld\n", key.is_none, (long)key.value);
 
     if ( !(shmget_flags & IPC_CREAT) && (shmget_flags & IPC_EXCL) ) {
-		PyErr_SetString(PyExc_ValueError, 
+        PyErr_SetString(PyExc_ValueError,
                 "IPC_EXCL must be combined with IPC_CREAT");
         goto error_return;
     }
 
     if (key.is_none && ((shmget_flags & IPC_EXCL) != IPC_EXCL)) {
-		PyErr_SetString(PyExc_ValueError, 
+        PyErr_SetString(PyExc_ValueError,
                 "Key can only be None if IPC_EXCL is set");
         goto error_return;
     }
@@ -335,7 +335,7 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
             errno = 0;
             self->key = get_random_key();
 
-            DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
+            DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n",
                     (long)self->key, size, mode, shmget_flags);
             self->id = shmget(self->key, size, mode | shmget_flags);
         } while ( (-1 == self->id) && (EEXIST == errno) );
@@ -343,30 +343,30 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     else {
         // (key != None) ==> use key supplied by the caller
         self->key = key.value;
-        
-        DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n", 
+
+        DPRINTF("Calling shmget, key=%ld, size=%lu, mode=%o, flags=0x%x\n",
                 (long)self->key, size, mode, shmget_flags);
         self->id = shmget(self->key, size, mode | shmget_flags);
     }
-        
+
     DPRINTF("id == %d\n", self->id);
-    
+
     if (self->id == -1) {
         switch (errno) {
             case EACCES:
-                PyErr_Format(pPermissionsException, 
-                             "Permission %o cannot be granted on the existing segment", 
+                PyErr_Format(pPermissionsException,
+                             "Permission %o cannot be granted on the existing segment",
                              mode);
             break;
 
             case EEXIST:
-                PyErr_Format(pExistentialException, 
-                    "Shared memory with the key %ld already exists", 
+                PyErr_Format(pExistentialException,
+                    "Shared memory with the key %ld already exists",
                     (long)self->key);
             break;
 
             case ENOENT:
-                PyErr_Format(pExistentialException, 
+                PyErr_Format(pExistentialException,
                     "No shared memory exists with the key %ld", (long)self->key);
             break;
 
@@ -379,7 +379,7 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
             break;
 
             case ENOSPC:
-                PyErr_SetString(PyExc_OSError, 
+                PyErr_SetString(PyExc_OSError,
                     "Not enough shared memory identifiers available (ENOSPC)");
             break;
 
@@ -393,19 +393,19 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
     // Attach the memory. If no write permissions requested, attach read-only.
     shmat_flags = (mode & 0200) ? 0 : SHM_RDONLY;
     if (NULL == shm_attach(self, shmat_flags)) {
-    	// Bad news, something went wrong. 
-    	goto error_return;
+        // Bad news, something went wrong.
+        goto error_return;
     }
-    
+
     if ( ((shmget_flags & IPC_CREX) == IPC_CREX) && (!(shmat_flags & SHM_RDONLY)) ) {
         // Initialize the memory.
-        
+
         py_size = shm_get_value(self->id, SVIFP_SHM_SIZE);
-    
+
         if (!py_size)
             goto error_return;
         else {
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
             size = PyLong_AsUnsignedLongMask(py_size);
 #else
             size = PyInt_AsUnsignedLongMask(py_size);
@@ -418,9 +418,9 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
         Py_DECREF(py_size);
     }
-    
+
     return 0;
-    
+
     error_return:
     return -1;
 }
@@ -431,7 +431,7 @@ SharedMemory_attach(SharedMemory *self, PyObject *args) {
     PyObject *py_address = NULL;
     void *address = NULL;
     int flags = 0;
-    
+
     if (!PyArg_ParseTuple(args, "|Oi", &py_address, &flags))
         goto error_return;
 
@@ -445,9 +445,9 @@ SharedMemory_attach(SharedMemory *self, PyObject *args) {
             goto error_return;
         }
     }
-    
+
     self->address = shmat(self->id, address, flags);
-    
+
     if ((void *)-1 == self->address) {
         self->address = NULL;
         switch (errno) {
@@ -471,9 +471,9 @@ SharedMemory_attach(SharedMemory *self, PyObject *args) {
     }
 
     Py_RETURN_NONE;
-    
+
     error_return:
-    return NULL;    
+    return NULL;
 }
 
 
@@ -496,18 +496,18 @@ SharedMemory_detach(SharedMemory *self) {
     self->address = NULL;
 
     Py_RETURN_NONE;
-    
+
     error_return:
-    return NULL;    
+    return NULL;
 }
 
 
 PyObject *
 SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
-    /* Tricky business here. A memory segment's size is a size_t which is 
-       ulong or smaller. However, the largest string that Python can 
+    /* Tricky business here. A memory segment's size is a size_t which is
+       ulong or smaller. However, the largest string that Python can
        construct is of ssize_t which is long or smaller. Therefore, the
-       size and offset variables must be ulongs while the byte_count 
+       size and offset variables must be ulongs while the byte_count
        must be a long (and must not exceed LONG_MAX).
        Mind your math!
     */
@@ -516,19 +516,19 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
     unsigned long size;
     PyObject *py_size;
     char *keyword_list[ ] = {"byte_count", "offset", NULL};
-    
-    if (!PyArg_ParseTupleAndKeywords(args, keywords, "|lk", keyword_list, 
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "|lk", keyword_list,
                                      &byte_count, &offset))
         goto error_return;
-        
+
     if (self->address == NULL) {
-        PyErr_SetString(pNotAttachedException, 
+        PyErr_SetString(pNotAttachedException,
                         "Read attempt on unattached memory segment");
         goto error_return;
     }
-    
+
     if ( (py_size = shm_get_value(self->id, SVIFP_SHM_SIZE)) ) {
-#if PY_MAJOR_VERSION > 2 
+#if PY_MAJOR_VERSION > 2
         size = PyLong_AsUnsignedLongMask(py_size);
 #else
         size = PyInt_AsUnsignedLongMask(py_size);
@@ -540,40 +540,40 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
     DPRINTF("offset = %lu, byte_count = %ld, size = %lu\n",
             offset, byte_count, size);
-    
+
     if (offset >= size) {
         PyErr_SetString(PyExc_ValueError, "The offset must be less than the segment size");
         goto error_return;
     }
-    
+
     if (byte_count < 0) {
         PyErr_SetString(PyExc_ValueError, "The byte_count cannot be negative");
         goto error_return;
     }
-    
+
     /* If the caller didn't specify a byte count or specified one that would
        read past the end of the segment, return everything from the offset to
        the end of the segment.
        Be careful here not to express the second if condition w/addition, e.g.
             (byte_count + offset > size)
-       It might be more intuitive but since byte_count is a long and offset 
+       It might be more intuitive but since byte_count is a long and offset
        is a ulong, their sum could cause an arithmetic overflow. */
     if ((!byte_count) || ((unsigned long)byte_count > size - offset)) {
         // byte_count needs to be calculated
         if (size - offset <= (unsigned long)PY_STRING_LENGTH_MAX)
             byte_count = size - offset;
         else {
-            // Caller is asking for more bytes than I can stuff into 
+            // Caller is asking for more bytes than I can stuff into
             // a Python string.
             PyErr_Format(PyExc_ValueError,
-                         "The byte_count cannot exceed Python's max string length %ld", 
+                         "The byte_count cannot exceed Python's max string length %ld",
                          (long)PY_STRING_LENGTH_MAX);
             goto error_return;
         }
     }
-        
-        
-#if PY_MAJOR_VERSION > 2 
+
+
+#if PY_MAJOR_VERSION > 2
     return PyBytes_FromStringAndSize(self->address + offset, byte_count);
 #else
     return PyString_FromStringAndSize(self->address + offset, byte_count);
@@ -587,9 +587,9 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
 PyObject *
 SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     /* See comments for read() regarding "size issues". Note that here
-       Python provides the byte_count so it can't be negative. 
-       
-       In Python >= 2.5, the Python argument specifier 's#' expects a 
+       Python provides the byte_count so it can't be negative.
+
+       In Python >= 2.5, the Python argument specifier 's#' expects a
        py_ssize_t for its second parameter. A long is long enough. It might
        be too big, though, on platforms where a long is larger than
        py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
@@ -607,25 +607,25 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     typedef struct {
         const char *buf;
         long len;
-    } MyBuffer;    
+    } MyBuffer;
     MyBuffer data;
     data.len = 0;
 #endif
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, args_format, keyword_list,
 #if PY_MAJOR_VERSION > 2
-                          &data, 
+                          &data,
 #else
-                          &(data.buf), &(data.len), 
+                          &(data.buf), &(data.len),
 #endif
                           &offset))
         goto error_return;
-	    
+
     if (self->address == NULL) {
         PyErr_SetString(pNotAttachedException, "Write attempt on unattached memory segment");
         goto error_return;
     }
-    
+
     if ( (py_size = shm_get_value(self->id, SVIFP_SHM_SIZE)) ) {
 #if PY_MAJOR_VERSION > 2
         size = PyLong_AsUnsignedLongMask(py_size);
@@ -677,7 +677,7 @@ shm_get_address(SharedMemory *self) {
 
 PyObject *
 shm_get_attached(SharedMemory *self) {
-    if (self->address) 
+    if (self->address)
         Py_RETURN_TRUE;
     else
         Py_RETURN_FALSE;
@@ -736,28 +736,28 @@ shm_get_mode(SharedMemory *self) {
 int
 shm_set_uid(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
-    
-#if PY_MAJOR_VERSION > 2 
-    if (!PyLong_Check(py_value)) 
+
+#if PY_MAJOR_VERSION > 2
+    if (!PyLong_Check(py_value))
 #else
-    if (!PyInt_Check(py_value)) 
+    if (!PyInt_Check(py_value))
 #endif
     {
-		PyErr_SetString(PyExc_TypeError, "Attribute 'uid' must be an integer");
+        PyErr_SetString(PyExc_TypeError, "Attribute 'uid' must be an integer");
         goto error_return;
     }
-    
-#if PY_MAJOR_VERSION > 2 
+
+#if PY_MAJOR_VERSION > 2
     new_value.uid = PyLong_AsLong(py_value);
 #else
     new_value.uid = PyInt_AsLong(py_value);
 #endif
-    
+
     if (((uid_t)-1 == new_value.uid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
-    
+
     return shm_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_UID, new_value);
 
     error_return:
@@ -773,28 +773,28 @@ shm_get_gid(SharedMemory *self) {
 int
 shm_set_gid(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
-    
-#if PY_MAJOR_VERSION > 2 
-    if (!PyLong_Check(py_value)) 
+
+#if PY_MAJOR_VERSION > 2
+    if (!PyLong_Check(py_value))
 #else
-    if (!PyInt_Check(py_value)) 
+    if (!PyInt_Check(py_value))
 #endif
     {
-		PyErr_Format(PyExc_TypeError, "attribute 'gid' must be an integer");
+        PyErr_Format(PyExc_TypeError, "attribute 'gid' must be an integer");
         goto error_return;
     }
-    
-#if PY_MAJOR_VERSION > 2 
+
+#if PY_MAJOR_VERSION > 2
     new_value.gid = PyLong_AsLong(py_value);
 #else
     new_value.gid = PyInt_AsLong(py_value);
 #endif
-    
+
     if (((gid_t)-1 == new_value.gid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
-    
+
     return shm_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_GID, new_value);
 
     error_return:
@@ -804,28 +804,28 @@ shm_set_gid(SharedMemory *self, PyObject *py_value) {
 int
 shm_set_mode(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
-    
-#if PY_MAJOR_VERSION > 2 
-    if (!PyLong_Check(py_value)) 
+
+#if PY_MAJOR_VERSION > 2
+    if (!PyLong_Check(py_value))
 #else
-    if (!PyInt_Check(py_value)) 
+    if (!PyInt_Check(py_value))
 #endif
     {
-		PyErr_Format(PyExc_TypeError, "attribute 'mode' must be an integer");
+        PyErr_Format(PyExc_TypeError, "attribute 'mode' must be an integer");
         goto error_return;
     }
-    
-#if PY_MAJOR_VERSION > 2 
+
+#if PY_MAJOR_VERSION > 2
     new_value.mode = PyLong_AsLong(py_value);
 #else
     new_value.mode = PyInt_AsLong(py_value);
 #endif
-    
+
     if (((mode_t)-1 == new_value.mode) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
         goto error_return;
     }
-    
+
     return shm_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_MODE, new_value);
 
     error_return:
