@@ -609,8 +609,8 @@ with sysv_ipc.Semaphore(name) as sem:
     <dd>Writes the string <span class="param">s</span> to the shared memory,
         starting at <span class="param">offset</span>.
 
-        <p>At most <tt><i>n</i></tt> bytes will be written, where
-            <tt><i>n</i></tt> = the segment's size minus <span class="param">offset</span>.
+        <p>If the offset + data would write past the end of the segment,
+        	this function raises <tt>ValueError</tt>.
         </p>
 
         <p>The string may contain embedded NULL bytes ('\0').
