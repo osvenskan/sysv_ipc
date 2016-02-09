@@ -1,7 +1,8 @@
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "structmember.h"
 
-#define PY_STRING_LENGTH_MAX  PY_SSIZE_T
+#define PY_STRING_LENGTH_MAX  PY_SSIZE_T_MAX
 
 #include <sys/ipc.h>
 #include <sys/shm.h>
