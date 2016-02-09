@@ -2,22 +2,21 @@
 # Don't add any from __future__ imports here. This code should execute
 # against standard Python.
 import unittest
-from unittest import skipUnless
-import datetime
 import time
+import os
 
 # Project imports
-import sysv_ipc
 # Hack -- add tests directory to sys.path so Python 3 can find base.py.
 import sys
-import os
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
+sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
 import base as tests_base
+import sysv_ipc
 
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
 # - address param of attach()
 # - attempt to write to segment attached with SHM_RDONLY gives a segfault under OS X and Linux.
+
 
 class SharedMemoryTestBase(tests_base.Base):
     """base class for SharedMemory test classes"""
@@ -38,6 +37,7 @@ class SharedMemoryTestBase(tests_base.Base):
         """test that writing to a readonly property raises TypeError"""
         tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.mem,
                                                            property_name, value)
+
 
 class TestSharedMemoryCreation(SharedMemoryTestBase):
     """Exercise stuff related to creating SharedMemory"""
@@ -169,7 +169,8 @@ class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
         # Should not raise an error
         self.mem.read(1)
 
-    @unittest.skipIf(sys.platform.startswith('darwin'), 'Test causes Bus Error (hard crash) under OS X')
+    @unittest.skipIf(sys.platform.startswith('darwin'),
+                     'Test causes Bus Error (hard crash) under OS X')
     @unittest.skipIf(sys.platform.startswith('linux'), 'Test causes seg fault under Linux')
     def test_attach_read_only(self):
         """exercise attach(SHM_RDONLY)"""
@@ -179,6 +180,7 @@ class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
         self.mem.attach(None, sysv_ipc.SHM_RDONLY)
         with self.assertRaises(sysv_ipc.PermissionsError):
             self.mem.write(' ')
+
 
 class TestSharedMemoryReadWrite(SharedMemoryTestBase):
     """Exercise read() and write()"""
@@ -252,7 +254,8 @@ class TestSharedMemoryReadWrite(SharedMemoryTestBase):
         with self.assertRaises(ValueError):
             self.mem.write('x' * (self.mem.size - 50), 100)
 
-    @unittest.skipIf(sys.platform.startswith('darwin'), 'Test causes Bus Error (hard crash) under OS X')
+    @unittest.skipIf(sys.platform.startswith('darwin'),
+                     'Test causes Bus Error (hard crash) under OS X')
     def test_write_bad_offset(self):
         """ensure ValueError is raised if I try to write using a bad offset"""
         with self.assertRaises(ValueError):
@@ -338,7 +341,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
 
         # BTW this is the most useless attribute ever:
         # "The last time a process changed the uid, gid or mode on this segment."
-        self.mem.mode = 0x1ff # = octal 777 which is expressed differently in Python 2 & 3
+        self.mem.mode = 0x1ff  # = octal 777 which is expressed differently in Python 2 & 3
         self.assertLess(self.mem.last_change_time - time.time(), 5)
         self.assertWriteToReadOnlyPropertyFails('last_change_time', 42)
 

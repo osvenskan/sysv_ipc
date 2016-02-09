@@ -2,17 +2,15 @@
 # Don't add any from __future__ imports here. This code should execute
 # against standard Python.
 import unittest
-from unittest import skipUnless
 import datetime
 import time
-import random
+import os
 
 # Project imports
 import sysv_ipc
 # Hack -- add tests directory to sys.path so Python 3 can find base.py.
 import sys
-import os
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))
+sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
 import base as tests_base
 
 # Not tested --
@@ -27,7 +25,8 @@ import base as tests_base
 
 
 # N_RELEASES is the number of times release() is called in test_release()
-N_RELEASES = 1000000 # 1 million
+N_RELEASES = 1000000  # 1 million
+
 
 class SemaphoreTestBase(tests_base.Base):
     """base class for Semaphore test classes"""
@@ -131,6 +130,7 @@ class TestSemaphoreCreation(SemaphoreTestBase):
         self.assertEqual(sem.value, 42)
         sem.remove()
 
+
 class TestSemaphoreAquisition(SemaphoreTestBase):
     """Exercise acquiring semaphores"""
     def test_simple_acquisition(self):
@@ -159,7 +159,7 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
     # maybe 10 seconds and have this process wait on it. That's complicated
     # and not a really great test.
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_acquisition_zero_timeout(self):
         """tests that acquisition w/timeout=0 implements non-blocking behavior"""
         # Should not raise an error
@@ -167,7 +167,7 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
         with self.assertRaises(sysv_ipc.BusyError):
             self.sem.acquire(0)
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_acquisition_nonzero_int_timeout(self):
         """tests that acquisition w/timeout=an int is reasonably accurate"""
         # Should not raise an error
@@ -184,7 +184,7 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_acquisition_nonzero_float_timeout(self):
         """tests that acquisition w/timeout=a float is reasonably accurate"""
         # Should not raise an error
@@ -200,6 +200,7 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
         expected_delta = datetime.timedelta(seconds=wait_time)
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
+
 
 class TestSemaphoreRelease(SemaphoreTestBase):
     """Exercise releasing semaphores"""
@@ -227,6 +228,7 @@ class TestSemaphoreRelease(SemaphoreTestBase):
         self.sem.block = False
         sem.acquire()
 
+
 class TestSemaphoreZ(SemaphoreTestBase):
     """exercise Z() (block until zero)"""
     def test_Z_failure(self):
@@ -236,14 +238,14 @@ class TestSemaphoreZ(SemaphoreTestBase):
         with self.assertRaises(sysv_ipc.BusyError):
             self.sem.Z()
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_Z_zero_timeout(self):
         """tests that Z w/timeout=0 implements non-blocking behavior"""
         self.sem.value = 42
         with self.assertRaises(sysv_ipc.BusyError):
             self.sem.Z(0)
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_Z_nonzero_int_timeout(self):
         """tests that Z() w/timeout=an int is reasonably accurate"""
         self.sem.value = 42
@@ -259,7 +261,7 @@ class TestSemaphoreZ(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
-    @skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
+    @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_Z_nonzero_float_timeout(self):
         """tests that Z() w/timeout=a float is reasonably accurate"""
         self.sem.value = 42
@@ -275,6 +277,7 @@ class TestSemaphoreZ(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
+
 class TestSemaphoreRemove(SemaphoreTestBase):
     """Exercise sem.remove()"""
     def test_remove(self):
@@ -284,6 +287,7 @@ class TestSemaphoreRemove(SemaphoreTestBase):
             sysv_ipc.Semaphore(self.sem.key)
         # Wipe this out so that self.tearDown() doesn't crash.
         self.sem = None
+
 
 class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
     """Exercise props and attrs"""
@@ -297,13 +301,6 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
         """exercise Semaphore.id"""
         self.assertGreaterEqual(self.sem.id, 0)
         self.assertWriteToReadOnlyPropertyFails('id', 42)
-
-    def test_attribute_value(self):
-        """exercise Semaphore.value"""
-        # test read, although this has been tested very thoroughly above
-        self.assertEqual(self.sem.value, 1)
-        self.sem.value = 42
-        self.assertEqual(self.sem.value, 42)
 
     def test_attribute_value(self):
         """exercise Semaphore.value"""

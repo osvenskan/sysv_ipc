@@ -15,6 +15,7 @@ def make_key():
     """Generate a random key suitable for an IPC object."""
     return random.randint(sysv_ipc.KEY_MIN, sysv_ipc.KEY_MAX)
 
+
 class Base(unittest.TestCase):
     """Base class for test cases."""
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name,
