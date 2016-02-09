@@ -641,7 +641,10 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     DPRINTF("write size check; size=%lu, offset=%lu, dat.len=%ld\n",
             size, offset, data.len);
 
-    if ((unsigned long)data.len > size - offset) {
+    // Remember that offset and size are both ulongs, so size > offset, then
+    // size - offset (as in the second part of the if expression) will evaluate
+    // to a "negative" number which is a very large ulong.
+    if ((offset > size) || ((unsigned long)data.len > size - offset)) {
         PyErr_SetString(PyExc_ValueError, "Attempt to write past end of memory segment");
         goto error_return;
     }
