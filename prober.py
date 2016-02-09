@@ -1,7 +1,6 @@
 import os.path
 import os
 import subprocess
-import sys
 import distutils.sysconfig
 
 # Set these to None for debugging or subprocess.PIPE to silence compiler
@@ -15,14 +14,15 @@ STDERR = subprocess.PIPE
 MAX_LINE_LENGTH = 78
 
 PYTHON_INCLUDE_DIR = os.path.dirname(distutils.sysconfig.get_config_h_filename())
-#print (PYTHON_INCLUDE_DIR)
+# print(PYTHON_INCLUDE_DIR)
+
 
 def line_wrap_paragraph(s):
     # Format s with terminal-friendly line wraps.
     done = False
     beginning = 0
     end = MAX_LINE_LENGTH - 1
-    lines = [ ]
+    lines = []
     while not done:
         if end >= len(s):
             done = True
@@ -38,9 +38,12 @@ def line_wrap_paragraph(s):
 
 
 def print_bad_news(value_name, default):
-    s = "Setup can't determine %s on your system, so it will default to %s which may not be correct." \
-            % (value_name, default)
-    plea = "Please report this message and your operating system info to the package maintainer listed in the README file."
+    s = "Setup can't determine %s on your system, so it will default to %s which may not " + \
+        "be correct."
+    s = s % (value_name, default)
+
+    plea = "Please report this message and your operating system info to the package " + \
+           "maintainer listed in the README file."
 
     lines = line_wrap_paragraph(s) + [''] + line_wrap_paragraph(plea)
 
@@ -48,7 +51,7 @@ def print_bad_news(value_name, default):
 
     s = border + "\n* " + ('\n* '.join(lines)) + '\n' + border
 
-    print (s)
+    print(s)
 
 
 def does_build_succeed(filename):
@@ -63,7 +66,8 @@ def does_build_succeed(filename):
     # the compile & link succeeded.
     return not bool(p.wait())
 
-def compile_and_run(filename, linker_options = ""):
+
+def compile_and_run(filename, linker_options=""):
     # Utility function that returns the stdout output from running the
     # compiled source file; None if the compile fails.
     cmd = "cc -Wall -I%s -o ./prober/foo %s ./prober/%s" %  \
@@ -112,7 +116,6 @@ def probe_semvmx():
     return semvmx
 
 
-
 def probe_page_size():
     DEFAULT_PAGE_SIZE = 4096
 
@@ -126,15 +129,13 @@ def probe_page_size():
 
 
 def probe():
-    d = { "KEY_MAX" : "LONG_MAX",
-          "KEY_MIN" : "LONG_MIN"
-        }
+    d = {"KEY_MAX": "LONG_MAX",
+         "KEY_MIN": "LONG_MIN"
+         }
 
-    conditionals = [ "_SEM_SEMUN_UNDEFINED" ]
+    conditionals = ["_SEM_SEMUN_UNDEFINED"]
 
-    f = open("VERSION")
-    version = f.read().strip()
-    f.close()
+    version = open("VERSION").read().strip()
 
     d["SYSV_IPC_VERSION"] = '"%s"' % version
     d["PAGE_SIZE"] = probe_page_size()
@@ -145,8 +146,6 @@ def probe():
     # to my code to declare this union, so I use that flag as my standard.
     if not sniff_union_semun_defined():
         d["_SEM_SEMUN_UNDEFINED"] = ""
-
-
 
     msg = """/*
 This header file was generated when you ran setup. Once created, the setup
@@ -163,7 +162,7 @@ you should never #define them to anything larger than LONG_MAX.
 
     filename = "probe_results.h"
     if not os.path.exists(filename):
-        lines = [ ]
+        lines = []
 
         for key in d:
             if key in conditionals:
@@ -175,12 +174,11 @@ you should never #define them to anything larger than LONG_MAX.
                 lines.append("#endif")
 
         # A trailing '\n' keeps compilers happy...
-        f = open(filename, "w")
-        f.write(msg + '\n'.join(lines) + '\n')
-        f.close()
+        with open(filename, "w") as f:
+            f.write(msg + '\n'.join(lines) + '\n')
 
     return d
 
 if __name__ == "__main__":
     s = probe()
-    print (s)
+    print(s)
