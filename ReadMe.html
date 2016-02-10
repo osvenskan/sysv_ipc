@@ -436,6 +436,11 @@ situations specific to IPC.
     <dt>last_pid (read-only)</dt>
     <dd>The PID of the process that last called <tt>semop()</tt> (<tt>.P()</tt>,
         <tt>.V()</tt> or <tt>.Z()</tt>) on this semaphore.
+
+        <p>Linux and OS X also set this when the semaphore's value is changed,
+        	although doing so disagrees with the POSIX specification.
+        	See <a href='https://bugzilla.kernel.org/show_bug.cgi?id=112271'>Linux kernel bug 112271</a>.
+    	</p>
     </dd>
 
     <dt>waiting_for_nonzero (read-only)</dt>
