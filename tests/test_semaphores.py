@@ -336,8 +336,10 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
 
     def test_attribute_last_pid(self):
         """exercise Semaphore.last_pid"""
-        # Under OS X and Linux, the call to semctl() during semaphore creation is enough to
-        # set last_pid. FreeBSD, however, requires a call to semop() (like acquire() or release()).
+        # According to the POSIX spec, only an operation (P(), V(), or Z()) should set last_pid,
+        # and under FreeBSD that's true. However, under Linux and OS X, setting the semaphore's
+        # value also changes last_pid. I believe this is incorrect behavior, and I've filed a
+        # bug against the Linux kernel: https://bugzilla.kernel.org/show_bug.cgi?id=112271
         self.sem.release()
         self.assertEqual(self.sem.last_pid, os.getpid())
         self.assertWriteToReadOnlyPropertyFails('last_pid', 42)
