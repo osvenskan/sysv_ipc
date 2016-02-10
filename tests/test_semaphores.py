@@ -336,6 +336,9 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
 
     def test_attribute_last_pid(self):
         """exercise Semaphore.last_pid"""
+        # Under OS X and Linux, the call to semctl() during semaphore creation is enough to
+        # set last_pid. FreeBSD, however, requires a call to semop() (like acquire() or release()).
+        self.sem.release()
         self.assertEqual(self.sem.last_pid, os.getpid())
         self.assertWriteToReadOnlyPropertyFails('last_pid', 42)
 
