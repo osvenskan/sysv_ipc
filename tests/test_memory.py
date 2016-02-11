@@ -169,17 +169,13 @@ class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
         # Should not raise an error
         self.mem.read(1)
 
-    @unittest.skipIf(sys.platform.startswith('darwin'),
-                     'Test causes Bus Error (hard crash) under OS X')
-    @unittest.skipIf(sys.platform.startswith('linux'), 'Test causes seg fault under Linux')
-    @unittest.skipIf(sys.platform.startswith('freebsd'), 'Test causes seg fault under FreeBSD')
     def test_attach_read_only(self):
         """exercise attach(SHM_RDONLY)"""
         self.assertTrue(self.mem.attached)
         self.mem.detach()
         self.assertFalse(self.mem.attached)
         self.mem.attach(None, sysv_ipc.SHM_RDONLY)
-        with self.assertRaises(sysv_ipc.PermissionsError):
+        with self.assertRaises(OSError):
             self.mem.write(' ')
 
 

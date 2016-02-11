@@ -2,6 +2,7 @@ typedef struct {
     PyObject_HEAD
     key_t key;
     int id;
+    int read_only;
     void *address;
 } SharedMemory;
 
@@ -53,5 +54,5 @@ PyObject *shm_repr(SharedMemory *);
 /* Utility functions */
 PyObject *shm_remove(int);
 
-PyObject *shm_attach(SharedMemory *, int);
+PyObject *shm_attach(SharedMemory *, void *, int);
 
