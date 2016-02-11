@@ -1,13 +1,25 @@
 # Python modules
 import time
-import md5
 import os
+import sys
+PY_MAJOR_VERSION = sys.version_info[0]
+# hashlib is only available in Python >= 2.5. I still want to support 
+# older Pythons so I import md5 if hashlib is not available. Fortunately
+# md5 can masquerade as hashlib for my purposes.
+try:
+    import hashlib
+except ImportError:
+    import md5 as hashlib
 
 # 3rd party modules
 import sysv_ipc
 
 # Utils for this demo
 import utils
+if PY_MAJOR_VERSION > 2:
+    import utils_for_3 as flex_utils
+else:
+    import utils_for_2 as flex_utils
 
 utils.say("Oooo 'ello, I'm Mrs. Premise!")
 
@@ -31,7 +43,7 @@ s = what_i_wrote
 
 utils.write_to_memory(memory, what_i_wrote)
 
-for i in xrange(0, params["ITERATIONS"]):
+for i in range(0, params["ITERATIONS"]):
     utils.say("iteration %d" % i)
     if not params["LIVE_DANGEROUSLY"]:
         # Releasing the semaphore...
@@ -61,13 +73,19 @@ for i in xrange(0, params["ITERATIONS"]):
         s = utils.read_from_memory(memory)
 
     # What I read must be the md5 of what I wrote or something's gone wrong.
+    if PY_MAJOR_VERSION > 2:
+        what_i_wrote = what_i_wrote.encode()
+
     try:
-        assert(s == md5.new(what_i_wrote).hexdigest())
-    except:
-        raise AssertionError, "Shared memory corruption after %d iterations." % i
+        assert(s == hashlib.md5(what_i_wrote).hexdigest())
+    except AssertionError:
+        flex_utils.raise_error(AssertionError, 
+                        "Shared memory corruption after %d iterations." % i)
 
-    what_i_wrote = md5.new(s).hexdigest()
-
+    # MD5 the reply and write back to Mrs. Conclusion.
+    if PY_MAJOR_VERSION > 2:
+        s = s.encode()
+    what_i_wrote = hashlib.md5(s).hexdigest()
     utils.write_to_memory(memory, what_i_wrote)
 
 

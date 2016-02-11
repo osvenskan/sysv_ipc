@@ -7,10 +7,11 @@ params = utils.read_params()
 try:
     mq = sysv_ipc.MessageQueue(params["KEY"])
     mq.remove()
-    print "message queue %d removed" % params["KEY"]
+    s = "message queue %d removed" % params["KEY"]
+    print (s)
 except:
-    print "message queue doesn't exist"
+    print ("message queue doesn't exist")
     
 
 
-print "\nAll clean!"
+print ("\nAll clean!")

@@ -15,7 +15,7 @@ except:
 if semaphore:
     semaphore.remove()
     
-print "The semaphore is cleaned up."
+print ("The semaphore is cleaned up.")
     
     
 try:
@@ -26,4 +26,4 @@ except:
 if memory:
     memory.remove()
 
-print "The shared memory is cleaned up."
+print ("The shared memory is cleaned up.")
