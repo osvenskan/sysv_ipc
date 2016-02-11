@@ -149,6 +149,14 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
         """tests that attach() is performed as part of init"""
         self.assertTrue(self.mem.attached)
 
+    def test_kwargs(self):
+        """ensure init accepts keyword args as advertised"""
+        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
+        mem = sysv_ipc.SharedMemory(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
+                                    size=sysv_ipc.PAGE_SIZE, init_character=b'x')
+        mem.detach()
+        mem.remove()
+
 
 class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
     """Exercise attach() and detach()"""
@@ -181,8 +189,7 @@ class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
     def test_attach_kwargs(self):
         """ensure attach() takes kwargs as advertised"""
         self.mem.detach()
-        # Should not raise an error
-        self.mem.attach(flags=0)
+        self.mem.attach(address=None, flags=0)
 
 
 class TestSharedMemoryReadWrite(SharedMemoryTestBase):
@@ -274,6 +281,14 @@ class TestSharedMemoryReadWrite(SharedMemoryTestBase):
         test_string = test_string.encode('utf-8')
         self.mem.write(test_string)
         self.assertEqual(self.mem.read(len(test_string)), test_string)
+
+    def test_read_kwargs(self):
+        """ensure read() accepts keyword args as advertised"""
+        self.mem.read(byte_count=1, offset=0)
+
+    def test_write_kwargs(self):
+        """ensure write() accepts keyword args as advertised"""
+        self.mem.write(b'x', offset=0)
 
 
 class TestSharedMemoryRemove(SharedMemoryTestBase):
