@@ -434,12 +434,16 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
 
 PyObject *
-SharedMemory_attach(SharedMemory *self, PyObject *args) {
+SharedMemory_attach(SharedMemory *self, PyObject *args, PyObject *keywords) {
     PyObject *py_address = NULL;
     void *address = NULL;
     int flags = 0;
+    static char *keyword_list[ ] = {"address", "flags", NULL};
 
-    if (!PyArg_ParseTuple(args, "|Oi", &py_address, &flags))
+    DPRINTF("Inside SharedMemory_attach()\n");
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywords, "|Oi", keyword_list,
+                                     &py_address, &flags))
         goto error_return;
 
     if ((!py_address) || (py_address == Py_None))

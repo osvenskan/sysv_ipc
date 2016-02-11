@@ -17,7 +17,7 @@ union ipc_perm_value {
 PyObject *SharedMemory_new(PyTypeObject *, PyObject *, PyObject *);
 int SharedMemory_init(SharedMemory *, PyObject *, PyObject *);
 void SharedMemory_dealloc(SharedMemory *);
-PyObject *SharedMemory_attach(SharedMemory *, PyObject *);
+PyObject *SharedMemory_attach(SharedMemory *, PyObject *, PyObject *);
 PyObject *SharedMemory_detach(SharedMemory *);
 PyObject *SharedMemory_read(SharedMemory *, PyObject *, PyObject *);
 PyObject *SharedMemory_write(SharedMemory *, PyObject *, PyObject *);

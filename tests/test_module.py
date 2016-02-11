@@ -67,6 +67,15 @@ class TestModuleFunctions(tests_base.Base):
 
         self.assertRaises(sysv_ipc.ExistentialError, sysv_ipc.SharedMemory, mem.key)
 
+    def test_attach_kwargs(self):
+        """Ensure attach takes kwargs as advertised"""
+        mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX)
+        mem.write('hello world')
+        mem.detach()
+        mem2 = sysv_ipc.attach(mem.id, flags=0)
+        mem2.detach()
+        mem.remove()
+
     def test_ftok(self):
         """Exercise ftok()"""
         with warnings.catch_warnings(record=True) as recorded_warnings:
