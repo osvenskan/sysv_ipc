@@ -98,11 +98,10 @@ sysv_ipc_attach(PyObject *self, PyObject *args, PyObject *keywords) {
     which I don't want to do.
     */
 	shm = (SharedMemory *)PyObject_New(SharedMemory, &SharedMemoryType);
-	shm->id  = id;
-	shm->address = address;
+	shm->id = id;
 
     DPRINTF("About to call shm_attach()\n");
-	if (Py_None == shm_attach(shm, flags))
+	if (Py_None == shm_attach(shm, address, flags))
 		// All is well
 		return (PyObject *)shm;
 	else
