@@ -130,6 +130,12 @@ class TestSemaphoreCreation(SemaphoreTestBase):
         self.assertEqual(sem.value, 42)
         sem.remove()
 
+    def test_kwargs(self):
+        """ensure init accepts keyword args as advertised"""
+        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
+        sem = sysv_ipc.Semaphore(None, flags=sysv_ipc.IPC_CREX, mode=0x180, initial_value=0)
+        sem.remove()
+
 
 class TestSemaphoreAquisition(SemaphoreTestBase):
     """Exercise acquiring semaphores"""
@@ -141,6 +147,19 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
         self.sem.block = False
         # Should raise no error
         self.sem.acquire()
+
+    def test_acquisition_delta(self):
+        """tests that the delta param works"""
+        self.sem.value = 42
+        self.sem.acquire(None, 10)
+        self.assertEqual(self.sem.value, 32)
+
+    def test_acquisition_zero_delta(self):
+        """tests that a zero delta is not allowed"""
+        # acquire() w/zero delta is not allowed because at the C level, P(), V(), and Z() all
+        # map to semop(), and the delta value is what differentiates P(), V(), and Z().
+        with self.assertRaises(ValueError):
+            self.sem.acquire(None, 0)
 
     def test_acquisition_non_blocking(self):
         """tests that a non-blocking attempt at acquisition works"""
@@ -201,6 +220,14 @@ class TestSemaphoreAquisition(SemaphoreTestBase):
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
 
+    def test_acquire_kwargs(self):
+        """Ensure acquire() takes kwargs as advertised"""
+        self.sem.acquire(timeout=None, delta=1)
+
+    def test_P_kwargs(self):
+        """Ensure P() takes kwargs as advertised"""
+        self.sem.P(timeout=None, delta=1)
+
 
 class TestSemaphoreRelease(SemaphoreTestBase):
     """Exercise releasing semaphores"""
@@ -211,8 +238,24 @@ class TestSemaphoreRelease(SemaphoreTestBase):
         # on platforms where that's ~2 billion, the test takes too long to run.
         # So I'll stick to a lower (but still very large) number of releases.
         n_releases = min(N_RELEASES, sysv_ipc.SEMAPHORE_VALUE_MAX - 1)
+        original_value = self.sem.value
         for i in range(n_releases):
             self.sem.release()
+        self.assertEqual(self.sem.value, original_value + n_releases)
+
+    def test_release_delta(self):
+        """tests that release()'s delta param works"""
+        original_value = self.sem.value
+        self.sem.release(5)
+        self.assertEqual(self.sem.value, original_value + 5)
+
+    def test_release_kwargs(self):
+        """Ensure release() takes kwargs as advertised"""
+        self.sem.release(delta=1)
+
+    def test_V_kwargs(self):
+        """Ensure V() takes kwargs as advertised"""
+        self.sem.V(delta=1)
 
     def test_context_manager(self):
         """tests that context manager acquire/release works"""
@@ -237,6 +280,13 @@ class TestSemaphoreZ(SemaphoreTestBase):
         self.sem.block = False
         with self.assertRaises(sysv_ipc.BusyError):
             self.sem.Z()
+
+    def test_Z_success(self):
+        """Ensure Z understands when the semaphore is zero"""
+        self.sem.value = 0
+        self.sem.block = False
+        # Should not raise BusyError
+        self.sem.Z()
 
     @unittest.skipUnless(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, "Requires Semaphore timeout support")
     def test_Z_zero_timeout(self):
@@ -276,6 +326,12 @@ class TestSemaphoreZ(SemaphoreTestBase):
         expected_delta = datetime.timedelta(seconds=wait_time)
 
         self.assertDeltasCloseEnough(actual_delta, expected_delta)
+
+    def test_Z_kwargs(self):
+        """Ensure Z() takes kwargs as advertised"""
+        self.sem.value = 0
+        self.sem.block = False
+        self.sem.Z(timeout=None)
 
 
 class TestSemaphoreRemove(SemaphoreTestBase):
