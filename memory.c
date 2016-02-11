@@ -32,7 +32,7 @@ shm_attach(SharedMemory *self, void *address, int shmat_flags) {
 
     self->address = shmat(self->id, address, shmat_flags);
 
-    if ( (void *)-1 == self->address) {
+    if ((void *)-1 == self->address) {
         self->address = NULL;
         switch (errno) {
             case EACCES:
@@ -454,32 +454,6 @@ SharedMemory_attach(SharedMemory *self, PyObject *args) {
     }
 
     return shm_attach(self, address, flags);
-
-    // self->address = shmat(self->id, address, flags);
-
-    // if ((void *)-1 == self->address) {
-    //     self->address = NULL;
-    //     switch (errno) {
-    //         case EACCES:
-    //             PyErr_SetString(pPermissionsException, "No permission to attach");
-    //         break;
-
-    //         case EINVAL:
-    //             PyErr_SetString(PyExc_ValueError, "Invalid address or flags");
-    //         break;
-
-    //         case ENOMEM:
-    //             PyErr_SetString(PyExc_MemoryError, "Not enough memory");
-    //         break;
-
-    //         default:
-    //             PyErr_SetFromErrno(PyExc_OSError);
-    //         break;
-    //     }
-    //     goto error_return;
-    // }
-
-    // Py_RETURN_NONE;
 
     error_return:
     return NULL;
