@@ -26,11 +26,11 @@ shm_repr(SharedMemory *self) {
 }
 
 PyObject *
-shm_attach(SharedMemory *self, int shmat_flags) {
+shm_attach(SharedMemory *self, void *address, int shmat_flags) {
     DPRINTF("attaching memory @ address %p with id %d using flags 0x%x\n",
-             self->address, self->id, shmat_flags);
+             address, self->id, shmat_flags);
 
-    self->address = shmat(self->id, self->address, shmat_flags);
+    self->address = shmat(self->id, address, shmat_flags);
 
     if ( (void *)-1 == self->address) {
         self->address = NULL;
@@ -44,7 +44,7 @@ shm_attach(SharedMemory *self, int shmat_flags) {
             break;
 
             case EINVAL:
-                PyErr_SetString(PyExc_ValueError, "Invalid id or address");
+                PyErr_SetString(PyExc_ValueError, "Invalid id, address, or flags");
             break;
 
             default:
@@ -53,6 +53,11 @@ shm_attach(SharedMemory *self, int shmat_flags) {
         }
 
         goto error_return;
+    }
+    else {
+        // memory was attached successfully
+        self->read_only = (shmat_flags & SHM_RDONLY) ? 1 : 0;
+        DPRINTF("set memory's internal read_only flag to %d\n", self->read_only);
     }
 
     Py_RETURN_NONE;
@@ -282,7 +287,8 @@ SharedMemory_new(PyTypeObject *type, PyObject *args, PyObject *kwlist) {
 
     if (NULL != self) {
         self->key = (key_t)-1;
-        self->id  = 0;
+        self->id = 0;
+        self->read_only = 0;
         self->address = NULL;
     }
 
@@ -393,7 +399,7 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
 
     // Attach the memory. If no write permissions requested, attach read-only.
     shmat_flags = (mode & 0200) ? 0 : SHM_RDONLY;
-    if (NULL == shm_attach(self, shmat_flags)) {
+    if (NULL == shm_attach(self, NULL, shmat_flags)) {
         // Bad news, something went wrong.
         goto error_return;
     }
@@ -447,31 +453,33 @@ SharedMemory_attach(SharedMemory *self, PyObject *args) {
         }
     }
 
-    self->address = shmat(self->id, address, flags);
+    return shm_attach(self, address, flags);
 
-    if ((void *)-1 == self->address) {
-        self->address = NULL;
-        switch (errno) {
-            case EACCES:
-                PyErr_SetString(pPermissionsException, "No permission to attach");
-            break;
+    // self->address = shmat(self->id, address, flags);
 
-            case EINVAL:
-                PyErr_SetString(PyExc_ValueError, "Invalid address or flags");
-            break;
+    // if ((void *)-1 == self->address) {
+    //     self->address = NULL;
+    //     switch (errno) {
+    //         case EACCES:
+    //             PyErr_SetString(pPermissionsException, "No permission to attach");
+    //         break;
 
-            case ENOMEM:
-                PyErr_SetString(PyExc_MemoryError, "Not enough memory");
-            break;
+    //         case EINVAL:
+    //             PyErr_SetString(PyExc_ValueError, "Invalid address or flags");
+    //         break;
 
-            default:
-                PyErr_SetFromErrno(PyExc_OSError);
-            break;
-        }
-        goto error_return;
-    }
+    //         case ENOMEM:
+    //             PyErr_SetString(PyExc_MemoryError, "Not enough memory");
+    //         break;
 
-    Py_RETURN_NONE;
+    //         default:
+    //             PyErr_SetFromErrno(PyExc_OSError);
+    //         break;
+    //     }
+    //     goto error_return;
+    // }
+
+    // Py_RETURN_NONE;
 
     error_return:
     return NULL;
@@ -612,6 +620,11 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     MyBuffer data;
     data.len = 0;
 #endif
+
+    if (self->read_only) {
+        PyErr_SetString(PyExc_OSError, "Write attempt on read-only memory segment");
+        goto error_return;
+    }
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, args_format, keyword_list,
 #if PY_MAJOR_VERSION > 2
