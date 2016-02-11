@@ -606,8 +606,8 @@ with sysv_ipc.Semaphore(name) as sem:
         </p>
     </dd>
 
-    <dt>write(s, [offset = 0])</dt>
-    <dd>Writes the bytes <span class="param">s</span> to the shared memory,
+    <dt>write(some_bytes, [offset = 0])</dt>
+    <dd>Writes bytes (i.e. <tt>str</tt> in Python 2) to the shared memory,
         starting at <span class="param">offset</span>. Passing a Unicode object
         may work, but doing so is unsupported and may be explicitly deprecated
         in a future version.
