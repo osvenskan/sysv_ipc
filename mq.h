@@ -7,9 +7,9 @@ typedef struct {
     unsigned long max_message_size;
 } MessageQueue;
 
-/* Message queue message struct for send() & receive() 
+/* Message queue message struct for send() & receive()
 On many systems this is defined in sys/msg.h already, but it's better
-for me to define it here. Name it something other than msgbuf to avoid 
+for me to define it here. Name it something other than msgbuf to avoid
 conflict with the struct that the OS header file might define.
 */
 struct queue_message {
@@ -18,24 +18,21 @@ struct queue_message {
 };
 
 /* Maximum message size is limited by (a) the largest Python string I can
-create and (b) SSIZE_T_MAX. The latter restriction comes from the spec which
-says, "If the value of msgsz is greater than {SSIZE_MAX}, the result is 
+create and (b) SSIZE_MAX. The latter restriction comes from the spec which
+says, "If the value of msgsz is greater than {SSIZE_MAX}, the result is
 implementation-defined."
 ref: http://www.opengroup.org/onlinepubs/000095399/functions/msgrcv.html
 */
-#if SSIZE_MAX > PY_STRING_LENGTH_MAX
-#define QUEUE_MESSAGE_SIZE_MAX  PY_STRING_LENGTH_MAX
-#else
-#define QUEUE_MESSAGE_SIZE_MAX  SSIZE_MAX
-#endif
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define QUEUE_MESSAGE_SIZE_MAX MIN(SSIZE_MAX, PY_STRING_LENGTH_MAX)
 
-/* The max message size is probably a very big number, and since a 
+/* The max message size is probably a very big number, and since a
 max-sized buffer is allocated every time receive() is called, it would be
 ugly if the default message size for new queues was the same as the max.
 In addition, many operating systems limit the entire queue to 2048 bytes,
 so defaulting the max message to something larger seems a bit stupid.
 
-This value is also present in numeric form in ReadMe.html, so if you 
+This value is also present in numeric form in ReadMe.html, so if you
 change it here, change it there too.
 */
 #define QUEUE_MESSAGE_SIZE_MAX_DEFAULT 2048
