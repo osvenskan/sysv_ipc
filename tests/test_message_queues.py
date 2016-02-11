@@ -93,6 +93,12 @@ class TestMessageQueueCreation(MessageQueueTestBase):
         mq = sysv_ipc.MessageQueue(self.mq.key)
         self.assertEqual(self.mq.id, mq.id)
 
+    def test_kwargs(self):
+        """ensure init accepts keyword args as advertised"""
+        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
+        mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
+                                   max_message_size=256)
+        mq.remove()
 
 class TestMessageQueueSendReceive(MessageQueueTestBase):
     """Exercise send() and receive()"""
@@ -196,6 +202,15 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
         test_string = test_string.encode('utf-8')
         self.mq.send(test_string)
         self.assertEqual(self.mq.receive(), (test_string, 1))
+
+    def test_send_kwargs(self):
+        """ensure send() accepts keyword args as advertised"""
+        self.mq.send(b'x', block=True, type=1)
+
+    def test_receive_kwargs(self):
+        """ensure receive() accepts keyword args as advertised"""
+        self.mq.send(b'x', block=True, type=1)
+        self.mq.receive(block=False, type=0)
 
 
 class TestMessageQueueRemove(MessageQueueTestBase):
