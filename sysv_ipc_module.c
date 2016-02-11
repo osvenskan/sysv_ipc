@@ -391,7 +391,7 @@ static PyMethodDef SharedMemory_methods[] = {
     },
     {   "attach",
         (PyCFunction)SharedMemory_attach,
-        METH_VARARGS,
+        METH_VARARGS | METH_KEYWORDS,
         "Attaches the shared memory"
     },
     {   "detach",

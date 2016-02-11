@@ -178,6 +178,12 @@ class TestSharedMemoryAttachDetach(SharedMemoryTestBase):
         with self.assertRaises(OSError):
             self.mem.write(' ')
 
+    def test_attach_kwargs(self):
+        """ensure attach() takes kwargs as advertised"""
+        self.mem.detach()
+        # Should not raise an error
+        self.mem.attach(flags=0)
+
 
 class TestSharedMemoryReadWrite(SharedMemoryTestBase):
     """Exercise read() and write()"""
