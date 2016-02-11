@@ -93,6 +93,10 @@ class TestModuleFunctions(tests_base.Base):
 
             self.assertEqual(len(recorded_warnings), 0)
 
+    def test_ftok_kwargs(self):
+        """Ensure ftok() takes kwargs as advertised"""
+        sysv_ipc.ftok('.', 42, silence_warning=True)
+
     def test_remove_semaphore(self):
         """Exercise remove_semaphore()"""
         sem = sysv_ipc.Semaphore(None, sysv_ipc.IPC_CREX)
