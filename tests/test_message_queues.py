@@ -217,9 +217,19 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         self.assertLessEqual(self.mq.key, sysv_ipc.KEY_MAX)
         self.assertWriteToReadOnlyPropertyFails('key', 42)
 
+    # The POSIX spec says "msgget() shall return a non-negative integer", but OS X sometimes
+    # returns a negative number like -1765146624. My guess is that they're using a UINT somewhere
+    # which exceeds INT_MAX and hence looks negative, or they just don't care about the spec.
+    # msgget() ref: http://pubs.opengroup.org/onlinepubs/009695399/functions/msgget.html
+    @unittest.skipIf(sys.platform.startswith('darwin'),
+                     'OS X message queues sometimes return negative ids')
     def test_property_id(self):
         """exercise MessageQueue.id"""
         self.assertGreaterEqual(self.mq.id, 0)
+        self.assertWriteToReadOnlyPropertyFails('id', 42)
+
+    def test_property_id_weak_for_darwin(self):
+        """exercise MessageQueue.id with the Darwin-failing test removed"""
         self.assertWriteToReadOnlyPropertyFails('id', 42)
 
     def test_attribute_max_size(self):
