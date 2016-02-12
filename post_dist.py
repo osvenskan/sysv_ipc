@@ -23,11 +23,11 @@ sha1_name = "releases/sysv_ipc-%s.sha1.txt" % VERSION
 tarball_content = open(tarball_name, 'rb').read()
 for hash_function_name in ('md5', 'sha1', 'sha256'):
     hash_function = getattr(hashlib, hash_function_name)
-    hash_value = hash_function(tarball_content)
+    hash_value = hash_function(tarball_content).hexdigest()
 
     hash_filename = "releases/sysv_ipc-{}.{}.txt".format(VERSION, hash_function_name)
 
-    open(hash_filename, "wb").write(hash_value)
+    open(hash_filename, "wb").write(hash_value.encode('ascii'))
     print(hash_function_name + " = " + hash_value)
 
 # Print an RSS item suitable for pasting into rss.xml
