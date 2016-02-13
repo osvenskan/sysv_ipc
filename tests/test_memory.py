@@ -336,29 +336,40 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
     def test_property_last_attach_time(self):
         """exercise SharedMemory.last_attach_time"""
         self.mem.detach()
+        original_last_attach_time = self.mem.last_attach_time
+        self.sleep_past_granularity()
         # I can't record exactly when this attach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.attach()
         self.assertLess(self.mem.last_attach_time - time.time(), 5)
+        # Ensure the time actually changed.
+        self.assertNotEqual(self.mem.last_attach_time, original_last_attach_time)
         self.assertWriteToReadOnlyPropertyFails('last_attach_time', 42)
 
     def test_property_last_detach_time(self):
         """exercise SharedMemory.last_detach_time"""
-        # I can't record exactly when this attach() happens, but as long as it is within 5 seconds
+        original_last_detach_time = self.mem.last_detach_time
+        self.sleep_past_granularity()
+        # I can't record exactly when this detach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.detach()
         self.assertLess(self.mem.last_detach_time - time.time(), 5)
+        # Ensure the time actually changed.
+        self.assertNotEqual(self.mem.last_detach_time, original_last_detach_time)
         self.assertWriteToReadOnlyPropertyFails('last_detach_time', 42)
 
     def test_property_last_change_time(self):
         """exercise SharedMemory.last_change_time"""
+        original_last_change_time = self.mem.last_change_time
+        self.sleep_past_granularity()
         # I can't record exactly when this last_change_time is set, but as long as it is within
         # 5 seconds of the assertion happening, this test will pass.
-
-        # BTW this is the most useless attribute ever:
-        # "The last time a process changed the uid, gid or mode on this segment."
-        self.mem.mode = 0x1ff  # = octal 777 which is expressed differently in Python 2 & 3
+        # The statement below might seem like a no-op, but setting the UID to any value triggers
+        # a call that should set last_change_time.
+        self.mem.uid = self.mem.uid
         self.assertLess(self.mem.last_change_time - time.time(), 5)
+        # Ensure the time actually changed.
+        self.assertNotEqual(self.mem.last_change_time, original_last_change_time)
         self.assertWriteToReadOnlyPropertyFails('last_change_time', 42)
 
     def test_property_creator_pid(self):

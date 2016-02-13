@@ -4,6 +4,7 @@
 import unittest
 import random
 import sys
+import time
 
 # Project imports
 import sysv_ipc
@@ -18,6 +19,30 @@ def make_key():
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
+    def sleep_past_granularity(self):
+        """A utility method that encapsulates a type-specific detail of testing.
+
+        I test all of the time-related variables in the IPC structs (o_time, shm_atime, shm_dtime,
+        shm_ctime, msg_ctime, msg_stime, and msg_rtime) to ensure they change when they're supposed
+        to (e.g. when a segment is detached, for shm_dtime). For variables that are initialized to 0
+        (like o_time), it's easy to verify that they're 0 to start with and then non-zero after the
+        change.
+
+        Other variables (like shm_ctime) are trickier to test because they're already non-zero
+        immediately after the object is created. My test has to save the value, do something that
+        should change it, and then compare the saved value to the current one via assertNotEqual().
+
+        Some (most? all?) systems define those time-related values as integral values (int or long),
+        so their granularity is only 1 second. If I don't force at least 1 second to elapse between
+        the statement where I save the value and the statement that should change it, they'll almost
+        always happen in the same second and the assertNotEqual() even though all code (mine and the
+        system) has behaved correctly.
+
+        This method sleeps for 1.1 seconds to avoid the problem described above.
+        """
+        time.sleep(1.1)
+
+
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name,
                                            value):
         """test that writing to a readonly property raises an exception"""
