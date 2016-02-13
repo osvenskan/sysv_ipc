@@ -273,18 +273,12 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         self.assertLess(self.mq.last_receive_time - time.time(), 5)
         self.assertWriteToReadOnlyPropertyFails('last_receive_time', 42)
 
-    # Changing the mode uses IPC_SET, and that should change last_change_time (msg_ctime in C)
-    # according to the docs that bother to explain what msg_ctime is at all. I don't think
-    # OS X ever sets msg_ctime. (Setting mq.uid and mq.mode didn't do the trick.)
-    @unittest.skipIf(sys.platform.startswith('darwin'),
-                     'last_change_time not implemented properly by OS X')
     def test_property_last_change_time(self):
         """exercise MessageQueue.last_change_time"""
         # Note that last_change_time doesn't start out as 0 (unlike e.g. last_receive_time), so
         # I don't test that here.
         original_last_change_time = self.mq.last_change_time
-        # Sleep to ensure the following statement actually happens at a different "time"
-        time.sleep(1)
+        self.sleep_past_granularity()
         # This might seem like a no-op, but setting the UID to any value triggers a call that
         # should set last_change_time.
         self.mq.uid = self.mq.uid
