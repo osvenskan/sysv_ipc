@@ -5,6 +5,7 @@ import unittest
 import os
 import resource
 import warnings
+import numbers
 
 # Project imports
 import sysv_ipc
@@ -22,12 +23,26 @@ class TestModuleConstants(tests_base.Base):
         """test that constants are what I expect"""
         self.assertEqual(sysv_ipc.IPC_CREX, sysv_ipc.IPC_CREAT | sysv_ipc.IPC_EXCL)
         self.assertEqual(sysv_ipc.PAGE_SIZE, resource.getpagesize())
-
         self.assertIn(sysv_ipc.SEMAPHORE_TIMEOUT_SUPPORTED, (True, False))
-
+        self.assertIsInstance(sysv_ipc.SEMAPHORE_VALUE_MAX, numbers.Integral)
         self.assertGreaterEqual(sysv_ipc.SEMAPHORE_VALUE_MAX, 1)
+        self.assertIsInstance(sysv_ipc.VERSION, str)
+        self.assertIsInstance(sysv_ipc.IPC_PRIVATE, numbers.Integral)
+        self.assertIsInstance(sysv_ipc.KEY_MIN, numbers.Integral)
+        self.assertIsInstance(sysv_ipc.KEY_MAX, numbers.Integral)
+        self.assertGreater(sysv_ipc.KEY_MAX, sysv_ipc.KEY_MIN)
+        self.assertIsInstance(sysv_ipc.SHM_RDONLY, numbers.Integral)
+        self.assertIsInstance(sysv_ipc.SHM_RND, numbers.Integral)
+        # These constants are only available under Linux as of this writing (Jan 2018).
+        for attr_name in ('SHM_HUGETLB', 'SHM_NORESERVE', 'SHM_REMAP'):
+            if hasattr(sysv_ipc, attr_name):
+                self.assertIsInstance(getattr(sysv_ipc, attr_name), numbers.Integral)
 
-        self.assertTrue(isinstance(sysv_ipc.VERSION, str))
+        self.assertIsInstance(sysv_ipc.__version__, str)
+        self.assertEqual(sysv_ipc.VERSION, sysv_ipc.__version__)
+        self.assertIsInstance(sysv_ipc.__author__, str)
+        self.assertIsInstance(sysv_ipc.__license__, str)
+        self.assertIsInstance(sysv_ipc.__copyright__, str)
 
 
 class TestModuleErrors(tests_base.Base):
