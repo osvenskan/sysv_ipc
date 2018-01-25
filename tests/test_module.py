@@ -91,7 +91,6 @@ class TestModuleFunctions(tests_base.Base):
         mem2.detach()
         mem.remove()
 
-
     def test_ftok(self):
         """Exercise ftok()'s behavior of raising a warning as documented"""
         # Test default value of silence_warning

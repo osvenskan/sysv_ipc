@@ -52,7 +52,7 @@
 
 <p>This describes the <tt>sysv_ipc</tt> module which gives Python access
 to System V inter-process semaphores, shared memory and message queues
-on most (all?) *nix flavors. Examples include OS X, Linux, FreeBSD,
+on most (all?) *nix flavors. Examples include macOS/OS X, Linux, FreeBSD,
 OpenSolaris 2008.11, and (maybe) AIX.
 It might also work under Windows with a library like
 <a href="http://www.cygwin.com/">Cygwin</a>.
@@ -323,7 +323,7 @@ situations specific to IPC.
             will not return until its wait condition is satisfied.
         </p>
 
-        <p>Most platforms provide <tt>semtimedop()</tt>. OS X is a
+        <p>Most platforms provide <tt>semtimedop()</tt>. macOS is a
             notable exception. The module's Boolean constant
             <tt>SEMAPHORE_TIMEOUT_SUPPORTED</tt>
             is True on platforms that support <tt>semtimedop()</tt>.
@@ -441,7 +441,7 @@ situations specific to IPC.
     <dd>The PID of the process that last called <tt>semop()</tt> (<tt>.P()</tt>,
         <tt>.V()</tt> or <tt>.Z()</tt>) on this semaphore.
 
-        <p>Linux and OS X also set this when the semaphore's value is changed,
+        <p>Linux and macOS also set this when the semaphore's value is changed,
         	although doing so disagrees with the POSIX specification.
         	See <a href='https://bugzilla.kernel.org/show_bug.cgi?id=112271'>Linux kernel bug 112271</a>.
     	</p>
@@ -1000,7 +1000,7 @@ relevant when dealing with System V message queues.
 </p>
 
 <p><strong>Some implementations impose extremely stingy limits.</strong>
-For instance, many BSDish systems (OS X, FreeBSD,
+For instance, many BSDish systems (macOS, FreeBSD,
 <a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=NETBSD">NetBSD</a>, and
 <a href="http://fxr.watson.org/fxr/source/sys/msg.h?v=OPENBSD">OpenBSD</a>)
 limit queues to 2048 bytes. Note that that's the <em>total
@@ -1017,7 +1017,7 @@ a recompile.
 it can't cushion them or even report them to you.
 On some systems the limits are expressed in header files, on others
 they're available through kernel interfaces (like FreeBSD's <tt>sysctl</tt>).
-Under OS X and to some extent OpenSolaris I can't figure out where they're
+Under macOS and to some extent OpenSolaris I can't figure out where they're
 defined and what I report here is the result of experimentation and educated
 guesses formed by Googling.
 </p>
@@ -1053,8 +1053,8 @@ set <tt>max_size</tt> to something larger and FreeBSD doesn't complain, but
 it also ignores the change.
 </p>
 
-<p><strong>OS X</strong> is the worst of the lot. Each queue is limited
-to 2048 bytes and OS X silently ignores attempts to increase this (just like
+<p><strong>macOS</strong> is the worst of the lot. Each queue is limited
+to 2048 bytes and macOS silently ignores attempts to increase this (just like
 FreeBSD). To add insult to injury, there appears to be no way to increase
 this limit short of recompiling the kernel.
 I'm guessing at this based on the
