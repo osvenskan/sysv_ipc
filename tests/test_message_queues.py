@@ -4,6 +4,7 @@
 import unittest
 import time
 import os
+import numbers
 
 # Project imports
 import sysv_ipc
@@ -14,7 +15,6 @@ import base as tests_base
 
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
-# - max_message_size of init
 
 
 class MessageQueueTestBase(tests_base.Base):
@@ -99,6 +99,7 @@ class TestMessageQueueCreation(MessageQueueTestBase):
         mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
                                    max_message_size=256)
         mq.remove()
+
 
 class TestMessageQueueSendReceive(MessageQueueTestBase):
     """Exercise send() and receive()"""
@@ -212,6 +213,15 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
         self.mq.send(b'x', block=True, type=1)
         self.mq.receive(block=False, type=0)
 
+    def test_max_message_size_respected(self):
+        '''ensure the max_message_size param is respected'''
+        mq = sysv_ipc.MessageQueue(None, sysv_ipc.IPC_CREX, max_message_size=10)
+
+        with self.assertRaises(ValueError):
+            mq.send(b' ' * 11, block=False)
+
+        mq.remove()
+
 
 class TestMessageQueueRemove(MessageQueueTestBase):
     """Exercise mq.remove()"""
@@ -245,6 +255,7 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
 
     def test_property_id_weak_for_darwin(self):
         """exercise MessageQueue.id with the Darwin-failing test removed"""
+        self.assertIsInstance(self.mq.id, numbers.Integral)
         self.assertWriteToReadOnlyPropertyFails('id', 42)
 
     def test_attribute_max_size(self):
@@ -334,6 +345,7 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         """exercise MessageQueue.cgid"""
         self.assertEqual(self.mq.cgid, os.getgid())
         self.assertWriteToReadOnlyPropertyFails('cgid', 42)
+
 
 if __name__ == '__main__':
     unittest.main()
