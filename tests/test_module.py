@@ -91,8 +91,10 @@ class TestModuleFunctions(tests_base.Base):
         mem2.detach()
         mem.remove()
 
+
     def test_ftok(self):
-        """Exercise ftok()"""
+        """Exercise ftok()'s behavior of raising a warning as documented"""
+        # Test default value of silence_warning
         with warnings.catch_warnings(record=True) as recorded_warnings:
             warnings.simplefilter("always")
 
@@ -101,6 +103,16 @@ class TestModuleFunctions(tests_base.Base):
             self.assertEqual(len(recorded_warnings), 1)
             self.assertTrue(issubclass(recorded_warnings[-1].category, Warning))
 
+        # Test explicit False value of silence_warning
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            warnings.simplefilter("always")
+
+            sysv_ipc.ftok('.', 42, silence_warning=False)
+
+            self.assertEqual(len(recorded_warnings), 1)
+            self.assertTrue(issubclass(recorded_warnings[-1].category, Warning))
+
+        # Test explicit True value of silence_warning
         with warnings.catch_warnings(record=True) as recorded_warnings:
             warnings.simplefilter("always")
 
@@ -111,6 +123,10 @@ class TestModuleFunctions(tests_base.Base):
     def test_ftok_kwargs(self):
         """Ensure ftok() takes kwargs as advertised"""
         sysv_ipc.ftok('.', 42, silence_warning=True)
+
+    def test_ftok_return_value(self):
+        """Ensure ftok() returns an int"""
+        self.assertIsInstance(sysv_ipc.ftok('.', 42, silence_warning=True), numbers.Integral)
 
     def test_remove_semaphore(self):
         """Exercise remove_semaphore()"""
