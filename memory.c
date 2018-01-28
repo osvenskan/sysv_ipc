@@ -102,8 +102,8 @@ shm_remove(int shared_memory_id) {
 
 static PyObject *
 shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
-	// FIXME
-	// Returns a boxed Python int or long. The caller assumes responsibility for the reference.
+	// Gets one of the values in GET_SET_IDENTIFIERS and returns it as a boxed Python int or long.
+	// The caller assumes responsibility for the reference.
 	// If an error occurs, sets the Python error and returns NULL.
     struct shmid_ds shm_info;
     PyObject *py_value = NULL;
