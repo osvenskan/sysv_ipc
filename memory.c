@@ -102,6 +102,9 @@ shm_remove(int shared_memory_id) {
 
 static PyObject *
 shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
+	// FIXME
+	// Returns a boxed Python int or long. The caller assumes responsibility for the reference.
+	// If an error occurs, sets the Python error and returns NULL.
     struct shmid_ds shm_info;
     PyObject *py_value = NULL;
 
@@ -268,10 +271,36 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
     return -1;
 }
 
+//https://docs.python.org/3/c-api/typeobj.html#buffer-structs
+int
+shm_get_buffer(SharedMemory *self, Py_buffer *view, int flags)
+{
+	PyObject *py_size = shm_get_value(self->id, SVIFP_SHM_SIZE);
+	Py_ssize_t size;
+
+    if (!py_size) {
+    	// If shm_get_value() failed, the Python error will already be set so there's no
+    	// need for me to set it here.
+        return -1;
+    }
+    else {
+#if PY_MAJOR_VERSION > 2
+    	size = PyLong_AsSsize_t(py_size);
+#else
+    	size = PyInt_AsSsize_t(py_size);
+#endif
+    	Py_DECREF(py_size);
+	    return PyBuffer_FillInfo(view,
+	    						 (PyObject *)self,
+	                             self->address,
+	                             size,
+	                             0,
+	                             flags);
+	}
+}
 
 
 /******************    Class methods     **********************/
-
 
 
 void
@@ -647,7 +676,6 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     error_return:
     return NULL;
 }
-
 
 PyObject *
 SharedMemory_remove(SharedMemory *self) {

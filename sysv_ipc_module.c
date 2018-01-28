@@ -498,7 +498,25 @@ static PyGetSetDef SharedMemory_gets_and_sets[] = {
     {NULL} /* Sentinel */
 };
 
-
+// // Python 3
+// PyBufferProcs SharedMemory_as_buffer = {
+//     (getbufferproc)shm_get_buffer,
+//     (releasebufferproc)NULL,
+// };
+// #else
+// Python 2
+// https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-python-2-7-when-class-implements-pep-3118
+PyBufferProcs SharedMemory_as_buffer = {
+#if PY_MAJOR_VERSION == 2
+    (readbufferproc)NULL,
+    (writebufferproc)NULL,
+    (segcountproc)NULL,
+    (charbufferproc)NULL,
+#endif
+    (getbufferproc)shm_get_buffer,
+    (releasebufferproc)NULL,
+};
+//#endif
 
 static PyTypeObject SharedMemoryType = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -519,8 +537,12 @@ static PyTypeObject SharedMemoryType = {
     (reprfunc)shm_str,                          // tp_str
     0,                                          // tp_getattro
     0,                                          // tp_setattro
-    0,                                          // tp_as_buffer
+    &SharedMemory_as_buffer,                    // tp_as_buffer
+#if PY_MAJOR_VERSION > 2
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   // tp_flags
+#else
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_NEWBUFFER,   // tp_flags
+#endif
     "System V shared memory object",            // tp_doc
     0,                                          // tp_traverse
     0,                                          // tp_clear
