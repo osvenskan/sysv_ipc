@@ -271,9 +271,11 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
     return -1;
 }
 
-//https://docs.python.org/3/c-api/typeobj.html#buffer-structs
 int
 shm_get_buffer(SharedMemory *self, Py_buffer *view, int flags)
+// Implementation of buffer interface (getbufferproc). The buffer implementation in Python 3.x was
+// backported to 2.7, and the 3.x documentation is more complete and easier to understand.
+// https://docs.python.org/3/c-api/typeobj.html#buffer-structs
 {
 	PyObject *py_size = shm_get_value(self->id, SVIFP_SHM_SIZE);
 	Py_ssize_t size;
