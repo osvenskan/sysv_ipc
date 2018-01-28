@@ -498,14 +498,13 @@ static PyGetSetDef SharedMemory_gets_and_sets[] = {
     {NULL} /* Sentinel */
 };
 
-// // Python 3
-// PyBufferProcs SharedMemory_as_buffer = {
-//     (getbufferproc)shm_get_buffer,
-//     (releasebufferproc)NULL,
-// };
-// #else
-// Python 2
-// https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-python-2-7-when-class-implements-pep-3118
+/* Python 2 and 3 both have a PyBufferProcs struct, but defined somewhat differently. The 2.x
+version has more fields. The 2.x documentation is confusing and incomplete. See here for some
+discussion --
+https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-python-2-7-when-class-implements-pep-3118
+
+Fortunately all the extra fields in the Python 2 version of the struct can just be NULL.
+*/
 PyBufferProcs SharedMemory_as_buffer = {
 #if PY_MAJOR_VERSION == 2
     (readbufferproc)NULL,
@@ -516,7 +515,6 @@ PyBufferProcs SharedMemory_as_buffer = {
     (getbufferproc)shm_get_buffer,
     (releasebufferproc)NULL,
 };
-//#endif
 
 static PyTypeObject SharedMemoryType = {
     PyVarObject_HEAD_INIT(NULL, 0)
