@@ -407,5 +407,75 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
         self.assertEqual(self.mem.cgid, os.getgid())
         self.assertWriteToReadOnlyPropertyFails('cgid', 42)
 
+
+class BufferProtocolTest(unittest.TestCase):
+    '''Exercise buffer protocol implmentation which allows creating memoryviews and bytesarrays'''
+    def setUp(self):
+        # Create a shared memory segment and write the (English) alphabet to it.
+        self.mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX, size=sysv_ipc.PAGE_SIZE)
+        ASCII_A = 0x61
+        self.alphabet = ''.join([chr(ASCII_A + i) for i in range(26)])
+
+        if tests_base.IS_PY3:
+            self.alphabet = bytes(self.alphabet, 'ASCII')
+
+        self.mem.write(self.alphabet)
+
+    def tearDown(self):
+        self.mem.detach()
+        self.mem.remove()
+
+    def test_bytearray(self):
+        '''Exercise creating a writeable bytesarray'''
+        # Confirm that we're so far, so good.
+        self.assertEqual(self.mem.read(26), self.alphabet)
+
+        ba = bytearray(self.mem)
+
+        self.assertEqual(len(ba), self.mem.size)
+
+        # Test reading & writing.
+        ba = ba.replace(b'c', b'x')
+
+        self.assertEqual(ba[:4], b'abxd')
+
+    def test_memoryview(self):
+        '''Exercise creating a writeable memoryview'''
+        # Confirm that we're so far, so good.
+        self.assertEqual(self.mem.read(26), self.alphabet)
+
+        mv = memoryview(self.mem)
+
+        # Ensure the memoryview has the properties I expect. Python populates a lot of the
+        # memoryview attributes (e.g. ndim, strides, etc.) based on what my sysv_ipc code reports
+        # to it, so testing the memoryview attributes is how I test that my code isn't lying to
+        # Python.
+        self.assertIsInstance(mv, memoryview)
+        self.assertEqual(mv.format, 'B')
+        self.assertEqual(mv.itemsize, 1)
+        self.assertEqual(mv.shape, (self.mem.size, ))
+        self.assertEqual(mv.ndim, 1)
+        self.assertEqual(mv.strides, (1, ))
+        self.assertFalse(mv.readonly)
+        self.assertEqual(len(mv), self.mem.size)
+
+        # Test slicing
+        to_chr = lambda c: chr(c) if tests_base.IS_PY3 else c
+        to_ord = lambda c: ord(c) if tests_base.IS_PY3 else c
+        self.assertEqual([to_chr(c) for c in mv[3:6]],
+                         ['d', 'e', 'f'])
+
+        # Test writing to the memoryview
+        mv[4] = to_ord('x')
+
+        self.assertEqual([to_chr(c) for c in mv[3:6]],
+                         ['d', 'x', 'f'])
+
+        # Ensure changes to the underlying segment are reflected in the memoryview
+        self.mem.write(b'xxx')
+        self.assertEqual([to_chr(c) for c in mv[:6]],
+                         ['x', 'x', 'x', 'd', 'x', 'f'])
+
+
 if __name__ == '__main__':
     unittest.main()

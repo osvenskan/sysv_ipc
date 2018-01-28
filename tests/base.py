@@ -42,7 +42,6 @@ class Base(unittest.TestCase):
         """
         time.sleep(1.1)
 
-
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name,
                                            value):
         """test that writing to a readonly property raises an exception"""
