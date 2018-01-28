@@ -536,11 +536,12 @@ static PyTypeObject SharedMemoryType = {
     0,                                          // tp_getattro
     0,                                          // tp_setattro
     &SharedMemory_as_buffer,                    // tp_as_buffer
-#if PY_MAJOR_VERSION > 2
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   // tp_flags
-#else
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_NEWBUFFER,   // tp_flags
+    // Python 2 needs the extra tp_flags Py_TPFLAGS_HAVE_NEWBUFFER.
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE
+#if PY_MAJOR_VERSION == 2
+                                             | Py_TPFLAGS_HAVE_NEWBUFFER
 #endif
+    ,                                           // tp_flags
     "System V shared memory object",            // tp_doc
     0,                                          // tp_traverse
     0,                                          // tp_clear
