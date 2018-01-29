@@ -409,7 +409,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
 
 
 class BufferProtocolTest(unittest.TestCase):
-    '''Exercise buffer protocol implmentation which allows creating memoryviews and bytesarrays'''
+    '''Exercise buffer protocol implementation which allows creating memoryviews and bytearrays'''
     def setUp(self):
         # Create a shared memory segment and write the (English) alphabet to it.
         self.mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX, size=sysv_ipc.PAGE_SIZE)
@@ -426,7 +426,7 @@ class BufferProtocolTest(unittest.TestCase):
         self.mem.remove()
 
     def test_bytearray(self):
-        '''Exercise creating a writeable bytesarray'''
+        '''Exercise creating a writeable bytearray'''
         # Confirm that we're so far, so good.
         self.assertEqual(self.mem.read(26), self.alphabet)
 
