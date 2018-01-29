@@ -740,6 +740,32 @@ else:
 
     print_mem_after()
 
+    print("Running memory create bytearray test...")
+    print_mem_before()
+
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
+
+    for i in range(1, TEST_COUNT):
+        foo = bytearray(mem)
+
+    mem.detach()
+    mem.remove()
+
+    print_mem_after()
+
+    print("Running memory create memoryview test...")
+    print_mem_before()
+
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX)
+
+    for i in range(1, TEST_COUNT):
+        foo = memoryview(mem)
+
+    mem.detach()
+    mem.remove()
+
+    print_mem_after()
+
 # ================ Message queue tests  ==============
 
 
