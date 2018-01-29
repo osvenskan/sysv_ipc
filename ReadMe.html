@@ -481,9 +481,17 @@ with sysv_ipc.Semaphore(name) as sem:
 
 <h3 id="shared_memory">The SharedMemory Class</h3>
 
-<p>This is a handle to a shared memory segment.
-</p>
+<p>This is a handle to a shared memory segment. </p>
 
+<h4>Buffer Protocol Support</h4>
+
+<p>
+	In addition to the
+	methods and attributes described below, <tt>SharedMemory</tt> supports
+	Python's buffer protocol, which means you can create <tt>bytearray</tt>
+	and <tt>memoryview</tt> objects based on a <tt>SharedMemory</tt> segment.
+	See <tt>demos/buffer_protocol</tt> for an example.
+</p>
 
 <h4>Methods</h4>
 
