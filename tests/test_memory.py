@@ -337,7 +337,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
         """exercise SharedMemory.last_attach_time"""
         self.mem.detach()
         original_last_attach_time = self.mem.last_attach_time
-        self.sleep_past_granularity()
+        tests_base.sleep_past_granularity()
         # I can't record exactly when this attach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.attach()
@@ -349,7 +349,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
     def test_property_last_detach_time(self):
         """exercise SharedMemory.last_detach_time"""
         original_last_detach_time = self.mem.last_detach_time
-        self.sleep_past_granularity()
+        tests_base.sleep_past_granularity()
         # I can't record exactly when this detach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.detach()
@@ -361,7 +361,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
     def test_property_last_change_time(self):
         """exercise SharedMemory.last_change_time"""
         original_last_change_time = self.mem.last_change_time
-        self.sleep_past_granularity()
+        tests_base.sleep_past_granularity()
         # I can't record exactly when this last_change_time is set, but as long as it is within
         # 5 seconds of the assertion happening, this test will pass.
         # The statement below might seem like a no-op, but setting the UID to any value triggers

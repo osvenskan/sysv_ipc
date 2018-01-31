@@ -289,7 +289,7 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         # Note that last_change_time doesn't start out as 0 (unlike e.g. last_receive_time), so
         # I don't test that here.
         original_last_change_time = self.mq.last_change_time
-        self.sleep_past_granularity()
+        tests_base.sleep_past_granularity()
         # This might seem like a no-op, but setting the UID to any value triggers a call that
         # should set last_change_time.
         self.mq.uid = self.mq.uid
