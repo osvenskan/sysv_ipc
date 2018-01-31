@@ -6,24 +6,21 @@ import utils
 
 params = utils.read_params()
 
+key = params["KEY"]
 
 try:
-    semaphore = sysv_ipc.Semaphore(params["KEY"], 0)
-except:
-    semaphore = None
-    
-if semaphore:
+    semaphore = sysv_ipc.Semaphore(key)
+except sysv_ipc.ExistentialError:
+    print('''The semaphore with key "{}" doesn't exist.'''.format(key))
+else:
     semaphore.remove()
-    
-print ("The semaphore is cleaned up.")
-    
-    
+    print('Removed the semaphore with key "{}".'.format(key))
+
+
 try:
-    memory = sysv_ipc.SharedMemory(params["KEY"], 0)
-except:
-    memory = None
-
-if memory:
+    memory = sysv_ipc.SharedMemory(key)
+except sysv_ipc.ExistentialError:
+    print('''The shared memory with key "{}" doesn't exist.'''.format(key))
+else:
     memory.remove()
-
-print ("The shared memory is cleaned up.")
+    print('Removed the shared memory with key "{}".'.format(key))
