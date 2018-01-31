@@ -860,12 +860,27 @@ with sysv_ipc.Semaphore(name) as sem:
 
 <h3>Usage Tips</h3>
 
-<h4>Sample Code</h4>
+<h4 id='samples'>Sample Code</h4>
 
-<p>This module comes with two demonstration apps. The first (in the
-directory <tt>demo</tt>) shows how to use shared memory and semaphores.
-The second (in the directory <tt>demo2</tt>) shows how to use
-message queues.
+<p>This module comes with four sets of demonstration code in the
+directory <tt>demos</tt>.</p>
+
+<ul>
+	<li><tt>sem_and_shm</tt> demonstrates using semaphores and
+		shared memory to share data between processes.
+	</li>
+	<li><tt>message_queues</tt> demonstrates using message queues
+		 to share data between processes.
+	</li>
+	<li><tt>buffer_protocol</tt> demonstrates creating <tt>bytearray</tt> and
+		<tt>memoryview</tt> objects atop shared memory.
+	</li>
+	<li><tt>semaphore_context_manager</tt> demonstrates using
+		semaphore instances in a context manager (<tt>with</tt> statement).
+	</li>
+
+</ul>
+
 
 
 <h4 id="ftok_weakness">The Weakness of <tt>ftok()</tt></h4>
