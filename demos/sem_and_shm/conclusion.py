@@ -1,24 +1,14 @@
 # Python modules
-import os
 import sys
-PY_MAJOR_VERSION = sys.version_info[0]
-# hashlib is only available in Python >= 2.5. I still want to support 
-# older Pythons so I import md5 if hashlib is not available. Fortunately
-# md5 can masquerade as hashlib for my purposes.
-try:
-    import hashlib
-except ImportError:
-    import md5 as hashlib
+import hashlib
 
 # 3rd party modules
 import sysv_ipc
 
 # Utils for this demo
 import utils
-if PY_MAJOR_VERSION > 2:
-    import utils_for_3 as flex_utils
-else:
-    import utils_for_2 as flex_utils
+
+PY_MAJOR_VERSION = sys.version_info[0]
 
 utils.say("Oooo 'ello, I'm Mrs. Conclusion!")
 
@@ -58,8 +48,7 @@ for i in range(0, params["ITERATIONS"]):
         try:
             assert(s == hashlib.md5(what_i_wrote).hexdigest())
         except AssertionError:
-            flex_utils.raise_error(AssertionError, 
-                        "Shared memory corruption after %d iterations." % i)
+            raise AssertionError("Shared memory corruption after %d iterations." % i)
 
     if PY_MAJOR_VERSION > 2:
         s = s.encode()

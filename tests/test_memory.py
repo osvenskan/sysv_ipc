@@ -460,8 +460,8 @@ class BufferProtocolTest(unittest.TestCase):
         self.assertEqual(len(mv), self.mem.size)
 
         # Test slicing
-        to_chr = lambda c: chr(c) if tests_base.IS_PY3 else c
-        to_ord = lambda c: ord(c) if tests_base.IS_PY3 else c
+        to_chr = lambda c: chr(c) if tests_base.IS_PY3 else c  # noqa E731 (silence flake8)
+        to_ord = lambda c: ord(c) if tests_base.IS_PY3 else c  # noqa E731 (silence flake8)
         self.assertEqual([to_chr(c) for c in mv[3:6]],
                          ['d', 'e', 'f'])
 

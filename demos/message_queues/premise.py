@@ -1,24 +1,15 @@
 # Python modules
 import time
 import sys
-PY_MAJOR_VERSION = sys.version_info[0]
-# hashlib is only available in Python >= 2.5. I still want to support 
-# older Pythons so I import md5 if hashlib is not available. Fortunately
-# md5 can masquerade as hashlib for my purposes.
-try:
-    import hashlib
-except ImportError:
-    import md5 as hashlib
+import hashlib
 
 # 3rd party modules
 import sysv_ipc
 
 # Utils for this demo
 import utils
-if PY_MAJOR_VERSION > 2:
-    import utils_for_3 as flex_utils
-else:
-    import utils_for_2 as flex_utils
+
+PY_MAJOR_VERSION = sys.version_info[0]
 
 utils.say("Oooo 'ello, I'm Mrs. Premise!")
 
@@ -35,7 +26,7 @@ what_i_sent = s
 
 for i in range(0, params["ITERATIONS"]):
     utils.say("iteration %d" % i)
-    
+
     s, _ = mq.receive()
     s = s.decode()
     utils.say("Received %s" % s)
@@ -44,19 +35,19 @@ for i in range(0, params["ITERATIONS"]):
     while s == what_i_sent:
         # Nothing new; give Mrs. Conclusion another chance to respond.
         mq.send(s)
-        
+
         s, _ = mq.receive()
         s = s.decode()
         utils.say("Received %s" % s)
 
-    # What I read must be the md5 of what I wrote or something's 
+    # What I read must be the md5 of what I wrote or something's
     # gone wrong.
     if PY_MAJOR_VERSION > 2:
         what_i_sent = what_i_sent.encode()
     try:
         assert(s == hashlib.md5(what_i_sent).hexdigest())
     except AssertionError:
-        flex_utils.raise_error(AssertionError, "Message corruption after %d iterations." % i)
+        raise AssertionError("Message corruption after %d iterations." % i)
 
     # MD5 the reply and write back to Mrs. Conclusion.
     s = hashlib.md5(s.encode()).hexdigest()
