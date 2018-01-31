@@ -10,7 +10,7 @@ sem = sysv_ipc.Semaphore(int(key))
 
 print('Child: waiting to aquire semaphore ' + key)
 
-with sem: 
+with sem:
     print('Child: semaphore {} aquired; holding for 3 seconds.'.format(sem.key))
 
     # Flip a coin to determine whether or not to bail out of the context.
