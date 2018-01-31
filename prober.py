@@ -133,7 +133,14 @@ def probe():
          "KEY_MIN": "LONG_MIN"
          }
 
-    conditionals = ["_SEM_SEMUN_UNDEFINED"]
+    # conditionals contains preprocessor #defines to be written to probe_results.h that might
+    # already be defined on some platforms. Any symbol in this list will be surrounded with
+    # preprocessor directives #ifndef/#endif in probe_results.h.
+    # If a symbol is in this list but isn't written to probe_results.h, no harm done.
+    conditionals = ["_SEM_SEMUN_UNDEFINED",
+                    # PAGE_SIZE is already #defined elsewhere on FreeBSD.
+                    "PAGE_SIZE",
+                    ]
 
     version = open("VERSION").read().strip()
 
@@ -183,6 +190,7 @@ what your operating system is capable of.
             f.write(msg + '\n'.join(lines) + '\n')
 
     return d
+
 
 if __name__ == "__main__":
     s = probe()
