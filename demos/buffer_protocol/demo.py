@@ -3,8 +3,8 @@ import sys
 import sysv_ipc
 
 IS_PY3 = (sys.version_info[0] == 3)
-to_chr = lambda c: chr(c) if IS_PY3 else c
-to_ord = lambda c: ord(c) if IS_PY3 else c
+to_chr = lambda c: chr(c) if IS_PY3 else c  # noqa E731  (silence flake8)
+to_ord = lambda c: ord(c) if IS_PY3 else c  # noqa E731  (silence flake8)
 
 # Create a shared memory segment and write the (English) alphabet to the shared memory.
 mem = sysv_ipc.SharedMemory(None, sysv_ipc.IPC_CREX, size=sysv_ipc.PAGE_SIZE)
