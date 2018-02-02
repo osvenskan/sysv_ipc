@@ -2,7 +2,7 @@
 sysv_ipc - A Python module for accessing System V semaphores, shared memory
             and message queues.
 
-Copyright (c) 2016, Philip Semanchuk
+Copyright (c) 2018, Philip Semanchuk
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -813,7 +813,7 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
 
     PyModule_AddStringConstant(module, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddStringConstant(module, "__version__", SYSV_IPC_VERSION);
-    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2016 Philip Semanchuk");
+    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2018 Philip Semanchuk");
     PyModule_AddStringConstant(module, "__author__", "Philip Semanchuk");
     PyModule_AddStringConstant(module, "__license__", "BSD");
 
