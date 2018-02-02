@@ -98,20 +98,9 @@ def sniff_union_semun_defined():
 
 
 def probe_semvmx():
-    # This is the hardcoded default that I chose for two reasons. First,
-    # it's the default on my Mac so I know at least one system needs it
-    # this low. Second, it fits neatly into a 16-bit signed int which
-    # makes me hope that it's low enough to be safe on all systems.
+    # At present, this is hardcoded and that seems fine on all systems I've tested.
+    # https://github.com/osvenskan/sysv_ipc/issues/3
     semvmx = 32767
-
-    # FIXME -- Ways to get SEMVMX --
-    # 1) Try to compile .c code assuming SEMVMX is #defined
-    # 2) Parse the output from `sysctl kern.sysv.semvmx` (doesn't work
-    #    on OS X).
-    # 3) Parse the output from `ipcs -S`
-    # 4) Run .c code that loops, releasing a semaphore until semop()
-    #    returns ERANGE or the value goes wonky. OS X lets the latter
-    #    happen, which AFAICT is a violation of the spec.
 
     return semvmx
 
