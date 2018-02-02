@@ -1,5 +1,11 @@
 # Python modules
-import distutils.core as duc
+# setuptools is apparently distributed with python.org Python now. Does that mean it's
+# standard? Who knows. I need it to build wheels on my machine, otherwise setup can get by just
+# fine with distutils.
+try:
+    import setuptools as distutools
+except ImportError:
+    import distutils.core as distutools
 
 # sysv_ipc installation helper module
 import prober
@@ -34,27 +40,27 @@ keywords = "sysv ipc inter-process communication semaphore shared memory shm mes
 
 prober.probe()
 
-extension = duc.Extension("sysv_ipc",
-                          source_files,
-                          # extra_compile_args=['-E'],
-                          depends=["common.c", "common.h", "memory.c",
-                                   "memory.h", "mq.c", "mq.h",
-                                   "probe_results.h", "semaphore.c",
-                                   "semaphore.h", "sysv_ipc_module.c",
-                                   ],
-                          )
+extension = distutools.Extension("sysv_ipc",
+                                 source_files,
+                                 # extra_compile_args=['-E'],
+                                 depends=["common.c", "common.h", "memory.c",
+                                          "memory.h", "mq.c", "mq.h",
+                                          "probe_results.h", "semaphore.c",
+                                          "semaphore.h", "sysv_ipc_module.c",
+                                          ],
+                                 )
 
-duc.setup(name=name,
-          version=VERSION,
-          description=description,
-          long_description=long_description,
-          author=author,
-          author_email=author_email,
-          maintainer=maintainer,
-          url=url,
-          download_url=download_url,
-          classifiers=classifiers,
-          license=license,
-          keywords=keywords,
-          ext_modules=[extension]
-          )
+distutools.setup(name=name,
+                 version=VERSION,
+                 description=description,
+                 long_description=long_description,
+                 author=author,
+                 author_email=author_email,
+                 maintainer=maintainer,
+                 url=url,
+                 download_url=download_url,
+                 classifiers=classifiers,
+                 license=license,
+                 keywords=keywords,
+                 ext_modules=[extension]
+                 )
