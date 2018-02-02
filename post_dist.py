@@ -46,4 +46,4 @@ print("""
 
 """ % (VERSION, VERSION, timestamp, VERSION))
 
-print("Don't forget this:\nhg tag rel" + VERSION)
+print("Don't forget this:\ngit tag rel" + VERSION)
