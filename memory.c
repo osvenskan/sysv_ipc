@@ -630,11 +630,6 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     data.len = 0;
 #endif
 
-    if (self->read_only) {
-        PyErr_SetString(PyExc_OSError, "Write attempt on read-only memory segment");
-        goto error_return;
-    }
-
     if (!PyArg_ParseTupleAndKeywords(args, kw, args_format, keyword_list,
 #if PY_MAJOR_VERSION > 2
                           &data,
@@ -643,6 +638,11 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
 #endif
                           &offset))
         goto error_return;
+
+    if (self->read_only) {
+        PyErr_SetString(PyExc_OSError, "Write attempt on read-only memory segment");
+        goto error_return;
+    }
 
     if (self->address == NULL) {
         PyErr_SetString(pNotAttachedException, "Write attempt on unattached memory segment");
@@ -673,9 +673,16 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
 
     memcpy((self->address + offset), data.buf, data.len);
 
+#if PY_MAJOR_VERSION > 2
+    PyBuffer_Release(&data);
+#endif
+
     Py_RETURN_NONE;
 
     error_return:
+#if PY_MAJOR_VERSION > 2
+    PyBuffer_Release(&data);
+#endif
     return NULL;
 }
 

@@ -5,7 +5,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2018 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2019 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory message queue">
 
 	<title>The sysv_ipc Module for SysV IPC Under Python -- Version History</title>
@@ -26,7 +26,16 @@
 <a href="http://semanchuk.com/philip/sysv_ipc/">sysv_ipc module</a>.</p>
 
 <ul>
-	<li id="v1_0_0"><strong><span id="current">Current</span> &ndash; 1.0.0 (2 Feb 2018) &ndash;</strong>
+	<li id="v1_0_1"><strong><span id="current">Current</span> &ndash; 1.0.1 (29 Nov 2019) &ndash;</strong>
+		<ul>
+			<li>Fix
+				<a href="https://github.com/osvenskan/sysv_ipc/issues/7">a memory leak bug in <tt>SharedMemory.write()</tt> that only occurred under Python 3</a>. Thanks to Andy for reporting!
+			</li>
+			<li>This will be the last version to support Python 2 which is pining for the fjords.</li>
+		</ul>
+	</li>
+
+	<li>1.0.0 (2 Feb 2018) &ndash;
 		<p>I'm bumping the version number to 1.0.0 because I now consider this feature complete.
 			That doesn't mean I won't add features, but I don't feel like I need to.
 		</p>
