@@ -8,21 +8,13 @@
 
 PyObject *
 mq_str(MessageQueue *self) {
-#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#else
-    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#endif
 }
 
 
 PyObject *
 mq_repr(MessageQueue *self) {
-#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("sysv_ipc.MessageQueue(%ld)", (long)self->key);
-#else
-    return PyString_FromFormat("sysv_ipc.MessageQueue(%ld)", (long)self->key);
-#endif
 }
 
 
@@ -119,12 +111,7 @@ int
 set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
     struct msqid_ds mq_info;
 
-#if PY_MAJOR_VERSION > 2
-    if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
-    {
+    if (!PyLong_Check(py_value)) {
         PyErr_Format(PyExc_TypeError, "The attribute must be an integer");
         goto error_return;
     }
@@ -156,37 +143,21 @@ set_a_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_value) {
 
     switch (field) {
         case SVIFP_IPC_PERM_UID:
-#if PY_MAJOR_VERSION > 2
             mq_info.msg_perm.uid = PyLong_AsLong(py_value);
-#else
-            mq_info.msg_perm.uid = PyInt_AsLong(py_value);
-#endif
         break;
 
         case SVIFP_IPC_PERM_GID:
-#if PY_MAJOR_VERSION > 2
             mq_info.msg_perm.gid = PyLong_AsLong(py_value);
-#else
-            mq_info.msg_perm.gid = PyInt_AsLong(py_value);
-#endif
         break;
 
         case SVIFP_IPC_PERM_MODE:
-#if PY_MAJOR_VERSION > 2
             mq_info.msg_perm.mode = PyLong_AsLong(py_value);
-#else
-            mq_info.msg_perm.mode = PyInt_AsLong(py_value);
-#endif
         break;
 
         case SVIFP_MQ_QUEUE_BYTES_MAX:
             // A msglen_t is unsigned.
             // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/msg.h.html
-#if PY_MAJOR_VERSION > 2
             mq_info.msg_qbytes = PyLong_AsUnsignedLongMask(py_value);
-#else
-            mq_info.msg_qbytes = PyInt_AsUnsignedLongMask(py_value);
-#endif
         break;
 
         default:
@@ -466,18 +437,8 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
        py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
        Python doesn't write to is zeroed out.
    */
-#if PY_MAJOR_VERSION > 2
     static char args_format[] = "s*|Oi";
     Py_buffer user_msg;
-#else
-    static char args_format[] = "s#|Oi";
-    typedef struct {
-        char *buf;
-        long len;
-    } MyBuffer;
-    MyBuffer user_msg;
-    user_msg.len = 0;
-#endif
     PyObject *py_block = NULL;
     int flags = 0;
     int type = 1;
@@ -487,12 +448,7 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
 
     // send(message, [block = True, [type = 1]])
     if (!PyArg_ParseTupleAndKeywords(args, keywords, args_format, keyword_list,
-#if PY_MAJOR_VERSION > 2
-                                     &user_msg,
-#else
-                                     &(user_msg.buf), &(user_msg.len),
-#endif
-                                     &py_block, &type))
+                                     &user_msg, &py_block, &type))
         goto error_return;
 
     if (type <= 0) {
@@ -560,19 +516,12 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
         goto error_return;
     }
 
-
-#if PY_MAJOR_VERSION > 2
     PyBuffer_Release(&user_msg);
-#endif
-
     free(p_msg);
-
     Py_RETURN_NONE;
 
     error_return:
-#if PY_MAJOR_VERSION > 2
     PyBuffer_Release(&user_msg);
-#endif
     free(p_msg);
     return NULL;
 }
@@ -647,13 +596,8 @@ MessageQueue_receive(MessageQueue *self, PyObject *args, PyObject *keywords) {
     }
 
     py_return_tuple = Py_BuildValue("NN",
-#if PY_MAJOR_VERSION > 2
                                     PyBytes_FromStringAndSize(p_msg->message, rc),
                                     PyLong_FromLong(p_msg->type)
-#else
-                                    PyString_FromStringAndSize(p_msg->message, rc),
-                                    PyInt_FromLong(p_msg->type)
-#endif
                                    );
 
     free(p_msg);
@@ -670,4 +614,3 @@ PyObject *
 MessageQueue_remove(MessageQueue *self) {
     return mq_remove(self->id);
 }
-
