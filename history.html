@@ -5,7 +5,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="author" content="Philip Semanchuk">
-	<meta name="copyright" content="All contents &copy; 2020 Philip Semanchuk">
+	<meta name="copyright" content="All contents &copy; 2021 Philip Semanchuk">
 	<meta name="keywords" content="python sysv system v ipc semaphore shared memory message queue">
 
 	<title>The sysv_ipc Module for SysV IPC Under Python -- Version History</title>
@@ -26,7 +26,15 @@
 <a href="http://semanchuk.com/philip/sysv_ipc/">sysv_ipc module</a>.</p>
 
 <ul>
-	<li id="v1_0_1"><strong><span id="current">Current</span> &ndash; 1.0.1 (29 Nov 2019) &ndash;</strong>
+	<li id="v1_1_0"><strong><span id="current">Current</span> &ndash; 1.1.0 (16 Jan 2021) &ndash;</strong>
+		<ul>
+			<li>Drop Python 2 support, also support for Python 3.4 and 3.5.</li>
+			<li><strong>Behavior change:</strong> Change <code>ftok()</code> to raise <code>OSError</code> if it fails so the particulars of the failure are visible to the caller. Thanks to James Williams for the suggestion. (Previously the function just returned -1 if it failed.)
+			</li>
+		</ul>
+	</li>
+
+	<li id="v1_0_1">1.0.1 (29 Nov 2019) &ndash;
 		<ul>
 			<li>Fix
 				<a href="https://github.com/osvenskan/sysv_ipc/issues/7">a memory leak bug in <code>SharedMemory.write()</code> that only occurred under Python 3</a>. Thanks to Andy for reporting!
