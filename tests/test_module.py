@@ -6,6 +6,7 @@ import os
 import resource
 import warnings
 import numbers
+import tempfile
 
 # Project imports
 import sysv_ipc
@@ -126,6 +127,14 @@ class TestModuleFunctions(tests_base.Base):
     def test_ftok_return_value(self):
         """Ensure ftok() returns an int"""
         self.assertIsInstance(sysv_ipc.ftok('.', 42, silence_warning=True), numbers.Integral)
+
+    def test_ftok_raises_os_error(self):
+        """Ensure ftok() failure raises an exception"""
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            # Create a path that should cause ftok() to fail.
+            does_not_exist_path = os.path.join(tmp_dir_name, "does_not_exist")
+            with self.assertRaises(OSError):
+                sysv_ipc.ftok(does_not_exist_path, 42, silence_warning=True)
 
     def test_remove_semaphore(self):
         """Exercise remove_semaphore()"""

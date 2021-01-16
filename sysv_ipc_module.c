@@ -136,6 +136,11 @@ sysv_ipc_ftok(PyObject *self, PyObject *args, PyObject *keywords) {
 
     DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, (long)rc);
 
+    if (rc == (key_t)-1) {
+	    PyErr_SetFromErrno(PyExc_OSError);
+	    goto error_return;
+	}
+
     return Py_BuildValue("i", rc);
 
     error_return:
