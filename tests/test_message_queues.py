@@ -1,23 +1,19 @@
 # Python imports
-# Don't add any from __future__ imports here. This code should execute
-# against standard Python.
 import unittest
 import time
 import os
 import numbers
+import sys
 
 # Project imports
 import sysv_ipc
-# Hack -- add tests directory to sys.path so Python 3 can find base.py.
-import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
-import base as tests_base
+from .base import Base, make_key, sleep_past_granularity
 
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
 
 
-class MessageQueueTestBase(tests_base.Base):
+class MessageQueueTestBase(Base):
     """base class for MessageQueue test classes"""
     def setUp(self):
         self.mq = sysv_ipc.MessageQueue(None, sysv_ipc.IPC_CREX)
@@ -28,8 +24,7 @@ class MessageQueueTestBase(tests_base.Base):
 
     def assertWriteToReadOnlyPropertyFails(self, property_name, value):
         """test that writing to a readonly property raises TypeError"""
-        tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.mq,
-                                                           property_name, value)
+        Base.assertWriteToReadOnlyPropertyFails(self, self.mq, property_name, value)
 
 
 class TestMessageQueueCreation(MessageQueueTestBase):
@@ -50,7 +45,7 @@ class TestMessageQueueCreation(MessageQueueTestBase):
     def test_IPC_CREAT_new(self):
         """tests sysv_ipc.IPC_CREAT to create a new MessageQueue without IPC_EXCL"""
         # I can't pass None for the name unless I also pass IPC_EXCL.
-        key = tests_base.make_key()
+        key = make_key()
 
         # Note: this method of finding an unused key is vulnerable to a race
         # condition. It's good enough for test, but don't copy it for use in
@@ -64,7 +59,7 @@ class TestMessageQueueCreation(MessageQueueTestBase):
             except sysv_ipc.ExistentialError:
                 key_is_available = True
             else:
-                key = tests_base.make_key()
+                key = make_key()
 
         mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
 
@@ -289,7 +284,7 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         # Note that last_change_time doesn't start out as 0 (unlike e.g. last_receive_time), so
         # I don't test that here.
         original_last_change_time = self.mq.last_change_time
-        tests_base.sleep_past_granularity()
+        sleep_past_granularity()
         # This might seem like a no-op, but setting the UID to any value triggers a call that
         # should set last_change_time.
         self.mq.uid = self.mq.uid

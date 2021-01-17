@@ -1,6 +1,4 @@
 # Python imports
-# Don't add any from __future__ imports here. This code should execute
-# against standard Python.
 import unittest
 import datetime
 import time
@@ -8,10 +6,7 @@ import os
 
 # Project imports
 import sysv_ipc
-# Hack -- add tests directory to sys.path so Python 3 can find base.py.
-import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
-import base as tests_base
+from .base import Base, make_key
 
 # Not tested --
 # - mode seems to be settable and readable, but ignored by the OS
@@ -28,7 +23,7 @@ import base as tests_base
 N_RELEASES = 1000000  # 1 million
 
 
-class SemaphoreTestBase(tests_base.Base):
+class SemaphoreTestBase(Base):
     """base class for Semaphore test classes"""
     def setUp(self):
         self.sem = sysv_ipc.Semaphore(None, sysv_ipc.IPC_CREX, initial_value=1)
@@ -39,7 +34,7 @@ class SemaphoreTestBase(tests_base.Base):
 
     def assertWriteToReadOnlyPropertyFails(self, property_name, value):
         """test that writing to a readonly property raises TypeError"""
-        tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.sem, property_name, value)
+        Base.assertWriteToReadOnlyPropertyFails(self, self.sem, property_name, value)
 
     def assertDeltasCloseEnough(self, delta_a, delta_b):
         """Compare two datetime.timedeltas and ensure they're within < 1 second of one another.
@@ -75,7 +70,7 @@ class TestSemaphoreCreation(SemaphoreTestBase):
     def test_IPC_CREAT_new(self):
         """tests sysv_ipc.IPC_CREAT to create a new semaphore without IPC_EXCL"""
         # I can't pass None for the name unless I also pass IPC_EXCL.
-        key = tests_base.make_key()
+        key = make_key()
 
         # Note: this method of finding an unused key is vulnerable to a race
         # condition. It's good enough for test, but don't copy it for use in
@@ -88,7 +83,7 @@ class TestSemaphoreCreation(SemaphoreTestBase):
             except sysv_ipc.ExistentialError:
                 key_is_available = True
             else:
-                key = tests_base.make_key()
+                key = make_key()
 
         sem = sysv_ipc.Semaphore(key, sysv_ipc.IPC_CREAT)
 

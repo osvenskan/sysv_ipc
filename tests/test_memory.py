@@ -1,15 +1,10 @@
 # Python imports
-# Don't add any from __future__ imports here. This code should execute
-# against standard Python.
 import unittest
 import time
 import os
 
 # Project imports
-# Hack -- add tests directory to sys.path so Python 3 can find base.py.
-import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
-import base as tests_base
+from .base import Base, make_key, sleep_past_granularity
 import sysv_ipc
 
 # Not tested --
@@ -18,7 +13,7 @@ import sysv_ipc
 # - attempt to write to segment attached with SHM_RDONLY gives a segfault under OS X and Linux.
 
 
-class SharedMemoryTestBase(tests_base.Base):
+class SharedMemoryTestBase(Base):
     """base class for SharedMemory test classes"""
     # SIZE should be something that's not a power of 2 since that's more
     # likely to expose odd behavior.
@@ -35,8 +30,7 @@ class SharedMemoryTestBase(tests_base.Base):
 
     def assertWriteToReadOnlyPropertyFails(self, property_name, value):
         """test that writing to a readonly property raises TypeError"""
-        tests_base.Base.assertWriteToReadOnlyPropertyFails(self, self.mem,
-                                                           property_name, value)
+        Base.assertWriteToReadOnlyPropertyFails(self, self.mem, property_name, value)
 
 
 class TestSharedMemoryCreation(SharedMemoryTestBase):
@@ -61,7 +55,7 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
     def test_IPC_CREAT_new(self):
         """tests sysv_ipc.IPC_CREAT to create a new SharedMemory without IPC_EXCL"""
         # I can't pass None for the name unless I also pass IPC_EXCL.
-        key = tests_base.make_key()
+        key = make_key()
 
         # Note: this method of finding an unused key is vulnerable to a race
         # condition. It's good enough for test, but don't copy it for use in
@@ -75,7 +69,7 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
             except sysv_ipc.ExistentialError:
                 key_is_available = True
             else:
-                key = tests_base.make_key()
+                key = make_key()
 
         mem = sysv_ipc.SharedMemory(key, sysv_ipc.IPC_CREAT, size=sysv_ipc.PAGE_SIZE)
 
@@ -337,7 +331,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
         """exercise SharedMemory.last_attach_time"""
         self.mem.detach()
         original_last_attach_time = self.mem.last_attach_time
-        tests_base.sleep_past_granularity()
+        sleep_past_granularity()
         # I can't record exactly when this attach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.attach()
@@ -349,7 +343,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
     def test_property_last_detach_time(self):
         """exercise SharedMemory.last_detach_time"""
         original_last_detach_time = self.mem.last_detach_time
-        tests_base.sleep_past_granularity()
+        sleep_past_granularity()
         # I can't record exactly when this detach() happens, but as long as it is within 5 seconds
         # of the assertion happening, this test will pass.
         self.mem.detach()
@@ -361,7 +355,7 @@ class TestSharedMemoryPropertiesAndAttributes(SharedMemoryTestBase):
     def test_property_last_change_time(self):
         """exercise SharedMemory.last_change_time"""
         original_last_change_time = self.mem.last_change_time
-        tests_base.sleep_past_granularity()
+        sleep_past_granularity()
         # I can't record exactly when this last_change_time is set, but as long as it is within
         # 5 seconds of the assertion happening, this test will pass.
         # The statement below might seem like a no-op, but setting the UID to any value triggers
