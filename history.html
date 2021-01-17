@@ -29,7 +29,7 @@
 	<li id="v1_1_0"><strong><span id="current">Current</span> &ndash; 1.1.0 (17 Jan 2021) &ndash;</strong>
 		<ul>
 			<li>Drop support for Python 2, also for Python 3.4 and 3.5.</li>
-			<li><strong>Behavior change:</strong> Change <code>ftok()</code> to raise <code>OSError</code> if it fails so the particulars of the failure are visible to the caller. Thanks to James Williams for the suggestion. (Previously the function just returned -1 if it failed.)
+			<li><strong>Behavior change:</strong> <code>ftok()</code> now raises <code>OSError</code> if it fails so the particulars of the failure are visible to the caller. Thanks to James Williams for the suggestion. (Previously the function just returned -1 if it failed.)
 			</li>
 		</ul>
 	</li>
