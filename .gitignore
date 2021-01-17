@@ -8,5 +8,6 @@ prober/foo
 prober/0.c
 prober/1.c
 prober/2.c
-notes.txt
+notes.*
 sysv_ipc.egg-info/*
+post_dist.py
