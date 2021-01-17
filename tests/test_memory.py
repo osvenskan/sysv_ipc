@@ -416,8 +416,7 @@ class BufferProtocolTest(unittest.TestCase):
         ASCII_A = 0x61
         self.alphabet = ''.join([chr(ASCII_A + i) for i in range(26)])
 
-        if tests_base.IS_PY3:
-            self.alphabet = bytes(self.alphabet, 'ASCII')
+        self.alphabet = bytes(self.alphabet, 'ASCII')
 
         self.mem.write(self.alphabet)
 
@@ -460,21 +459,16 @@ class BufferProtocolTest(unittest.TestCase):
         self.assertEqual(len(mv), self.mem.size)
 
         # Test slicing
-        to_chr = lambda c: chr(c) if tests_base.IS_PY3 else c  # noqa E731 (silence flake8)
-        to_ord = lambda c: ord(c) if tests_base.IS_PY3 else c  # noqa E731 (silence flake8)
-        self.assertEqual([to_chr(c) for c in mv[3:6]],
-                         ['d', 'e', 'f'])
+        self.assertEqual([chr(c) for c in mv[3:6]], ['d', 'e', 'f'])
 
         # Test writing to the memoryview
-        mv[4] = to_ord('x')
+        mv[4] = ord('x')
 
-        self.assertEqual([to_chr(c) for c in mv[3:6]],
-                         ['d', 'x', 'f'])
+        self.assertEqual([chr(c) for c in mv[3:6]], ['d', 'x', 'f'])
 
         # Ensure changes to the underlying segment are reflected in the memoryview
         self.mem.write(b'xxx')
-        self.assertEqual([to_chr(c) for c in mv[:6]],
-                         ['x', 'x', 'x', 'd', 'x', 'f'])
+        self.assertEqual([chr(c) for c in mv[:6]], ['x', 'x', 'x', 'd', 'x', 'f'])
 
 
 if __name__ == '__main__':

@@ -8,7 +8,8 @@ import os
 
 RSS_TIMESTAMP_FORMAT = "%a, %d %b %Y %H:%M:%S GMT"
 
-VERSION = open("VERSION").read().strip()
+with open("VERSION") as f:
+    VERSION = f.read().strip()
 
 # Make a copy of the tarball for posterity
 tarball_name = "sysv_ipc-%s.tar.gz" % VERSION

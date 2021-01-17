@@ -1,8 +1,6 @@
 import time
 import sys
 
-PY_MAJOR_VERSION = sys.version_info[0]
-
 NULL_CHAR = '\0'
 
 

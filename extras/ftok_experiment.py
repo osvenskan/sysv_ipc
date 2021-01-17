@@ -3,17 +3,11 @@ import sys
 import os
 import sysv_ipc
 
-# Python 2's raw_input() has become input() in Python 3.
-if sys.version_info[0] == 3:
-    input_method = input
-else:
-    input_method = raw_input  # noqa - tell flake8 to chill
-
 if len(sys.argv) == 2:
     start_path = sys.argv[1]
 else:
     msg = "Start path? [Default = your home directory] "
-    start_path = input_method(msg)
+    start_path = input(msg)
     if not start_path:
         start_path = "~"
 
@@ -23,6 +17,7 @@ start_path = os.path.abspath(start_path)
 
 # For every filename in the tree, generate a key and associate the filename
 # with that key via a dictionary.
+print(f"Scanning {start_path}...")
 d = {}
 nfilenames = 0
 for path, dirnames, filenames in os.walk(start_path):
@@ -48,4 +43,4 @@ for key in d:
         ndups += len(d[key])
         print(key, d[key])
 
-print("Out of {0} unique filenames, I found {1} duplicate keys.".format(nfilenames, ndups))
+print(f"Out of {nfilenames} unique filenames, I found {ndups} duplicate keys.")
