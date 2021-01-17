@@ -58,12 +58,6 @@ convert_timeout(PyObject *py_timeout, void *converted_timeout) {
         rc = 1;
         simple_timeout = PyFloat_AsDouble(py_timeout);
     }
-#if PY_MAJOR_VERSION < 3
-    else if (PyInt_Check(py_timeout)) {
-        rc = 1;
-        simple_timeout = (double)PyInt_AsLong(py_timeout);
-    }
-#endif
     else if (PyLong_Check(py_timeout)) {
         rc = 1;
         simple_timeout = (double)PyLong_AsLong(py_timeout);
@@ -98,21 +92,13 @@ convert_timeout(PyObject *py_timeout, void *converted_timeout) {
 
 PyObject *
 sem_str(Semaphore *self) {
-#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#else
-    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#endif
 }
 
 
 PyObject *
 sem_repr(Semaphore *self) {
-#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("sysv_ipc.Semaphore(%ld)", (long)self->key);
-#else
-    return PyString_FromFormat("sysv_ipc.Semaphore(%ld)", (long)self->key);
-#endif
 }
 
 
@@ -291,11 +277,7 @@ sem_get_semctl_value(int semaphore_id, int cmd) {
         goto error_return;
     }
 
-#if PY_MAJOR_VERSION > 2
     return PyLong_FromLong(rc);
-#else
-    return PyInt_FromLong(rc);
-#endif
 
     error_return:
     return NULL;
@@ -363,11 +345,7 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_valu
 
     arg.buf = &sem_info;
 
-#if PY_MAJOR_VERSION > 2
     if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
     {
         PyErr_Format(PyExc_TypeError, "The attribute must be an integer");
         goto error_return;
@@ -391,27 +369,15 @@ sem_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, PyObject *py_valu
     // cast. If the user passes a value that's too big, tough cookies.
     switch (field) {
         case SVIFP_IPC_PERM_UID:
-#if PY_MAJOR_VERSION > 2
             sem_info.sem_perm.uid = (uid_t)PyLong_AsLong(py_value);
-#else
-            sem_info.sem_perm.uid = (uid_t)PyInt_AsLong(py_value);
-#endif
         break;
 
         case SVIFP_IPC_PERM_GID:
-#if PY_MAJOR_VERSION > 2
             sem_info.sem_perm.gid = (gid_t)PyLong_AsLong(py_value);
-#else
-            sem_info.sem_perm.gid = (gid_t)PyInt_AsLong(py_value);
-#endif
         break;
 
         case SVIFP_IPC_PERM_MODE:
-#if PY_MAJOR_VERSION > 2
             sem_info.sem_perm.mode = (mode_t)PyLong_AsLong(py_value);
-#else
-            sem_info.sem_perm.mode = (mode_t)PyInt_AsLong(py_value);
-#endif
         break;
 
         default:
@@ -624,21 +590,13 @@ sem_set_value(Semaphore *self, PyObject *py_value)
     union semun arg;
     long value;
 
-#if PY_MAJOR_VERSION > 2
     if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
     {
 		PyErr_Format(PyExc_TypeError, "Attribute 'value' must be an integer");
         goto error_return;
     }
 
-#if PY_MAJOR_VERSION > 2
     value = PyLong_AsLong(py_value);
-#else
-    value = PyInt_AsLong(py_value);
-#endif
 
     DPRINTF("C value is %ld\n", value);
 

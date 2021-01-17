@@ -103,83 +103,48 @@ Freebsd - l_int (int)
 // I assume it is a long; see comment above.
 // Some functions return (key_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/austin/interps/doc.tpl?gdid=6226
-#if PY_MAJOR_VERSION > 2
-    #define KEY_T_TO_PY(key)   PyLong_FromLong(key)
-#else
-    #define KEY_T_TO_PY(key)   PyInt_FromLong(key)
-#endif
+#define KEY_T_TO_PY(key)   PyLong_FromLong(key)
+
 // SUSv3 guarantees a uid_t to be an integer type. Some functions return
 // (uid_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
 // ref: http://www.opengroup.org/onlinepubs/9699919799/functions/chown.html
-#if PY_MAJOR_VERSION > 2
-    #define UID_T_TO_PY(uid)   PyLong_FromLong(uid)
-#else
-    #define UID_T_TO_PY(uid)   PyInt_FromLong(uid)
-#endif
+#define UID_T_TO_PY(uid)   PyLong_FromLong(uid)
 
 // SUSv3 guarantees a gid_t to be an integer type. Some functions return
 // (gid_t)-1, so I guess this has to be a signed type.
 // ref: http://www.opengroup.org/onlinepubs/009695399/basedefs/sys/types.h.html
-#if PY_MAJOR_VERSION > 2
-    #define GID_T_TO_PY(gid)   PyLong_FromLong(gid)
-#else
-    #define GID_T_TO_PY(gid)   PyInt_FromLong(gid)
-#endif
+#define GID_T_TO_PY(gid)   PyLong_FromLong(gid)
 
 // I'm not sure what guarantees SUSv3 makes about a mode_t, but param 3 of
 // shmget() is an int that contains flags in addition to the mode, so
 // mode must be able to fit into an int.
 // ref: http://www.opengroup.org/onlinepubs/009695399/functions/shmget.html
-#if PY_MAJOR_VERSION > 2
-    #define MODE_T_TO_PY(mode)   PyLong_FromLong(mode)
-#else
-    #define MODE_T_TO_PY(mode)   PyInt_FromLong(mode)
-#endif
+#define MODE_T_TO_PY(mode)   PyLong_FromLong(mode)
 
 // I'm not sure what guarantees SUSv3 makes about a time_t, but the times
 // I deal with here are all guaranteed to be after 1 Jan 1970 which means
 // they'll always be positive numbers. A ulong sounds appropriate to me,
 // and Python agrees in posixmodule.c.
-#if PY_MAJOR_VERSION > 2
-    #define TIME_T_TO_PY(time)   PyLong_FromUnsignedLong(time)
-#else
-    #define TIME_T_TO_PY(time)   py_int_or_long_from_ulong(time)
-#endif
+#define TIME_T_TO_PY(time)   PyLong_FromUnsignedLong(time)
 
 // C89 guarantees a size_t to be unsigned and fit into a ulong or smaller.
-#if PY_MAJOR_VERSION > 2
-    #define SIZE_T_TO_PY(size)   PyLong_FromUnsignedLong(size)
-#else
-    #define SIZE_T_TO_PY(size)   py_int_or_long_from_ulong(size)
-#endif
+#define SIZE_T_TO_PY(size)   PyLong_FromUnsignedLong(size)
 
 // SUSv3 guarantees a pid_t to be a signed integer type. Some functions
 // return (pid_t)-1 so I guess this has to be signed.
 // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/types.h.html#tag_13_67
-#if PY_MAJOR_VERSION > 2
-    #define PID_T_TO_PY(pid)   PyLong_FromLong(pid)
-#else
-    #define PID_T_TO_PY(pid)   PyInt_FromLong(pid)
-#endif
+#define PID_T_TO_PY(pid)   PyLong_FromLong(pid)
 
 // The SUS guarantees a msglen_t to be an unsigned integer type.
 // Ditto: msgqnum_t.
 // ref: http://www.opengroup.org/onlinepubs/000095399/basedefs/sys/msg.h.html
-#if PY_MAJOR_VERSION > 2
-    #define MSGLEN_T_TO_PY(msglen)     PyLong_FromUnsignedLong(msglen)
-    #define MSGQNUM_T_TO_PY(msgqnum)   PyLong_FromUnsignedLong(msgqnum)
-#else
-    #define MSGLEN_T_TO_PY(msglen)     py_int_or_long_from_ulong(msglen)
-    #define MSGQNUM_T_TO_PY(msgqnum)   py_int_or_long_from_ulong(msgqnum)
-#endif
+#define MSGLEN_T_TO_PY(msglen)     PyLong_FromUnsignedLong(msglen)
+#define MSGQNUM_T_TO_PY(msgqnum)   PyLong_FromUnsignedLong(msgqnum)
 
 /* Utility functions */
 key_t get_random_key(void);
 int convert_key_param(PyObject *, void *);
-#if PY_MAJOR_VERSION < 3
-PyObject *py_int_or_long_from_ulong(unsigned long);
-#endif
 
 /* Custom Exceptions/Errors */
 extern PyObject *pBaseException;

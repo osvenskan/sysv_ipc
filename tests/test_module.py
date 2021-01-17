@@ -1,23 +1,19 @@
 # Python imports
-# Don't add any from __future__ imports here. This code should execute
-# against standard Python.
 import unittest
 import os
 import resource
 import warnings
 import numbers
+import tempfile
 
 # Project imports
 import sysv_ipc
-# Hack -- add tests directory to sys.path so Python 3 can find base.py.
-import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'tests'))  # noqa - tell flake8 to chill
-import base as tests_base
+from .base import Base
 
 ONE_MILLION = 1000000
 
 
-class TestModuleConstants(tests_base.Base):
+class TestModuleConstants(Base):
     """Check that the sysv_ipc module-level constants are defined as expected"""
     def test_constant_values(self):
         """test that constants are what I expect"""
@@ -45,7 +41,7 @@ class TestModuleConstants(tests_base.Base):
         self.assertIsInstance(sysv_ipc.__copyright__, str)
 
 
-class TestModuleErrors(tests_base.Base):
+class TestModuleErrors(Base):
     """Exercise the exceptions defined by the module"""
     def test_errors(self):
         self.assertTrue(issubclass(sysv_ipc.Error, Exception))
@@ -56,7 +52,7 @@ class TestModuleErrors(tests_base.Base):
         self.assertTrue(issubclass(sysv_ipc.NotAttachedError, sysv_ipc.Error))
 
 
-class TestModuleFunctions(tests_base.Base):
+class TestModuleFunctions(Base):
     """Exercise the sysv_ipc module-level functions"""
     def test_attach(self):
         """Exercise attach()"""
@@ -126,6 +122,14 @@ class TestModuleFunctions(tests_base.Base):
     def test_ftok_return_value(self):
         """Ensure ftok() returns an int"""
         self.assertIsInstance(sysv_ipc.ftok('.', 42, silence_warning=True), numbers.Integral)
+
+    def test_ftok_raises_os_error(self):
+        """Ensure ftok() failure raises an exception"""
+        with tempfile.TemporaryDirectory() as tmp_dir_name:
+            # Create a path that should cause ftok() to fail.
+            does_not_exist_path = os.path.join(tmp_dir_name, "does_not_exist")
+            with self.assertRaises(OSError):
+                sysv_ipc.ftok(does_not_exist_path, 42, silence_warning=True)
 
     def test_remove_semaphore(self):
         """Exercise remove_semaphore()"""

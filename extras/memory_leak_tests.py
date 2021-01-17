@@ -18,12 +18,10 @@ SKIP_MESSAGE_QUEUE_TESTS = False
 # TEST_COUNT = 10
 TEST_COUNT = 1024 * 100
 
-PY_MAJOR_VERSION = sys.version_info[0]
-
 # ps output looks like this:
 #   RSZ      VSZ
 #   944    75964
-ps_output_regex = re.compile("""
+ps_output_regex = re.compile(r"""
     ^
     \s*   # whitespace before first heading
     \S*   # first heading (e.g. RSZ)
@@ -77,8 +75,7 @@ def get_memory_usage():
     #   RSZ      VSZ
     #   944    75964
 
-    if PY_MAJOR_VERSION > 2:
-        s = s.decode(sys.getfilesystemencoding())
+    s = s.decode(sys.getfilesystemencoding())
 
     m = ps_output_regex.match(s)
 
@@ -467,26 +464,25 @@ else:
 
     print_mem_after()
 
-    if PY_MAJOR_VERSION > 2:
-        print("Running memory read/write test with bytes...")
-        print_mem_before()
+    print("Running memory read/write test with bytes...")
+    print_mem_before()
 
-        mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX, size=sysv_ipc.PAGE_SIZE)
-        alphabet = "abcdefghijklmnopqrstuvwxyz".encode()
+    mem = sysv_ipc.SharedMemory(42, sysv_ipc.IPC_CREX, size=sysv_ipc.PAGE_SIZE)
+    alphabet = "abcdefghijklmnopqrstuvwxyz".encode()
 
-        s = alphabet
-        length = len(s)
-        for i in range(1, TEST_COUNT):
-            # length = random.randint(1, sysv_ipc.PAGE_SIZE)
-            # s = ''.join( [ random.choice(alphabet) for j in range(1, length + 1) ] )
-            mem.write(s)
-            assert(s == mem.read(length))
+    s = alphabet
+    length = len(s)
+    for i in range(1, TEST_COUNT):
+        # length = random.randint(1, sysv_ipc.PAGE_SIZE)
+        # s = ''.join( [ random.choice(alphabet) for j in range(1, length + 1) ] )
+        mem.write(s)
+        assert(s == mem.read(length))
 
-        mem.detach()
+    mem.detach()
 
-        mem.remove()
+    mem.remove()
 
-        print_mem_after()
+    print_mem_after()
 
     print("Running memory key read test...")
     print_mem_before()
@@ -795,20 +791,19 @@ else:
 
     print_mem_after()
 
-    if PY_MAJOR_VERSION > 2:
-        print("Running message queue send/receive test with bytes...")
-        print_mem_before()
+    print("Running message queue send/receive test with bytes...")
+    print_mem_before()
 
-        mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
+    mq = sysv_ipc.MessageQueue(42, sysv_ipc.IPC_CREX)
 
-        for i in range(1, TEST_COUNT):
-            s = random_string(15).encode()
-            mq.send(s)
-            assert(s == mq.receive()[0])
+    for i in range(1, TEST_COUNT):
+        s = random_string(15).encode()
+        mq.send(s)
+        assert(s == mq.receive()[0])
 
-        mq.remove()
+    mq.remove()
 
-        print_mem_after()
+    print_mem_after()
 
     print("Running message queue key read test...")
     print_mem_before()

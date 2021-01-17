@@ -2,7 +2,7 @@
 sysv_ipc - A Python module for accessing System V semaphores, shared memory
             and message queues.
 
-Copyright (c) 2018, Philip Semanchuk
+Copyright (c) 2021, Philip Semanchuk
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -135,6 +135,11 @@ sysv_ipc_ftok(PyObject *self, PyObject *args, PyObject *keywords) {
     rc = ftok(path, id);
 
     DPRINTF("path=%s, id=%d, rc=%ld\n", path, id, (long)rc);
+
+    if (rc == (key_t)-1) {
+	    PyErr_SetFromErrno(PyExc_OSError);
+	    goto error_return;
+	}
 
     return Py_BuildValue("i", rc);
 
@@ -506,12 +511,6 @@ https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-pyth
 Fortunately all the extra fields in the Python 2 version of the struct can just be NULL.
 */
 PyBufferProcs SharedMemory_as_buffer = {
-#if PY_MAJOR_VERSION == 2
-    (readbufferproc)NULL,
-    (writebufferproc)NULL,
-    (segcountproc)NULL,
-    (charbufferproc)NULL,
-#endif
     (getbufferproc)shm_get_buffer,
     (releasebufferproc)NULL,
 };
@@ -536,12 +535,7 @@ static PyTypeObject SharedMemoryType = {
     0,                                          // tp_getattro
     0,                                          // tp_setattro
     &SharedMemory_as_buffer,                    // tp_as_buffer
-    // Python 2 needs the extra tp_flags Py_TPFLAGS_HAVE_NEWBUFFER.
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE
-#if PY_MAJOR_VERSION == 2
-                                             | Py_TPFLAGS_HAVE_NEWBUFFER
-#endif
-    ,                                           // tp_flags
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   // tp_flags
     "System V shared memory object",            // tp_doc
     0,                                          // tp_traverse
     0,                                          // tp_clear
@@ -752,7 +746,6 @@ static PyMethodDef module_methods[ ] = {
 };
 
 
-#if PY_MAJOR_VERSION > 2
 static struct PyModuleDef this_module = {
 	PyModuleDef_HEAD_INIT,  // m_base
 	"sysv_ipc",             // m_name
@@ -764,20 +757,10 @@ static struct PyModuleDef this_module = {
 	NULL,                   // m_clear
 	NULL                    // m_free
 };
-#endif
-
-
-/* Module init function */
-#if PY_MAJOR_VERSION > 2
-#define SYSV_IPC_INIT_FUNCTION_NAME PyInit_sysv_ipc
-#else
-#define SYSV_IPC_INIT_FUNCTION_NAME initsysv_ipc
-#endif
-
 
 /* Module init function */
 PyMODINIT_FUNC
-SYSV_IPC_INIT_FUNCTION_NAME(void) {
+PyInit_sysv_ipc(void) {
     PyObject *module;
     PyObject *module_dict;
 
@@ -785,11 +768,7 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
     // random keys.
     srand((unsigned int)time(NULL));
 
-#if PY_MAJOR_VERSION > 2
     module = PyModule_Create(&this_module);
-#else
-    module = Py_InitModule3("sysv_ipc", module_methods, "System V IPC module");
-#endif
 
     if (!module)
         goto error_return;
@@ -883,15 +862,9 @@ SYSV_IPC_INIT_FUNCTION_NAME(void) {
     else
         PyDict_SetItemString(module_dict, "NotAttachedError", pNotAttachedException);
 
-#if PY_MAJOR_VERSION > 2
     return module;
-#endif
 
     error_return:
-#if PY_MAJOR_VERSION > 2
     return NULL;
-#else
-    ; // Nothing to do
-#endif
 }
 

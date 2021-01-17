@@ -1,12 +1,7 @@
 import time
 import sys
 
-PY_MAJOR_VERSION = sys.version_info[0]
-
-if PY_MAJOR_VERSION > 2:
-    NULL_CHAR = 0
-else:
-    NULL_CHAR = '\0'
+NULL_CHAR = '\0'
 
 
 def say(s):
@@ -19,17 +14,15 @@ def say(s):
 
 def write_to_memory(memory, s):
     say("writing %s " % s)
-    s += '\0'
-    if PY_MAJOR_VERSION > 2:
-        s = s.encode()
+    s += NULL_CHAR
+    s = s.encode()
     memory.write(s)
 
 
 def read_from_memory(memory):
     s = memory.read()
-    if PY_MAJOR_VERSION > 2:
-        s = s.decode()
-    i = s.find('\0')
+    s = s.decode()
+    i = s.find(NULL_CHAR)
     if i != -1:
         s = s[:i]
     say("read %s" % s)

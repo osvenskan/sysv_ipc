@@ -131,9 +131,10 @@ def probe():
                     "PAGE_SIZE",
                     ]
 
-    version = open("VERSION").read().strip()
+    with open("VERSION") as f:
+        version = f.read().strip()
 
-    d["SYSV_IPC_VERSION"] = '"%s"' % version
+    d["SYSV_IPC_VERSION"] = f'"{version}"'
     d["PAGE_SIZE"] = probe_page_size()
     if sniff_semtimedop():
         d["SEMTIMEDOP_EXISTS"] = ""

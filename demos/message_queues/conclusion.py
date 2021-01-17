@@ -1,5 +1,4 @@
 # Python modules
-import sys
 import hashlib
 
 # 3rd party modules
@@ -7,8 +6,6 @@ import sysv_ipc
 
 # Utils for this demo
 import utils
-
-PY_MAJOR_VERSION = sys.version_info[0]
 
 params = utils.read_params()
 
@@ -33,8 +30,7 @@ for i in range(0, params["ITERATIONS"]):
         utils.say("Received %s" % s)
 
     if what_i_sent:
-        if PY_MAJOR_VERSION > 2:
-            what_i_sent = what_i_sent.encode()
+        what_i_sent = what_i_sent.encode()
         try:
             assert(s == hashlib.md5(what_i_sent).hexdigest())
         except AssertionError:

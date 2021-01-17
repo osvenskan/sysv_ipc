@@ -9,20 +9,12 @@
 /******************    Internal use only     **********************/
 PyObject *
 shm_str(SharedMemory *self) {
-#if PY_MAJOR_VERSION > 2
-    return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#else
-    return PyString_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
-#endif
+	return PyUnicode_FromFormat("Key=%ld, id=%d", (long)self->key, self->id);
 }
 
 PyObject *
 shm_repr(SharedMemory *self) {
-#if PY_MAJOR_VERSION > 2
     return PyUnicode_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
-#else
-    return PyString_FromFormat("sysv_ipc.SharedMemory(%ld)", (long)self->key);
-#endif
 }
 
 PyObject *
@@ -159,11 +151,7 @@ shm_get_value(int shared_memory_id, enum GET_SET_IDENTIFIERS field) {
         case SVIFP_SHM_NUMBER_ATTACHED:
             // shm_nattch is unsigned
             // ref: http://www.opengroup.org/onlinepubs/007908799/xsh/sysshm.h.html
-#if PY_MAJOR_VERSION > 2
             py_value = PyLong_FromUnsignedLong(shm_info.shm_nattch);
-#else
-            py_value = py_int_or_long_from_ulong(shm_info.shm_nattch);
-#endif
         break;
 
         case SVIFP_IPC_PERM_UID:
@@ -286,11 +274,7 @@ shm_get_buffer(SharedMemory *self, Py_buffer *view, int flags)
         return -1;
     }
     else {
-#if PY_MAJOR_VERSION > 2
     	size = PyLong_AsSsize_t(py_size);
-#else
-    	size = PyInt_AsSsize_t(py_size);
-#endif
     	Py_DECREF(py_size);
 	    return PyBuffer_FillInfo(view,
 	    						 (PyObject *)self,
@@ -443,11 +427,7 @@ SharedMemory_init(SharedMemory *self, PyObject *args, PyObject *keywords) {
         if (!py_size)
             goto error_return;
         else {
-#if PY_MAJOR_VERSION > 2
             size = PyLong_AsUnsignedLongMask(py_size);
-#else
-            size = PyInt_AsUnsignedLongMask(py_size);
-#endif
 
             DPRINTF("memsetting address %p to %lu bytes of ASCII 0x%x (%c)\n", \
                     self->address, size, (int)init_character, init_character);
@@ -546,11 +526,7 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
     }
 
     if ( (py_size = shm_get_value(self->id, SVIFP_SHM_SIZE)) ) {
-#if PY_MAJOR_VERSION > 2
         size = PyLong_AsUnsignedLongMask(py_size);
-#else
-        size = PyInt_AsUnsignedLongMask(py_size);
-#endif
         Py_DECREF(py_size);
     }
     else
@@ -590,12 +566,7 @@ SharedMemory_read(SharedMemory *self, PyObject *args, PyObject *keywords) {
         }
     }
 
-
-#if PY_MAJOR_VERSION > 2
     return PyBytes_FromStringAndSize(self->address + offset, byte_count);
-#else
-    return PyString_FromStringAndSize(self->address + offset, byte_count);
-#endif
 
     error_return:
     return NULL;
@@ -617,25 +588,11 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     unsigned long size;
     PyObject *py_size;
     char *keyword_list[ ] = {"s", "offset", NULL};
-#if PY_MAJOR_VERSION > 2
     static char args_format[] = "s*|k";
     Py_buffer data;
-#else
-    static char args_format[] = "s#|k";
-    typedef struct {
-        const char *buf;
-        long len;
-    } MyBuffer;
-    MyBuffer data;
-    data.len = 0;
-#endif
 
     if (!PyArg_ParseTupleAndKeywords(args, kw, args_format, keyword_list,
-#if PY_MAJOR_VERSION > 2
                           &data,
-#else
-                          &(data.buf), &(data.len),
-#endif
                           &offset))
         goto error_return;
 
@@ -650,11 +607,7 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     }
 
     if ( (py_size = shm_get_value(self->id, SVIFP_SHM_SIZE)) ) {
-#if PY_MAJOR_VERSION > 2
         size = PyLong_AsUnsignedLongMask(py_size);
-#else
-        size = PyInt_AsUnsignedLongMask(py_size);
-#endif
         Py_DECREF(py_size);
     }
     else
@@ -673,16 +626,12 @@ SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
 
     memcpy((self->address + offset), data.buf, data.len);
 
-#if PY_MAJOR_VERSION > 2
     PyBuffer_Release(&data);
-#endif
 
     Py_RETURN_NONE;
 
     error_return:
-#if PY_MAJOR_VERSION > 2
     PyBuffer_Release(&data);
-#endif
     return NULL;
 }
 
@@ -769,21 +718,13 @@ int
 shm_set_uid(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
 
-#if PY_MAJOR_VERSION > 2
     if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
     {
         PyErr_SetString(PyExc_TypeError, "Attribute 'uid' must be an integer");
         goto error_return;
     }
 
-#if PY_MAJOR_VERSION > 2
     new_value.uid = PyLong_AsLong(py_value);
-#else
-    new_value.uid = PyInt_AsLong(py_value);
-#endif
 
     if (((uid_t)-1 == new_value.uid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
@@ -806,21 +747,13 @@ int
 shm_set_gid(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
 
-#if PY_MAJOR_VERSION > 2
     if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
     {
         PyErr_Format(PyExc_TypeError, "attribute 'gid' must be an integer");
         goto error_return;
     }
 
-#if PY_MAJOR_VERSION > 2
     new_value.gid = PyLong_AsLong(py_value);
-#else
-    new_value.gid = PyInt_AsLong(py_value);
-#endif
 
     if (((gid_t)-1 == new_value.gid) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
@@ -837,21 +770,13 @@ int
 shm_set_mode(SharedMemory *self, PyObject *py_value) {
     union ipc_perm_value new_value;
 
-#if PY_MAJOR_VERSION > 2
     if (!PyLong_Check(py_value))
-#else
-    if (!PyInt_Check(py_value))
-#endif
     {
         PyErr_Format(PyExc_TypeError, "attribute 'mode' must be an integer");
         goto error_return;
     }
 
-#if PY_MAJOR_VERSION > 2
     new_value.mode = PyLong_AsLong(py_value);
-#else
-    new_value.mode = PyInt_AsLong(py_value);
-#endif
 
     if (((mode_t)-1 == new_value.mode) && PyErr_Occurred()) {
         // no idea what could have gone wrong -- punt it up to the caller
