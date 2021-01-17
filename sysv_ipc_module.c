@@ -2,7 +2,7 @@
 sysv_ipc - A Python module for accessing System V semaphores, shared memory
             and message queues.
 
-Copyright (c) 2020, Philip Semanchuk
+Copyright (c) 2021, Philip Semanchuk
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
