@@ -21,7 +21,7 @@ TEST_COUNT = 1024 * 100
 # ps output looks like this:
 #   RSZ      VSZ
 #   944    75964
-ps_output_regex = re.compile("""
+ps_output_regex = re.compile(r"""
     ^
     \s*   # whitespace before first heading
     \S*   # first heading (e.g. RSZ)
