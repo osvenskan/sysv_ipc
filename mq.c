@@ -342,6 +342,9 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
                                      &mode, &max_message_size))
         goto error_return;
 
+    DPRINTF("After args, key=%ld, flags=0x%x, mode=0x%x\n",
+    		(long)self->key, flags, mode);
+
     if (max_message_size > QUEUE_MESSAGE_SIZE_MAX) {
         PyErr_Format(PyExc_ValueError, "The message length must be <= %lu\n",
             (unsigned long)QUEUE_MESSAGE_SIZE_MAX);
