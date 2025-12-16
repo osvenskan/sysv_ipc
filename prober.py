@@ -162,7 +162,7 @@ what your operating system is capable of.
 
 """
 
-    filename = "probe_results.h"
+    filename = "src/probe_results.h"
     if not os.path.exists(filename):
         lines = []
 
