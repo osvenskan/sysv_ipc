@@ -17,23 +17,23 @@ LICENSE = "BSD-3-Clause"
 # As of April 2025, use of tool.setuptools.ext-modules is stil experimental in pyproject.toml,
 # so I specify the extension module here in setup.py.
 SOURCE_FILES = [
-    "sysv_ipc_module.c",
-    "common.c",
-    "semaphore.c",
-    "memory.c",
-    "mq.c"
+    "src/sysv_ipc_module.c",
+    "src/common.c",
+    "src/semaphore.c",
+    "src/memory.c",
+    "src/mq.c"
 ]
 DEPENDS = [
-    "probe_results.h",
-    "common.c",
-    "common.h",
-    "memory.c",
-    "memory.h",
-    "mq.c",
-    "mq.h",
-    "semaphore.c",
-    "semaphore.h",
-    "sysv_ipc_module.c",
+    "src/probe_results.h",
+    "src/common.c",
+    "src/common.h",
+    "src/memory.c",
+    "src/memory.h",
+    "src/mq.c",
+    "src/mq.h",
+    "src/semaphore.c",
+    "src/semaphore.h",
+    "src/sysv_ipc_module.c",
 ]
 
 prober.probe()
