@@ -9,7 +9,7 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 
-#include "probe_results.h"
+#include "system_info.h"
 
 /* Struct to contain a key which can be None */
 typedef struct {

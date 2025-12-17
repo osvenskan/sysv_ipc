@@ -6,9 +6,7 @@ import sys
 # to it (which is guaranteed by setuptools to be the project's root) so that I can import my
 # build_support tools.
 sys.path.append('.')
-
-# sysv_ipc installation helper module
-import prober
+import build_support.discover_system_info
 
 # As of April 2025, specifying the license metadata here (rather than in pyproject.toml) seems
 # like the best solution for now. See https://github.com/osvenskan/posix_ipc/issues/68
@@ -24,7 +22,7 @@ SOURCE_FILES = [
     "src/mq.c"
 ]
 DEPENDS = [
-    "src/probe_results.h",
+    "src/system_info.h",
     "src/common.c",
     "src/common.h",
     "src/memory.c",
@@ -36,7 +34,8 @@ DEPENDS = [
     "src/sysv_ipc_module.c",
 ]
 
-prober.probe()
+# Run discovery to create system_info.h (if needed).
+build_support.discover_system_info.discover()
 
 ext_modules = [Extension("sysv_ipc",
                          SOURCE_FILES,
