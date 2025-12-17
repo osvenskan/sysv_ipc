@@ -73,4 +73,3 @@ PyObject *mq_repr(MessageQueue *);
 
 /* Misc. */
 PyObject *mq_remove(int);
-

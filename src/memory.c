@@ -261,8 +261,7 @@ shm_set_ipc_perm_value(int id, enum GET_SET_IDENTIFIERS field, union ipc_perm_va
 
 int
 shm_get_buffer(SharedMemory *self, Py_buffer *view, int flags)
-// Implementation of buffer interface (getbufferproc). The buffer implementation in Python 3.x was
-// backported to 2.7, and the 3.x documentation is more complete and easier to understand.
+// Implementation of buffer interface (getbufferproc).
 // https://docs.python.org/3/c-api/typeobj.html#buffer-structs
 {
 	PyObject *py_size = shm_get_value(self->id, SVIFP_SHM_SIZE);
@@ -577,13 +576,7 @@ PyObject *
 SharedMemory_write(SharedMemory *self, PyObject *args, PyObject *kw) {
     /* See comments for read() regarding "size issues". Note that here
        Python provides the byte_count so it can't be negative.
-
-       In Python >= 2.5, the Python argument specifier 's#' expects a
-       py_ssize_t for its second parameter. A long is long enough. It might
-       be too big, though, on platforms where a long is larger than
-       py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
-       Python doesn't write to is zeroed out.
-   */
+    */
     unsigned long offset = 0;
     unsigned long size;
     PyObject *py_size;
@@ -788,4 +781,3 @@ shm_set_mode(SharedMemory *self, PyObject *py_value) {
     error_return:
     return -1;
 }
-
