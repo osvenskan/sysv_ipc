@@ -89,25 +89,18 @@ class TestModuleFunctions(Base):
 
     def test_ftok(self):
         """Exercise ftok()'s behavior of raising a warning as documented"""
-        # Test default value of silence_warning
-        with warnings.catch_warnings(record=True) as recorded_warnings:
-            warnings.simplefilter("always")
+        expected_msg = 'Use of ftok() is not recommended; see sysv_ipc documentation'
 
+        # Test default value of silence_warning
+        with self.assertWarns(Warning, msg=expected_msg) as context:
             sysv_ipc.ftok('.', 42)
 
-            self.assertEqual(len(recorded_warnings), 1)
-            self.assertTrue(issubclass(recorded_warnings[-1].category, Warning))
-
         # Test explicit False value of silence_warning
-        with warnings.catch_warnings(record=True) as recorded_warnings:
-            warnings.simplefilter("always")
-
+        with self.assertWarns(Warning, msg=expected_msg) as context:
             sysv_ipc.ftok('.', 42, silence_warning=False)
 
-            self.assertEqual(len(recorded_warnings), 1)
-            self.assertTrue(issubclass(recorded_warnings[-1].category, Warning))
-
-        # Test explicit True value of silence_warning
+        # Test explicit True value of silence_warning. This is more complex because it requires
+        # capturing all warnings and ensuring that none occurred.
         with warnings.catch_warnings(record=True) as recorded_warnings:
             warnings.simplefilter("always")
 
