@@ -15,8 +15,6 @@ STDERR = subprocess.PIPE
 # when this script executes.
 OUTPUT_FILEPATH = "./src/system_info.h"
 
-PYTHON_INCLUDE_DIR = os.path.dirname(distutils.sysconfig.get_config_h_filename())
-
 class DiscoveryError(Exception):
     '''Exception raised when this script is unable to discover a value that it needs.'''
     pass
@@ -35,7 +33,6 @@ def _does_build_succeed(filename):
     cmd = [
        *shlex.split(cc),
        '-Wall',
-       '-I' + PYTHON_INCLUDE_DIR,
        '-o',
        f'./build_support/src/{filename[:-2]}',
        f'./build_support/src/{filename}',
