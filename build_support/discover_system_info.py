@@ -1,7 +1,6 @@
 import subprocess
 import os
 import shlex
-import distutils.sysconfig
 
 # Set these to None for compile/link debugging or subprocess.PIPE to silence
 # compiler warnings and errors.
