@@ -430,13 +430,6 @@ MessageQueue_init(MessageQueue *self, PyObject *args, PyObject *keywords) {
 
 PyObject *
 MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
-    /* In Python >= 2.5, the Python argument specifier 's#' expects a
-       py_ssize_t for its second parameter. A ulong is long enough to hold
-       a py_ssize_t.
-       It might be too big, though, on platforms where a long is larger than
-       py_ssize_t. Therefore I *must* initialize it to 0 so that whatever
-       Python doesn't write to is zeroed out.
-   */
     static char args_format[] = "s*|Oi";
     Py_buffer user_msg;
     PyObject *py_block = NULL;

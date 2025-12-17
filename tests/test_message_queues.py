@@ -90,8 +90,7 @@ class TestMessageQueueCreation(MessageQueueTestBase):
 
     def test_kwargs(self):
         """ensure init accepts keyword args as advertised"""
-        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
-        mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
+        mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0o0600,
                                    max_message_size=256)
         mq.remove()
 

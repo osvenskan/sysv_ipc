@@ -193,6 +193,12 @@ sysv_ipc_remove_message_queue(PyObject *self, PyObject *args) {
     return NULL;
 }
 
+/*
+
+    Semaphore stuff
+
+*/
+
 
 static PyMemberDef Semaphore_members[] = {
     {"id", T_INT, offsetof(Semaphore, id), READONLY, "The id assigned by the system"},
@@ -371,6 +377,12 @@ static PyTypeObject SemaphoreType = {
 };
 
 
+/*
+
+    Shared memory stuff
+
+*/
+
 
 static PyMemberDef SharedMemory_members[] = {
     {"id", T_INT, offsetof(SharedMemory, id), READONLY, "The id assigned by the system"},
@@ -503,13 +515,6 @@ static PyGetSetDef SharedMemory_gets_and_sets[] = {
     {NULL} /* Sentinel */
 };
 
-/* Python 2 and 3 both have a PyBufferProcs struct, but defined somewhat differently. The 2.x
-version has more fields. The 2.x documentation is confusing and incomplete. See here for some
-discussion --
-https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-python-2-7-when-class-implements-pep-3118
-
-Fortunately all the extra fields in the Python 2 version of the struct can just be NULL.
-*/
 PyBufferProcs SharedMemory_as_buffer = {
     (getbufferproc)shm_get_buffer,
     (releasebufferproc)NULL,
@@ -557,6 +562,11 @@ static PyTypeObject SharedMemoryType = {
 };
 
 
+/*
+
+    Message queue stuff
+
+*/
 
 
 static PyMemberDef MessageQueue_members[] = {
@@ -867,4 +877,3 @@ PyInit_sysv_ipc(void) {
     error_return:
     return NULL;
 }
-

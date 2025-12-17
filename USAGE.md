@@ -292,7 +292,7 @@ This module supplies a default `size` of `PAGE_SIZE` when `IPC_CREX` is specifie
 
 Attaches this process to the shared memory. The memory must be attached before calling `.read()` or `.write()`. Note that the constructor automatically attaches the memory so you won't need to call this method unless you explicitly detach it and then want to use it again.
 
-The address parameter allows one to specify (as a Python long) a memory address at which to attach the segment. Passing None (the default) is equivalent to passing NULL to `shmat()`. See that function's man page for details.
+The address parameter allows one to specify (as a Python int) a memory address at which to attach the segment. Passing None (the default) is equivalent to passing NULL to `shmat()`. See that function's man page for details.
 
 The flags are mostly only relevant if one specifies a specific address. One exception is the flag `SHM_RDONLY` which, surprisingly, attaches the segment read-only.
 
@@ -313,7 +313,7 @@ This method will never attempt to read past the end of the shared memory segment
 
 #### `write(some_bytes, [offset = 0])`
 
-Writes bytes to the shared memory, starting at `offset`. Passing a Unicode object may work, but doing so is unsupported and may be explicitly deprecated in a future version.
+Writes bytes to the shared memory, starting at `offset`. Passing a `str` object may work, but doing so is unsupported and may be explicitly deprecated in a future version.
 
 If the offset + data would write outside of the segment, this function raises `ValueError`.
 
@@ -411,7 +411,7 @@ The `flags` specify whether you want to create a new queue or open an existing o
  - With `flags` set to **`IPC_CREAT`**, the module **opens** the message queue identified by `key`**or creates** a new one if no such queue exists.
  - With `flags` set to **`IPC_CREX`** (`IPC_CREAT | IPC_EXCL`), the module **creates** a new message queue identified by `key`. If a queue with that key already exists, the call raises `ExistentialError`.
 
-The `max_message_size` can be increased from the default, but be aware of the issues discussed in [Message Queue Limits](#message-queue-limits)</a>.
+The `max_message_size` can be increased from the default, but be aware of the issues discussed in [Message Queue Limits](#message-queue-limits).
 
 ### Methods
 
@@ -451,7 +451,7 @@ The key provided in the constructor.
 
 The id assigned to this queue by the OS.
 
-#### `<dt id="queue_max_size">max_size`
+#### `max_size`
 
 The maximum size of the queue in bytes. Only a process with "appropriate privileges" can increase this value, and on some systems even that won't work. See [Message Queue Limits](#message-queue-limits) for details.
 
@@ -630,7 +630,7 @@ Other ~~bugs~~ suboptimal anomalies are recorded in [the issue tracker on GitHub
 These are features that may or may not be added depending on technical difficulty, user interest and so forth.
 
  - Update this documentation with a list of platforms that support `semtimedop()`.
- - Find a way to make `SEMAPHORE_VALUE_MAX` more accurate.
+ - Find a way to make `SEMAPHORE_VALUE_MAX` more accurate (https://github.com/osvenskan/sysv_ipc/issues/3)
 
 I don't plan to add support for semaphore sets, for which I've had only [one request](https://github.com/osvenskan/sysv_ipc/issues/18) in 17 years. If it's important to you, feel free to try to change my mind!
 
