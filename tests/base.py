@@ -38,21 +38,21 @@ def sleep_past_granularity():
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
-    def assertWriteToReadOnlyPropertyFails(self, target_object, property_name,
-                                           value):
-        """test that writing to a readonly property raises an exception"""
-        # The attributes tested with this code are implemented differently in C.
-        # For instance, Semaphore.value is a 'getseters' with a NULL setter,
-        # whereas Semaphore.name is a reference into the Semaphore member
-        # definition.
-        # Under Python 2.6, writing to sem.value raises AttributeError whereas
-        # writing to sem.name raises TypeError. Under Python 3, both raise
-        # AttributeError (but with different error messages!).
-        # This illustrates that Python is a little unpredictable in this
-        # matter. Rather than testing each of the numerous combinations of
-        # of Python versions and attribute implementation, I just accept
-        # both TypeError and AttributeError here.
-        # ref: http://bugs.python.org/issue1687163
-        # ref: http://bugs.python.org/msg127173
-        with self.assertRaises((TypeError, AttributeError)):
+    def assertWriteToReadOnlyPropertyFails(self, target_object, property_name, value):
+        """test that writing to a readonly property raises an exception with the expected msg"""
+        with self.assertRaises(AttributeError) as context:
             setattr(target_object, property_name, value)
+
+        # In addition to checking that AttributeError is raised, I also check the message text.
+        if property_name == 'id':
+            # For some reason 'id' gets a different message.
+            expected = 'readonly attribute'
+        else:
+            # Extract the class name. str() returns something like this --
+            #    <class 'sysv_ipc.SharedMemory'>
+            # From that, I only want this bit --
+            #    sysv_ipc.SharedMemory
+            class_name = str(target_object.__class__)[8:-2]
+            expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
+
+        assert str(context.exception) == expected
