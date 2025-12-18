@@ -15,7 +15,7 @@ def main():
     a negative one (or completes its max number of attempts). As of this writing, for me, this
     reaches returns a negative queue id 100% of the time, and takes < 1 second to run.
 
-    msgget() ref: http://pubs.opengroup.org/onlinepubs/009695399/functions/msgget.html
+    msgget() ref: https://pubs.opengroup.org/onlinepubs/9799919799/functions/msgget.html
     '''
     MAX_ITERATIONS = 200000
     done = False
