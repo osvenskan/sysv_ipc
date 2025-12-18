@@ -1,0 +1,22 @@
+I wrote the original code in 2008 and have been the maintainer ever since
+(Philip Semanchuk, https://github.com/osvenskan).
+
+Several people have contributed code to this project. In addition, others
+have contributed detailed problem reports, suggestions, troubleshooting, and
+documentation updates.
+
+Below is an incomplete list of contributors, in no particular order. I'm
+grateful for all of the help. Some of them contributed indirectly by
+contributing to this project's sister posix_ipc
+(https://github.com/osvenskan/posix_ipc) which I also maintain. Many
+improvements to posix_ipc are also relevant here.
+
+- 原志 (Daniel)
+- Álvaro Justen
+- Ronald Kaiser
+- Matt Ruffalo
+- Matiiss (https://github.com/Matiiss)
+- Martin Jansa (https://github.com/shr-project)
+- György Sárvári (https://github.com/OldManYellsAtCloud)
+- HaixiaoYanWind (https://github.com/HaixiaoYanWind)
+- Szymon Janora (https://github.com/szymon-janora)
