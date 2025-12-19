@@ -131,6 +131,8 @@ def discover():
     CONDITIONALS = ("_SEM_SEMUN_UNDEFINED",
                     # PAGE_SIZE is already #defined elsewhere on FreeBSD.
                     "PAGE_SIZE",
+                    # SEM_VALUE_MAX is often #defined in a system header file
+                    "SEM_VALUE_MAX",
                     )
 
     if os.path.exists(OUTPUT_FILEPATH):
