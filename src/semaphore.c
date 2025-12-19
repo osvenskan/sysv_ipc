@@ -123,8 +123,7 @@ sem_set_error(void) {
 
         case ERANGE:
             PyErr_Format(PyExc_ValueError,
-                "The semaphore's value must remain between 0 and %ld (SEMAPHORE_VALUE_MAX)",
-                (long)SEMAPHORE_VALUE_MAX);
+                "The semaphore's value must remain between 0 and SEM_VALUE_MAX");
         break;
 
         case EAGAIN:
@@ -603,13 +602,6 @@ sem_set_value(Semaphore *self, PyObject *py_value)
 
     if ((-1 == value) && PyErr_Occurred()) {
         // No idea what could cause this -- just raise it to the caller.
-        goto error_return;
-    }
-
-    if ((value < 0) || (value > SEMAPHORE_VALUE_MAX)) {
-		PyErr_Format(PyExc_ValueError,
-		    "Attribute 'value' must be between 0 and %ld (SEMAPHORE_VALUE_MAX)",
-		    (long)SEMAPHORE_VALUE_MAX);
         goto error_return;
     }
 

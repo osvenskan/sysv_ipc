@@ -151,9 +151,9 @@ def discover():
             sys_info["SEMTIMEDOP_EXISTS"] = ""
 
         # I hardcode the max value of a sempahore. I expect that this value is fine for most
-        # users, and those that need something different can use their own  system_info.h.
+        # users, and those that need something different can use their own system_info.h.
         # Details: https://github.com/osvenskan/sysv_ipc/issues/3
-        sys_info["SEMAPHORE_VALUE_MAX"] = 32767
+        sys_info["SEM_VALUE_MAX"] = 32767
 
         # On some platforms, it's the responsibility of my code to define the semun union, on
         # other platforms, it's already defined in a system header file. To avoid potential
