@@ -360,6 +360,17 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
         self.sem.value = 42
         self.assertEqual(self.sem.value, 42)
 
+        # test writing out of bounds values
+        expected = "The semaphore's value must remain between 0 and SEM_VALUE_MAX"
+
+        with self.assertRaises(ValueError) as context:
+            self.sem.value = -1
+        assert str(context.exception) == expected
+
+        with self.assertRaises(ValueError) as context:
+            self.sem.value = 999999
+        assert str(context.exception) == expected
+
     def test_attribute_block(self):
         """exercise Semaphore.block"""
         # tested for semantics above, here I just test that it can be read.
