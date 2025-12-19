@@ -2,6 +2,7 @@
 import unittest
 import time
 import os
+import mmap
 
 # Project imports
 from .base import Base, make_key, sleep_past_granularity
@@ -35,10 +36,6 @@ class SharedMemoryTestBase(Base):
 
 class TestSharedMemoryCreation(SharedMemoryTestBase):
     """Exercise stuff related to creating SharedMemory"""
-
-    def get_block_size(self):
-        """Return block size as reported by operating system"""
-        return os.statvfs('.')[1]
 
     def test_no_flags(self):
         """tests that opening a SharedMemory with no flags opens the existing
@@ -115,13 +112,11 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
         #
         # AFAICT the specification doesn't demand that the size has to match
         # exactly, so this code accepts either value as correct.
-        block_size = self.get_block_size()
-
-        delta = self.SIZE % block_size
+        delta = self.SIZE % mmap.PAGESIZE
 
         if delta:
             # Round up to nearest block size
-            crude_size = (self.SIZE - delta) + block_size
+            crude_size = (self.SIZE - delta) + mmap.PAGESIZE
         else:
             crude_size = self.SIZE
 
