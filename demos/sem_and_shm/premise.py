@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Python modules
 import time
 import hashlib
@@ -31,7 +33,7 @@ s = what_i_wrote
 utils.write_to_memory(memory, what_i_wrote)
 
 for i in range(0, params["ITERATIONS"]):
-    utils.say("iteration %d" % i)
+    utils.say(f"iteration {i}")
     if not params["LIVE_DANGEROUSLY"]:
         # Releasing the semaphore...
         utils.say("releasing the semaphore")
@@ -65,7 +67,7 @@ for i in range(0, params["ITERATIONS"]):
     try:
         assert(s == hashlib.md5(what_i_wrote).hexdigest())
     except AssertionError:
-        raise AssertionError("Shared memory corruption after %d iterations." % i)
+        raise AssertionError(f"Shared memory corruption after {i} iterations.")
 
     # MD5 the reply and write back to Mrs. Conclusion.
     s = s.encode()
