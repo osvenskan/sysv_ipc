@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import time
 import os
@@ -5,7 +7,7 @@ import os
 import sysv_ipc
 
 sem = sysv_ipc.Semaphore(None, sysv_ipc.IPC_CREX, initial_value=1)
-print("Parent: created semaphore {}.".format(sem.key))
+print(f"Parent: created semaphore {sem.key}.")
 
 sem.acquire()
 
@@ -15,7 +17,7 @@ print("Parent: spawning child process...")
 subprocess.Popen(["python", os.path.join(path, 'child.py'), str(sem.key)])
 
 for i in range(3, 0, -1):
-    print("Parent: child process will acquire the semaphore in {} seconds...".format(i))
+    print(f"Parent: child process will acquire the semaphore in {i} seconds...")
     time.sleep(1)
 
 sem.release()

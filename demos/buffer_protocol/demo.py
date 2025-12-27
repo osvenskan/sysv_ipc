@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sysv_ipc
 
 # Create a shared memory segment and write the (English) alphabet to the shared memory.
