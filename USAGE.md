@@ -230,7 +230,7 @@ The semaphore creator's group id.
 
 The PID of the process that last called `semop()` (`.P()`, `.V()` or `.Z()`) on this semaphore.
 
-Linux and macOS also set this when the semaphore's value is changed, although doing so disagrees with the POSIX specification. See [Linux kernel bug 112271](https://bugzilla.kernel.org/show_bug.cgi?id=112271).
+Under some systems (e.g. Linux and Mac OS, but not FreeBSD), [other changes to the semaphore can also set `last_pid`](#last_pid-behavior-depends-on-platform).
 
 #### `waiting_for_nonzero (read-only)`
 
@@ -525,6 +525,14 @@ This module obviates the need for `ftok()` by generating random keys for you. If
 This module provides `ftok()` in case you want to experiment with it. However, to emphasize its weakness, this version of `ftok()` raises a warning with every call unless you explicitly pass a flag to silence it.
 
 This package also provides `ftok_experiment.py` so that you can observe how often `ftok()` generates duplicate keys on your system.
+
+#### `last_pid` Behavior Depends on Platform
+
+While testing `sysv_ipc` in 2016, I found that some operating systems OS behaved differently than the UNIX specification with regard to a very specific point. According to the specification, only an operation (`P()`, `V()`, or `Z()`) should set `sempid` (which in `sysv_ipc` is the attribute `Semaphore.last_pid`). However, under Linux and Mac OS (and possibly other systems including Open Solaris), a few other things (like setting the semaphore's value) also change `sempid` (`last_pid`). FreeBSD's behavior agrees with the specification.
+
+I filed a bug against the Linux kernel (https://bugzilla.kernel.org/show_bug.cgi?id=112271). The kernel maintainers declined to change the code (although they did change the documentation).
+
+IMO it's not useful to argue who is right and wrong here; that ship has sailed. The practical upshot is that the behavior of `last_pid` is not as cross-platform as it could be.
 
 #### Semaphore Initialization
 

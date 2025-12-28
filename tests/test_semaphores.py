@@ -398,10 +398,13 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
 
     def test_attribute_last_pid(self):
         """exercise Semaphore.last_pid"""
-        # According to the POSIX spec, only an operation (P(), V(), or Z()) should set last_pid,
-        # and under FreeBSD that's true. However, under Linux and OS X, setting the semaphore's
-        # value also changes last_pid. I believe this is incorrect behavior, and I've filed a
-        # bug against the Linux kernel: https://bugzilla.kernel.org/show_bug.cgi?id=112271
+        # All operating systems set last_pid when an operation like sem.release() occurs. Some
+        # systems set it under other conditions, too, and some do not. The goal of this test is
+        # not to exercise OS-specific quirks. In my tests, I assume the operating system is
+        # well-behaved. My responsibility is only to ensure that my code correctly reports last_pid,
+        # and that I can't write to it.
+        #
+        # https://github.com/osvenskan/sysv_ipc/blob/develop/USAGE.md#last_pid-behavior-depends-on-platform
         self.sem.release()
         self.assertEqual(self.sem.last_pid, os.getpid())
         self.assertWriteToReadOnlyPropertyFails('last_pid', 42)
