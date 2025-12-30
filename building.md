@@ -24,4 +24,4 @@ If you want to run `sysv_ipc` on a system other than the one where it was built,
 
 ### Descriptive, Not Definitive
 
-It's very important to understand that the values in `system_info.h` _describe_ your system to `sysv_ipc`. They don't change the behavior of your operating system. For instance, if you arbitrarily change `SEM_VALUE_MAX` in `system_info.h` to a larger number, that won't actually increase the maximum valid value for a semaphore on your system. It will only misinform `sysv_ipc` about what your system accepts, and a misinformed `sysv_ipc` will probably behave badly.
+It's very important to understand that the values in `system_info.h` _describe_ your system to `sysv_ipc`. They don't change the behavior of your operating system. For instance, if you arbitrarily change `SEMVMX` in `system_info.h` to a larger number, that won't actually increase the maximum valid value for a semaphore on your system. It will only misinform `sysv_ipc` about what your system accepts, and a misinformed `sysv_ipc` will probably behave badly.

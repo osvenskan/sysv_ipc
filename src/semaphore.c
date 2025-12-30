@@ -123,7 +123,7 @@ sem_set_error(void) {
 
         case ERANGE:
             PyErr_Format(PyExc_ValueError,
-                "The semaphore's value must remain between 0 and SEM_VALUE_MAX");
+                "The semaphore's value must remain between 0 and SEMVMX");
         break;
 
         case EAGAIN:

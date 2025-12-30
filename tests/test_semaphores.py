@@ -361,7 +361,7 @@ class TestSemaphorePropertiesAndAttributes(SemaphoreTestBase):
         self.assertEqual(self.sem.value, 42)
 
         # test writing out of bounds values
-        expected = "The semaphore's value must remain between 0 and SEM_VALUE_MAX"
+        expected = "The semaphore's value must remain between 0 and SEMVMX"
 
         with self.assertRaises(ValueError) as context:
             self.sem.value = -1
