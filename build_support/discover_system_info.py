@@ -131,8 +131,8 @@ def discover():
     CONDITIONALS = ("_SEM_SEMUN_UNDEFINED",
                     # PAGE_SIZE is already #defined elsewhere on FreeBSD.
                     "PAGE_SIZE",
-                    # SEM_VALUE_MAX is often #defined in a system header file
-                    "SEM_VALUE_MAX",
+                    # SEMVMX is often #defined in a system header file
+                    "SEMVMX",
                     )
 
     if os.path.exists(OUTPUT_FILEPATH):
@@ -155,7 +155,7 @@ def discover():
         # I hardcode the max value of a sempahore. I expect that this value is fine for most
         # users, and those that need something different can use their own system_info.h.
         # Details: https://github.com/osvenskan/sysv_ipc/issues/3
-        sys_info["SEM_VALUE_MAX"] = 32767
+        sys_info["SEMVMX"] = 32767
 
         # On some platforms, it's the responsibility of my code to define the semun union, on
         # other platforms, it's already defined in a system header file. To avoid potential

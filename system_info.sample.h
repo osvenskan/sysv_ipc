@@ -45,14 +45,14 @@ timeouts for acquire() on Semaphore instances.
 */
 #define SEMTIMEDOP_EXISTS
 
-/* SEM_VALUE_MAX is the maximum value of a semaphore. It's already #defined in
-system header files on many systems, so it should be surrounded with
+/* SEMVMX is the maximum value of a semaphore. It's already #defined in
+system header files on some systems, so it should be surrounded with
 #ifndef/#endif here.
 
 This value only provides information to module users. The module reports it as
 sysv_ipc.SEMAPHORE_VALUE_MAX, but that value isn't used anywhere in the
 module code, so if it's wrong, that might not matter to you.
 */
-#ifndef SEM_VALUE_MAX
-#define SEM_VALUE_MAX                   32767
+#ifndef SEMVMX
+#define SEMVMX                          32767
 #endif

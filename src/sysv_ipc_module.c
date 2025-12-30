@@ -809,7 +809,7 @@ PyInit_sysv_ipc(void) {
     PyModule_AddIntConstant(module, "PAGE_SIZE", PAGE_SIZE);
     PyModule_AddIntConstant(module, "KEY_MIN", KEY_MIN);
     PyModule_AddIntConstant(module, "KEY_MAX", KEY_MAX);
-    PyModule_AddIntConstant(module, "SEMAPHORE_VALUE_MAX", SEM_VALUE_MAX);
+    PyModule_AddIntConstant(module, "SEMAPHORE_VALUE_MAX", SEMVMX);
     PyModule_AddIntConstant(module, "IPC_CREAT", IPC_CREAT);
     PyModule_AddIntConstant(module, "IPC_EXCL", IPC_EXCL);
     PyModule_AddIntConstant(module, "IPC_CREX", IPC_CREX);
