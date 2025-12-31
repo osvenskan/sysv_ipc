@@ -802,7 +802,7 @@ PyInit_sysv_ipc(void) {
 
     PyModule_AddStringConstant(module, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddStringConstant(module, "__version__", SYSV_IPC_VERSION);
-    PyModule_AddStringConstant(module, "__copyright__", "2008 - 2026, Philip Semanchuk and contributors");
+    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2008 - 2026, Philip Semanchuk and contributors");
     PyModule_AddStringConstant(module, "__author__", "Philip Semanchuk");
     PyModule_AddStringConstant(module, "__license__", "BSD");
 
