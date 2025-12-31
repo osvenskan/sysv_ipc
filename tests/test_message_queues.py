@@ -123,18 +123,19 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
 
         self.assertEqual(self.mq.current_messages, 0)
 
-    # The bug referenced below affects use of a negative type. Supposedly it's only on 32 binaries
-    # running on 64 bit systems, but I see it using 64-bit Python under 64-bit Linux.
+    # Since the earliest commit I have for this file (2016), I've had to skip this test under Linux
+    # because msgrcv() does not work correctly under Linux when using a negative type. See
+    # https://github.com/osvenskan/sysv_ipc/issues/38 for details.
     # A less demanding version of this test follows so Linux doesn't go entirely untested.
     @unittest.skipIf(sys.platform.startswith('linux'),
-                     'msgrcv() buggy on Linux: https://bugzilla.kernel.org/show_bug.cgi?id=94181')
+                     'msgrcv() buggy on Linux: https://github.com/osvenskan/sysv_ipc/issues/38')
     def test_message_type_receive_specific_order(self):
         # Place messsages in Q w/highest type first
         for i in range(4, 0, -1):
             self.mq.send('type' + str(i), type=i)
 
         # receive(type=-2) should get "the first message of the lowest type that is <= the absolute
-        # value of type."
+        # value of type." This assertion fails under Linux (but not under Mac or FreeBSD).
         self.assertEqual(self.mq.receive(type=-2), (b'type2', 2))
 
         # receive(type=3) should get "the first message of that type."
