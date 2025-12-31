@@ -579,7 +579,7 @@ As a (sort of) side note, the [SUSv3 specification for `shmget()`](https://pubs.
 
 #### Message Queue Limits
 
-Python programmers can usually remain blissfully ignorant of memory allocation issues. Unfortunately, a combination of factors makes them relevant when dealing with System V message queues.
+Python programmers can usually remain blissfully ignorant of memory allocation issues. Unfortunately, a combination of factors makes them relevant when dealing with System V message queues. [**Update 2026**: I wrote these notes 17 years ago, so the operating systems they reference are out of date, and their newer versions might behave very differently. I leave the notes here as a demonstration of the system-specific limits one should be aware of.]
 
 **Some implementations impose extremely stingy limits.** For instance, many BSDish systems (including Mac) limit queues to 2048 bytes. Note that that's the *total queue size*, not the message size. Two 1k messages would fill the queue.
 
@@ -632,13 +632,3 @@ Bugs? My code never has bugs! There are, however, some suboptimal anomalies...
 One such anomaly is that this module can't report the exact min and max values for a key. It turns out that [it's really difficult to determine the maximum value that a typedef-ed variable can hold](http://groups.google.com/group/comp.lang.c/browse_thread/thread/14a1cdbfb111f4eb).
 
 Other ~~bugs~~ suboptimal anomalies are recorded in [the issue tracker on GitHub](https://github.com/osvenskan/sysv_ipc/issues).
-
-#### Future Features/Changes
-
-These are features that may or may not be added depending on technical difficulty, user interest and so forth.
-
- - Update this documentation with a list of platforms that support `semtimedop()`.
- - Find a way to make `SEMAPHORE_VALUE_MAX` more accurate (https://github.com/osvenskan/sysv_ipc/issues/3)
-
-I don't plan to add support for semaphore sets, for which I've had only [one request](https://github.com/osvenskan/sysv_ipc/issues/18) in 17 years. If it's important to you, feel free to try to change my mind!
-

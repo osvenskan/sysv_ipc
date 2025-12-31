@@ -1,4 +1,7 @@
-To install, just use the normal setup.py routine:
+`sysv_ipc` is available from PyPI:
 
-sudo python setup.py install
+	pip install sysv-ipc
 
+If you have the source code, you can install `sysv_ipc` with this command:
+
+	python -m pip install .
