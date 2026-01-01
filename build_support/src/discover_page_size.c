@@ -1,4 +1,3 @@
-//#define _XOPEN_SOURCE  500
 #include <stdio.h>
 
 // Code for determining page size swiped from Python's mmapmodule.c
