@@ -1,6 +1,6 @@
-include INSTALL LICENSE README VERSION
-include ReadMe.html history.html
-include setup.py
+include INSTALL LICENSE VERSION
+include README.md USAGE.md history.md building.md CONTRIBUTORS.txt
+include system_info.sample.h
 # The 'graft src' command has the useful flexibility of copying a custom
 # system_info.h if one exists, and not fussing if there isn't one present.
 graft src
@@ -8,6 +8,6 @@ graft build_support
 graft tests
 recursive-include demos *.h *.c *.py *.sh *.png *.txt *.md
 recursive-include extras *
-global-exclude *.pyc
-
-
+global-exclude .DS_Store
+global-exclude *.py[cod]
+global-exclude *.o
