@@ -54,5 +54,6 @@ class Base(unittest.TestCase):
             #    sysv_ipc.SharedMemory
             class_name = str(target_object.__class__)[8:-2]
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
+            actual = str(context.exception)
 
-        assert str(context.exception) == expected
+        assert (actual == expected), actual
