@@ -55,6 +55,12 @@ class Base(unittest.TestCase):
             # From that, I only want this bit --
             #    sysv_ipc.SharedMemory
             class_name = str(target_object.__class__)[8:-2]
+
+            # Under CPython, the class name is prefixed with the module name. Under PyPy, it is
+            # not. I remove the module name if present.
+            if class_name.startswith('sysv_ipc.'):
+                class_name = class_name[9:]
+
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
 
         assert (actual == expected), f'actual: `{actual}`, expected: `{expected}`'
