@@ -57,4 +57,4 @@ class Base(unittest.TestCase):
             class_name = str(target_object.__class__)[8:-2]
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
 
-        assert (actual == expected), actual
+        assert (actual == expected), f'actual: `{actual}`, expected: `{expected}`'
