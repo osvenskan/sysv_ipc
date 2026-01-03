@@ -2,6 +2,7 @@
 import unittest
 import random
 import time
+import platform
 
 # Project imports
 import sysv_ipc
@@ -38,6 +39,23 @@ def sleep_past_granularity():
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
+    # @staticmethod
+    # def _get_class_name(klass):
+    #     # FIXME docstring
+    #     # Extract the class name. str() returns something like this under CPython
+    #     #    <class 'sysv_ipc.SharedMemory'>
+    #     # Under
+
+    #     # From that, I only want this bit --
+    #     #    sysv_ipc.SharedMemory
+    #     class_name = str(target_object.__class__)[8:-2]
+
+    #     # Under CPython, the class name is prefixed with the module name. Under PyPy, it is
+    #     # not. I remove the module name if present.
+    #     if class_name.startswith('sysv_ipc.'):
+    #         class_name = class_name[9:]
+
+
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name, value):
         """test that writing to a readonly property raises an exception with the expected msg"""
         with self.assertRaises(AttributeError) as context:
@@ -58,7 +76,8 @@ class Base(unittest.TestCase):
 
             # Under CPython, the class name is prefixed with the module name. Under PyPy, it is
             # not. I remove the module name if present.
-            if class_name.startswith('sysv_ipc.'):
+            #if (platform.python_implementation()) == 'PyPy' and (class_name.startswith('sysv_ipc.')):
+            if (platform.python_implementation()) == 'PyPy':
                 class_name = class_name[9:]
 
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
