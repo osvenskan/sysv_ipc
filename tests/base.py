@@ -8,6 +8,10 @@ import platform
 import sysv_ipc
 
 
+# PyPy requires some specific test behavior
+IS_PYPY = (platform.python_implementation() == 'PyPy')
+
+
 def make_key():
     """Generate a random key suitable for an IPC object."""
     return random.randint(sysv_ipc.KEY_MIN, sysv_ipc.KEY_MAX)
@@ -39,22 +43,24 @@ def sleep_past_granularity():
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
-    # @staticmethod
-    # def _get_class_name(klass):
-    #     # FIXME docstring
-    #     # Extract the class name. str() returns something like this under CPython
-    #     #    <class 'sysv_ipc.SharedMemory'>
-    #     # Under
+    @staticmethod
+    def _get_class_name(an_object):
+        '''Return a version of the class name appropriate for assertWriteToReadOnlyPropertyFails().
+        This encapsulates a quirk specific to that assertion function. For details, see
+        https://github.com/osvenskan/sysv_ipc/issues/68
+        '''
+        # Extract the class name. str() returns something like this --
+        #    <class 'sysv_ipc.SharedMemory'>
+        # From that, I only want this bit --
+        #    sysv_ipc.SharedMemory
+        class_name = str(an_object.__class__)[8:-2]
 
-    #     # From that, I only want this bit --
-    #     #    sysv_ipc.SharedMemory
-    #     class_name = str(target_object.__class__)[8:-2]
+        # Under PyPy, the module prefix doesn't appear in the exception message that I see in
+        # assertWriteToReadOnlyPropertyFails().
+        if IS_PYPY:
+            class_name = class_name[9:]
 
-    #     # Under CPython, the class name is prefixed with the module name. Under PyPy, it is
-    #     # not. I remove the module name if present.
-    #     if class_name.startswith('sysv_ipc.'):
-    #         class_name = class_name[9:]
-
+        return class_name
 
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name, value):
         """test that writing to a readonly property raises an exception with the expected msg"""
@@ -68,18 +74,7 @@ class Base(unittest.TestCase):
             # For some reason 'id' gets a different message.
             expected = 'readonly attribute'
         else:
-            # Extract the class name. str() returns something like this --
-            #    <class 'sysv_ipc.SharedMemory'>
-            # From that, I only want this bit --
-            #    sysv_ipc.SharedMemory
-            class_name = str(target_object.__class__)[8:-2]
-
-            # Under CPython, the class name is prefixed with the module name. Under PyPy, it is
-            # not. I remove the module name if present.
-            #if (platform.python_implementation()) == 'PyPy' and (class_name.startswith('sysv_ipc.')):
-            if (platform.python_implementation()) == 'PyPy':
-                class_name = class_name[9:]
-
+            class_name = self._get_class_name(target_object)
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
 
         assert (actual == expected), f'actual: `{actual}`, expected: `{expected}`'
