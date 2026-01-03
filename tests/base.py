@@ -2,9 +2,14 @@
 import unittest
 import random
 import time
+import platform
 
 # Project imports
 import sysv_ipc
+
+
+# PyPy requires some specific test behavior
+IS_PYPY = (platform.python_implementation() == 'PyPy')
 
 
 def make_key():
@@ -38,21 +43,38 @@ def sleep_past_granularity():
 
 class Base(unittest.TestCase):
     """Base class for test cases."""
+    @staticmethod
+    def _get_class_name(an_object):
+        '''Return a version of the class name appropriate for assertWriteToReadOnlyPropertyFails().
+        This encapsulates a quirk specific to that assertion function. For details, see
+        https://github.com/osvenskan/sysv_ipc/issues/68
+        '''
+        # Extract the class name. str() returns something like this --
+        #    <class 'sysv_ipc.SharedMemory'>
+        # From that, I only want this bit --
+        #    sysv_ipc.SharedMemory
+        class_name = str(an_object.__class__)[8:-2]
+
+        # Under PyPy, the module prefix doesn't appear in the exception message that I see in
+        # assertWriteToReadOnlyPropertyFails().
+        if IS_PYPY:
+            class_name = class_name[9:]
+
+        return class_name
+
     def assertWriteToReadOnlyPropertyFails(self, target_object, property_name, value):
         """test that writing to a readonly property raises an exception with the expected msg"""
         with self.assertRaises(AttributeError) as context:
             setattr(target_object, property_name, value)
 
         # In addition to checking that AttributeError is raised, I also check the message text.
+        actual = str(context.exception)
+
         if property_name == 'id':
             # For some reason 'id' gets a different message.
             expected = 'readonly attribute'
         else:
-            # Extract the class name. str() returns something like this --
-            #    <class 'sysv_ipc.SharedMemory'>
-            # From that, I only want this bit --
-            #    sysv_ipc.SharedMemory
-            class_name = str(target_object.__class__)[8:-2]
+            class_name = self._get_class_name(target_object)
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
 
-        assert str(context.exception) == expected
+        assert (actual == expected), f'actual: `{actual}`, expected: `{expected}`'
