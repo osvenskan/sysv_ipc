@@ -44,6 +44,8 @@ class Base(unittest.TestCase):
             setattr(target_object, property_name, value)
 
         # In addition to checking that AttributeError is raised, I also check the message text.
+        actual = str(context.exception)
+
         if property_name == 'id':
             # For some reason 'id' gets a different message.
             expected = 'readonly attribute'
@@ -54,6 +56,5 @@ class Base(unittest.TestCase):
             #    sysv_ipc.SharedMemory
             class_name = str(target_object.__class__)[8:-2]
             expected = f"attribute '{property_name}' of '{class_name}' objects is not writable"
-            actual = str(context.exception)
 
         assert (actual == expected), actual
