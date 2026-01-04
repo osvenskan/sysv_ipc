@@ -461,7 +461,8 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
     if (py_block && PyObject_Not(py_block))
         flags |= IPC_NOWAIT;
 
-    p_msg = (struct queue_message *)malloc(offsetof(struct queue_message, message) + user_msg.len);
+    size_t p_msg_size = offsetof(struct queue_message, message) + user_msg.len;
+    p_msg = (struct queue_message *)malloc(p_msg_size);
 
     DPRINTF("p_msg is %p\n", p_msg);
 
@@ -475,8 +476,8 @@ MessageQueue_send(MessageQueue *self, PyObject *args, PyObject *keywords) {
 
     Py_BEGIN_ALLOW_THREADS
     DPRINTF("Calling msgsnd(), id=%ld, p_msg=%p, p_msg->type=%ld, length=%lu, flags=0x%x\n",
-            (long)self->id, p_msg, p_msg->type, user_msg.len, flags);
-    rc = msgsnd(self->id, p_msg, (size_t)user_msg.len, flags);
+            (long)self->id, p_msg, p_msg->type, p_msg_size, flags);
+    rc = msgsnd(self->id, p_msg, p_msg_size, flags);
     Py_END_ALLOW_THREADS
 
     if (-1 == rc) {
