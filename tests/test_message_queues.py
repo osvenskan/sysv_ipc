@@ -238,9 +238,9 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         self.assertWriteToReadOnlyPropertyFails('key', 42)
 
     # The POSIX spec says "msgget() shall return a non-negative integer", but OS X does not
-    # respect this, I think due to a bug. Details are in extras/explore_message_queue_id.py.
+    # respect this, I think due to a bug. See https://github.com/osvenskan/sysv_ipc/issues/63
     @unittest.skipIf(sys.platform.startswith('darwin'),
-                     'OS X message queues sometimes return negative ids')
+                     'msgget() buggy on Mac: https://github.com/osvenskan/sysv_ipc/issues/63')
     def test_property_id(self):
         """exercise MessageQueue.id"""
         self.assertGreaterEqual(self.mq.id, 0)
