@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Python modules
 import hashlib
 
@@ -14,13 +16,13 @@ params = utils.read_params()
 semaphore = sysv_ipc.Semaphore(params["KEY"])
 memory = sysv_ipc.SharedMemory(params["KEY"])
 
-utils.say("memory attached at %d" % memory.address)
+utils.say(f"Memory attached at {memory.address}")
 
 what_i_wrote = ""
 s = ""
 
 for i in range(0, params["ITERATIONS"]):
-    utils.say("i = %d" % i)
+    utils.say(f"iteration {i}")
     if not params["LIVE_DANGEROUSLY"]:
         # Wait for Mrs. Premise to free up the semaphore.
         utils.say("acquiring the semaphore...")
@@ -34,7 +36,7 @@ for i in range(0, params["ITERATIONS"]):
             utils.say("releasing the semaphore")
             semaphore.release()
             # ...and wait for it to become available again.
-            utils.say("acquiring for the semaphore...")
+            utils.say("acquiring the semaphore...")
             semaphore.acquire()
 
         s = utils.read_from_memory(memory)
@@ -44,7 +46,7 @@ for i in range(0, params["ITERATIONS"]):
         try:
             assert(s == hashlib.md5(what_i_wrote).hexdigest())
         except AssertionError:
-            raise AssertionError("Shared memory corruption after %d iterations." % i)
+            raise AssertionError(f"Shared memory corruption after {i} iterations.")
 
     s = s.encode()
     what_i_wrote = hashlib.md5(s).hexdigest()

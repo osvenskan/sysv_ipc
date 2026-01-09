@@ -90,8 +90,7 @@ class TestMessageQueueCreation(MessageQueueTestBase):
 
     def test_kwargs(self):
         """ensure init accepts keyword args as advertised"""
-        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
-        mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
+        mq = sysv_ipc.MessageQueue(None, flags=sysv_ipc.IPC_CREX, mode=0o0600,
                                    max_message_size=256)
         mq.remove()
 
@@ -124,18 +123,19 @@ class TestMessageQueueSendReceive(MessageQueueTestBase):
 
         self.assertEqual(self.mq.current_messages, 0)
 
-    # The bug referenced below affects use of a negative type. Supposedly it's only on 32 binaries
-    # running on 64 bit systems, but I see it using 64-bit Python under 64-bit Linux.
+    # Since the earliest commit I have for this file (2016), I've had to skip this test under Linux
+    # because msgrcv() does not work correctly under Linux when using a negative type. See
+    # https://github.com/osvenskan/sysv_ipc/issues/38 for details.
     # A less demanding version of this test follows so Linux doesn't go entirely untested.
     @unittest.skipIf(sys.platform.startswith('linux'),
-                     'msgrcv() buggy on Linux: https://bugzilla.kernel.org/show_bug.cgi?id=94181')
+                     'msgrcv() buggy on Linux: https://github.com/osvenskan/sysv_ipc/issues/38')
     def test_message_type_receive_specific_order(self):
         # Place messsages in Q w/highest type first
         for i in range(4, 0, -1):
             self.mq.send('type' + str(i), type=i)
 
         # receive(type=-2) should get "the first message of the lowest type that is <= the absolute
-        # value of type."
+        # value of type." This assertion fails under Linux (but not under Mac or FreeBSD).
         self.assertEqual(self.mq.receive(type=-2), (b'type2', 2))
 
         # receive(type=3) should get "the first message of that type."
@@ -237,12 +237,10 @@ class TestMessageQueuePropertiesAndAttributes(MessageQueueTestBase):
         self.assertLessEqual(self.mq.key, sysv_ipc.KEY_MAX)
         self.assertWriteToReadOnlyPropertyFails('key', 42)
 
-    # The POSIX spec says "msgget() shall return a non-negative integer", but OS X sometimes
-    # returns a negative number like -1765146624. My guess is that they're using a UINT somewhere
-    # which exceeds INT_MAX and hence looks negative, or they just don't care about the spec.
-    # msgget() ref: http://pubs.opengroup.org/onlinepubs/009695399/functions/msgget.html
+    # The POSIX spec says "msgget() shall return a non-negative integer", but OS X does not
+    # respect this, I think due to a bug. See https://github.com/osvenskan/sysv_ipc/issues/63
     @unittest.skipIf(sys.platform.startswith('darwin'),
-                     'OS X message queues sometimes return negative ids')
+                     'msgget() buggy on Mac: https://github.com/osvenskan/sysv_ipc/issues/63')
     def test_property_id(self):
         """exercise MessageQueue.id"""
         self.assertGreaterEqual(self.mq.id, 0)

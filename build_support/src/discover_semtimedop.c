@@ -1,6 +1,3 @@
-//#define _XOPEN_SOURCE  500
-#include "Python.h"
-
 #include <sys/sem.h>
 #include <stdlib.h>
 

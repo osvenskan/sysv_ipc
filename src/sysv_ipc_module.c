@@ -2,7 +2,7 @@
 sysv_ipc - A Python module for accessing System V semaphores, shared memory
             and message queues.
 
-Copyright (c) 2021, Philip Semanchuk
+Copyright (c) 2008 - 2026, Philip Semanchuk and contributors
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -16,10 +16,10 @@ modification, are permitted provided that the following conditions are met:
       names of its contributors may be used to endorse or promote products
       derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY Philip Semanchuk ''AS IS'' AND ANY
+THIS SOFTWARE IS PROVIDED BY Philip Semanchuk AND CONTRIBUTORS ''AS IS'' AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL Philip Semanchuk BE LIABLE FOR ANY
+DISCLAIMED. IN NO EVENT SHALL Philip Semanchuk OR CONTRIBUTORS BE LIABLE FOR ANY
 DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
 LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -192,6 +192,12 @@ sysv_ipc_remove_message_queue(PyObject *self, PyObject *args) {
     error_return:
     return NULL;
 }
+
+/*
+
+    Semaphore stuff
+
+*/
 
 
 static PyMemberDef Semaphore_members[] = {
@@ -371,6 +377,12 @@ static PyTypeObject SemaphoreType = {
 };
 
 
+/*
+
+    Shared memory stuff
+
+*/
+
 
 static PyMemberDef SharedMemory_members[] = {
     {"id", T_INT, offsetof(SharedMemory, id), READONLY, "The id assigned by the system"},
@@ -503,13 +515,6 @@ static PyGetSetDef SharedMemory_gets_and_sets[] = {
     {NULL} /* Sentinel */
 };
 
-/* Python 2 and 3 both have a PyBufferProcs struct, but defined somewhat differently. The 2.x
-version has more fields. The 2.x documentation is confusing and incomplete. See here for some
-discussion --
-https://stackoverflow.com/questions/19223721/definition-of-pybufferprocs-in-python-2-7-when-class-implements-pep-3118
-
-Fortunately all the extra fields in the Python 2 version of the struct can just be NULL.
-*/
 PyBufferProcs SharedMemory_as_buffer = {
     (getbufferproc)shm_get_buffer,
     (releasebufferproc)NULL,
@@ -557,6 +562,11 @@ static PyTypeObject SharedMemoryType = {
 };
 
 
+/*
+
+    Message queue stuff
+
+*/
 
 
 static PyMemberDef MessageQueue_members[] = {
@@ -792,14 +802,14 @@ PyInit_sysv_ipc(void) {
 
     PyModule_AddStringConstant(module, "VERSION", SYSV_IPC_VERSION);
     PyModule_AddStringConstant(module, "__version__", SYSV_IPC_VERSION);
-    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2018 Philip Semanchuk");
+    PyModule_AddStringConstant(module, "__copyright__", "Copyright 2008 - 2026, Philip Semanchuk and contributors");
     PyModule_AddStringConstant(module, "__author__", "Philip Semanchuk");
     PyModule_AddStringConstant(module, "__license__", "BSD");
 
     PyModule_AddIntConstant(module, "PAGE_SIZE", PAGE_SIZE);
     PyModule_AddIntConstant(module, "KEY_MIN", KEY_MIN);
     PyModule_AddIntConstant(module, "KEY_MAX", KEY_MAX);
-    PyModule_AddIntConstant(module, "SEMAPHORE_VALUE_MAX", SEMAPHORE_VALUE_MAX);
+    PyModule_AddIntConstant(module, "SEMAPHORE_VALUE_MAX", SEMVMX);
     PyModule_AddIntConstant(module, "IPC_CREAT", IPC_CREAT);
     PyModule_AddIntConstant(module, "IPC_EXCL", IPC_EXCL);
     PyModule_AddIntConstant(module, "IPC_CREX", IPC_CREX);
@@ -867,4 +877,3 @@ PyInit_sysv_ipc(void) {
     error_return:
     return NULL;
 }
-

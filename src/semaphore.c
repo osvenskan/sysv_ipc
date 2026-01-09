@@ -26,7 +26,8 @@ typedef struct {
 // It is recommended practice to define this union here in the .c module, but
 // it's been common practice for platforms to define it themselves in header
 // files. For instance, BSD and OS X do so (provisionally) in sem.h. As a
-// result, I need to surround this with an #ifdef.
+// result, I need to surround this with an #ifdef. The value _SEM_SEMUN_UNDEFINED
+// is written to system_info.h as necessary.
 #ifdef _SEM_SEMUN_UNDEFINED
 union semun {
     int val;                    /* used for SETVAL only */
@@ -122,8 +123,7 @@ sem_set_error(void) {
 
         case ERANGE:
             PyErr_Format(PyExc_ValueError,
-                "The semaphore's value must remain between 0 and %ld (SEMAPHORE_VALUE_MAX)",
-                (long)SEMAPHORE_VALUE_MAX);
+                "The semaphore's value must remain between 0 and SEMVMX");
         break;
 
         case EAGAIN:
@@ -601,14 +601,7 @@ sem_set_value(Semaphore *self, PyObject *py_value)
     DPRINTF("C value is %ld\n", value);
 
     if ((-1 == value) && PyErr_Occurred()) {
-        // No idea wht could cause this -- just raise it to the caller.
-        goto error_return;
-    }
-
-    if ((value < 0) || (value > SEMAPHORE_VALUE_MAX)) {
-		PyErr_Format(PyExc_ValueError,
-		    "Attribute 'value' must be between 0 and %ld (SEMAPHORE_VALUE_MAX)",
-		    (long)SEMAPHORE_VALUE_MAX);
+        // No idea what could cause this -- just raise it to the caller.
         goto error_return;
     }
 
@@ -688,18 +681,15 @@ sem_get_uid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_UID);
 }
 
-
 int
 sem_set_uid(Semaphore *self, PyObject *py_value) {
     return sem_set_ipc_perm_value(self->id, SVIFP_IPC_PERM_UID, py_value);
 }
 
-
 PyObject *
 sem_get_gid(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, SVIFP_IPC_PERM_GID);
 }
-
 
 int
 sem_set_gid(Semaphore *self, PyObject *py_value) {
@@ -735,4 +725,3 @@ PyObject *
 sem_get_o_time(Semaphore *self) {
     return sem_get_ipc_perm_value(self->id, SVIFP_SEM_OTIME);
 }
-

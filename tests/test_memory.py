@@ -2,6 +2,7 @@
 import unittest
 import time
 import os
+import mmap
 
 # Project imports
 from .base import Base, make_key, sleep_past_granularity
@@ -35,10 +36,6 @@ class SharedMemoryTestBase(Base):
 
 class TestSharedMemoryCreation(SharedMemoryTestBase):
     """Exercise stuff related to creating SharedMemory"""
-
-    def get_block_size(self):
-        """Return block size as reported by operating system"""
-        return os.statvfs('.')[1]
 
     def test_no_flags(self):
         """tests that opening a SharedMemory with no flags opens the existing
@@ -111,17 +108,15 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
         #
         # OS X's mmapped files always have sizes that are mod 4096 which is probably block size.
         #
-        # I haven't tested other operating systems, and I haven't run this experiment with sysv_ipc.
+        # I haven't tested other operating systems.
         #
         # AFAICT the specification doesn't demand that the size has to match
         # exactly, so this code accepts either value as correct.
-        block_size = self.get_block_size()
-
-        delta = self.SIZE % block_size
+        delta = self.SIZE % mmap.PAGESIZE
 
         if delta:
             # Round up to nearest block size
-            crude_size = (self.SIZE - delta) + block_size
+            crude_size = (self.SIZE - delta) + mmap.PAGESIZE
         else:
             crude_size = self.SIZE
 
@@ -145,8 +140,7 @@ class TestSharedMemoryCreation(SharedMemoryTestBase):
 
     def test_kwargs(self):
         """ensure init accepts keyword args as advertised"""
-        # mode 0x180 = 0600. Octal is difficult to express in Python 2/3 compatible code.
-        mem = sysv_ipc.SharedMemory(None, flags=sysv_ipc.IPC_CREX, mode=0x180,
+        mem = sysv_ipc.SharedMemory(None, flags=sysv_ipc.IPC_CREX, mode=0o0600,
                                     size=sysv_ipc.PAGE_SIZE, init_character=b'x')
         mem.detach()
         mem.remove()
@@ -271,7 +265,7 @@ class TestSharedMemoryReadWrite(SharedMemoryTestBase):
 
     def test_utf8(self):
         """Test writing encoded Unicode"""
-        test_string = 'G' + '\u00F6' + 'teborg'
+        test_string = 'Göteborg'
         test_string = test_string.encode('utf-8')
         self.mem.write(test_string)
         self.assertEqual(self.mem.read(len(test_string)), test_string)
