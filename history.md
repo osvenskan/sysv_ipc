@@ -4,12 +4,44 @@ This is the version history for the [sysv_ipc module](https://github.com/osvensk
 
 As of version 1.0.0, I consider this module complete. I will continue to support it and look for useful features to add, but right now I don't see any.
 
-# Current/Latest – 1.1.0 (17 Jan 2021) —
+# Current/Latest – 1.2.0 (9 Jan 2026)
+
+After five years, a new version! This is the ["I don't want to go on the cart"](https://www.youtube.com/watch?v=zEmfsmasjVA) release.
+
+This release modernizes the file layout, building, and packaging of `sysv_ipc`, including many improvements copied from its sister project [`posix_ipc`](https://github.com/osvenskan/posix_ipc/). There are no changes to the core code other than the one behavior change noted below.
+
+## Behavior Change
+
+When attempting to set a Semaphore's value out of range (e.g. -1 or 99999), the module still raises a `ValueError`, but the associated message has changed. The previous message was "Attribute 'value' must be between 0 and 32767 (SEMAPHORE_VALUE_MAX)". The new message is "The semaphore's value must remain between 0 and SEMVMX"
+
+## Deprecations
+
+> [!IMPORTANT]
+> The module constants `PAGE_SIZE` and `SEMAPHORE_VALUE_MAX` are deprecated as of this version. They will be removed in a future version. See https://github.com/osvenskan/sysv_ipc/issues/48 for background.
+
+## Changes to System Discovery
+
+ - Renamed `prober.py` to `discover_system_info.py`, which now raises `DiscoveryError` if it encounters a situation it can't handle.
+ - Improved `does_build_succeed()` and `compile_and_run()`, including some ideas suggested by [Martin Jansa](https://github.com/shr-project) copied from https://github.com/osvenskan/posix_ipc/pull/77.
+ - Added and expanded docstrings.
+ - Changed to always write `SEMVMX` to `system_info.h`, and surround it with `#ifndef/#endif`.
+
+## Other Changes
+
+ - Converted all doc to Markdown
+ - Integrated `cibuildwheel` to automate testing and create wheels for many platforms, thanks to [Matiiss](https://github.com/Matiiss).
+ - Added `building.md` to document `discover_system_info.py` and the header file it creates.
+ - Added a sample file (`system_info.sample.h`) that can be used as a template for writing your own.
+ - Modernized the project to use `pyproject.toml` and modern build practices (e.g. `python -m build`). I reorganized the project's files to make it easier to use `pyproject.toml`.
+ - Added `CONTRIBUTORS.txt` and updated copyright notices.
+ - Added a GitHub issue template to make people more aware of the mailing list https://groups.io/g/python-sysv-ipc/
+
+# Older Versions
+
+## 1.1.0 (17 Jan 2021) —
 
  - Drop support for Python 2, also for Python 3.4 and 3.5.
  - **Behavior change:** `ftok()` now raises `OSError` if it fails so the particulars of the failure are visible to the caller. Thanks to James Williams for the suggestion. (Previously the function just returned -1 if it failed.)
-
-# Older Versions
 
 ## 1.0.1 (29 Nov 2019) —
 
