@@ -1,5 +1,6 @@
 """Type stubs for the sysv_ipc C extension module."""
 
+import sys
 from types import TracebackType
 from typing import Optional, Tuple, Type
 
@@ -18,10 +19,10 @@ IPC_PRIVATE: int
 SHM_RND: int
 SHM_RDONLY: int
 
-# Linux-specific (may not be present on all platforms)
-SHM_HUGETLB: int
-SHM_NORESERVE: int
-SHM_REMAP: int
+if sys.platform == "linux":
+    SHM_HUGETLB: int
+    SHM_NORESERVE: int
+    SHM_REMAP: int
 
 VERSION: str
 __version__: str
