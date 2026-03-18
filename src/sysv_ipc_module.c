@@ -768,11 +768,52 @@ static struct PyModuleDef this_module = {
 	NULL                    // m_free
 };
 
+/* All public names exported by this module. */
+static const char * const module_all_names[] = {
+    "PAGE_SIZE",
+    "KEY_MIN",
+    "KEY_MAX",
+    "SEMAPHORE_VALUE_MAX",
+    "SEMAPHORE_TIMEOUT_SUPPORTED",
+    "IPC_CREAT",
+    "IPC_EXCL",
+    "IPC_CREX",
+    "IPC_PRIVATE",
+    "SHM_RND",
+    "SHM_RDONLY",
+#ifdef SHM_HUGETLB
+    "SHM_HUGETLB",
+#endif
+#ifdef SHM_NORESERVE
+    "SHM_NORESERVE",
+#endif
+#ifdef SHM_REMAP
+    "SHM_REMAP",
+#endif
+    "VERSION",
+    "Semaphore",
+    "SharedMemory",
+    "MessageQueue",
+    "Error",
+    "InternalError",
+    "PermissionsError",
+    "ExistentialError",
+    "BusyError",
+    "NotAttachedError",
+    "attach",
+    "ftok",
+    "remove_semaphore",
+    "remove_shared_memory",
+    "remove_message_queue",
+    NULL
+};
+
 /* Module init function */
 PyMODINIT_FUNC
 PyInit_sysv_ipc(void) {
     PyObject *module;
     PyObject *module_dict;
+    PyObject *module_all;
 
     // I seed the random number generator in case I'm asked to make some
     // random keys.
@@ -871,6 +912,25 @@ PyInit_sysv_ipc(void) {
         goto error_return;
     else
         PyDict_SetItemString(module_dict, "NotAttachedError", pNotAttachedException);
+
+    // Build __all__
+    if (!(module_all = PyList_New(0)))
+        goto error_return;
+
+    for (int i = 0; module_all_names[i]; i++) {
+        PyObject *s = PyUnicode_FromString(module_all_names[i]);
+        if (!s || PyList_Append(module_all, s) < 0) {
+            Py_XDECREF(s);
+            Py_DECREF(module_all);
+            goto error_return;
+        }
+        Py_DECREF(s);
+    }
+
+    if (PyModule_AddObject(module, "__all__", module_all) < 0) {
+        Py_DECREF(module_all);
+        goto error_return;
+    }
 
     return module;
 
