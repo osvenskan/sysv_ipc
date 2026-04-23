@@ -1,5 +1,6 @@
 import ast
 import pathlib
+import sys
 import unittest
 
 import sysv_ipc
@@ -23,6 +24,10 @@ def _names_defined_in_stub():
             defined.add(node.name)
         elif isinstance(node, ast.If):
             # Platform guards (e.g. `if sys.platform == "linux":`)
+            # If we eve add more conditionals to the pyi file we'll need to
+            # extend the logic here (but until then, YAGNI)
+            if sys.platform != 'linux':
+                continue
             for child in ast.walk(node):
                 if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name):
                     defined.add(child.target.id)
