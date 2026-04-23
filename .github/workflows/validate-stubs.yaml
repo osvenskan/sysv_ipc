@@ -1,0 +1,39 @@
+name: Validate type stubs
+
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-validate
+  cancel-in-progress: true
+
+jobs:
+  validate_stubs:
+    name: Validate type stubs (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macos-15-intel is an Intel runner, macos-14 is Apple silicon
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-14]
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Install mypy and package
+        run: python -m pip install mypy .
+
+      - name: Validate type stubs
+        # https://github.com/python/mypy/issues/19737
+        run: python3 -m mypy.stubtest --ignore-disjoint-bases sysv_ipc

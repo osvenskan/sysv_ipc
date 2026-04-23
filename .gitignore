@@ -6,3 +6,4 @@ dist/*
 src/system_info.h
 notes.*
 sysv_ipc.egg-info/*
+sysv_ipc.cpython-*.so
